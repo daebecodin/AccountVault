@@ -22,6 +22,7 @@ namespace account_vault::services
             std::wstring launcherUsername,
             std::wstring launcherPassword,
             std::wstring emailAddress,
+            std::wstring emailProvider,
             std::wstring emailProviderWebsite,
             std::wstring emailPassword)
         {
@@ -33,6 +34,7 @@ namespace account_vault::services
                 .launcherUsername = std::move(launcherUsername),
                 .launcherPassword = std::move(launcherPassword),
                 .emailAddress = std::move(emailAddress),
+                .emailProvider = std::move(emailProvider),
                 .emailProviderWebsite = std::move(emailProviderWebsite),
                 .emailPassword = std::move(emailPassword),
             });
@@ -62,6 +64,7 @@ namespace account_vault::services
             std::wstring launcherUsername,
             std::wstring launcherPassword,
             std::wstring emailAddress,
+            std::wstring emailProvider,
             std::wstring emailProviderWebsite,
             std::wstring emailPassword)
         {
@@ -79,6 +82,7 @@ namespace account_vault::services
             account->launcherUsername = std::move(launcherUsername);
             account->launcherPassword = std::move(launcherPassword);
             account->emailAddress = std::move(emailAddress);
+            account->emailProvider = std::move(emailProvider);
             account->emailProviderWebsite = std::move(emailProviderWebsite);
             account->emailPassword = std::move(emailPassword);
             return true;
@@ -112,6 +116,7 @@ namespace account_vault::services
                     containsIgnoreCase(account.launcher, loweredQuery) ||
                     containsIgnoreCase(account.launcherUsername, loweredQuery) ||
                     containsIgnoreCase(account.emailAddress, loweredQuery) ||
+                    containsIgnoreCase(account.emailProvider, loweredQuery) ||
                     containsIgnoreCase(account.emailProviderWebsite, loweredQuery);
 
                 if (launcherMatches && queryMatches)

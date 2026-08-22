@@ -12,9 +12,36 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="Components\AccountCard.cpp">
+      <Filter>Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\AddAccountDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\AccountDetailsDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\ThemeEditorDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Themes\ThemeService.cpp">
+      <Filter>Themes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Models\Account.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Models\ThemeDefinition.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\AccountRepository.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\EmailProviderCatalog.h">
+      <Filter>Services</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
@@ -42,6 +69,21 @@
   <ItemGroup>
     <Filter Include="Assets">
       <UniqueIdentifier>{1a8f8282-3df5-4f97-9d77-9f1ee793d0c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Components">
+      <UniqueIdentifier>{821f7320-3162-4f98-a1e5-815cfbf51203}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dialogs">
+      <UniqueIdentifier>{ac3d7fa5-6708-43ed-af7d-3d8025f9cb55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Models">
+      <UniqueIdentifier>{97f2f5c9-b4b0-485c-9a77-c8b7a814a03b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Services">
+      <UniqueIdentifier>{3de9ca91-eec4-43bf-a888-27d9e734f22e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Themes">
+      <UniqueIdentifier>{b33c93be-236b-480e-aea4-70bdf681d786}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

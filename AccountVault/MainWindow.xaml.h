@@ -1,9 +1,12 @@
 #pragma once
 
 #include "MainWindow.g.h"
+#include "Models/ThemeDefinition.h"
 #include "Services/AccountRepository.h"
 
+#include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace winrt::AccountVault::implementation
@@ -36,16 +39,7 @@ namespace winrt::AccountVault::implementation
         using Account = account_vault::models::Account;
         using RecordId = account_vault::models::RecordId;
 
-        struct ThemeDefinition
-        {
-            std::wstring name;
-            Windows::UI::Color background;
-            Windows::UI::Color surface;
-            Windows::UI::Color surfaceAlt;
-            Windows::UI::Color accent;
-            Windows::UI::Color text;
-            Windows::UI::Color mutedText;
-        };
+        using ThemeDefinition = account_vault::models::ThemeDefinition;
 
         static constexpr int BuiltInThemeCount{ 10 };
 

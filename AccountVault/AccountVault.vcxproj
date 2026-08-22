@@ -130,6 +130,10 @@
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="Models\Account.h" />
+    <ClInclude Include="Models\ThemeDefinition.h" />
+    <ClInclude Include="Services\AccountRepository.h" />
+    <ClInclude Include="Services\EmailProviderCatalog.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -145,6 +149,11 @@
     <ClCompile Include="MainWindow.xaml.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="Components\AccountCard.cpp" />
+    <ClCompile Include="Dialogs\AddAccountDialog.cpp" />
+    <ClCompile Include="Dialogs\AccountDetailsDialog.cpp" />
+    <ClCompile Include="Dialogs\ThemeEditorDialog.cpp" />
+    <ClCompile Include="Themes\ThemeService.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>
   <ItemGroup>
