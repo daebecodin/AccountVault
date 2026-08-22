@@ -4,9 +4,6 @@
 #include "MainWindow.g.cpp"
 #endif
 
-#include <winrt/Microsoft.UI.Windowing.h>
-
-#include <filesystem>
 #include <string>
 
 using namespace winrt;
@@ -19,32 +16,6 @@ namespace winrt::AccountVault::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
-
-        // Package logo assets do not automatically set a WinUI desktop
-        // window's title-bar icon. Resolve the deployed ICO beside the EXE
-        // and assign it explicitly to this AppWindow.
-        std::wstring modulePath(32768, L'\0');
-        const DWORD modulePathCapacity{
-            static_cast<DWORD>(modulePath.size()) };
-        const DWORD modulePathLength{ GetModuleFileNameW(
-            nullptr,
-            modulePath.data(),
-            modulePathCapacity) };
-
-        if (modulePathLength > 0 && modulePathLength < modulePathCapacity)
-        {
-            modulePath.resize(modulePathLength);
-            const std::filesystem::path iconPath{
-                std::filesystem::path{ modulePath }.parent_path()
-                / L"Assets"
-                / L"AccountArmory.ico" };
-
-            std::error_code fileError;
-            if (std::filesystem::exists(iconPath, fileError))
-            {
-                AppWindow().SetIcon(hstring{ iconPath.c_str() });
-            }
-        }
 
         // Temporary data makes the first UI run immediately useful.
         // Delete these calls when you are ready to begin with an empty vault.

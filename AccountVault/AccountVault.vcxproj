@@ -68,7 +68,6 @@
   </ItemGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <ApplicationIcon>Assets\AccountArmory.ico</ApplicationIcon>
     <PlatformToolset Condition="'$(VisualStudioVersion)' &gt;= '18.0'">v145</PlatformToolset>
     <PlatformToolset Condition="'$(VisualStudioVersion)' &lt; '18.0'">v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -125,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
     </ClInclude>
@@ -156,6 +156,7 @@
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp" />
     <ClCompile Include="Themes\ThemeService.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ResourceCompile Include="AccountArmory.rc" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl">

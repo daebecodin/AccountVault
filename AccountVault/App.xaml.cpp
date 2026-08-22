@@ -1,9 +1,57 @@
 #include "pch.h"
 #include "App.xaml.h"
 #include "MainWindow.xaml.h"
+#include "resource.h"
+
+#include <microsoft.ui.xaml.window.h>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
+
+namespace
+{
+    void setNativeWindowIcons(Window const& window)
+    {
+        HWND windowHandle{};
+        auto windowNative{ window.as<::IWindowNative>() };
+        check_hresult(windowNative->get_WindowHandle(&windowHandle));
+
+        const HINSTANCE moduleHandle{ GetModuleHandleW(nullptr) };
+
+        const auto loadIconAtSystemSize = [moduleHandle](int width, int height)
+        {
+            return static_cast<HICON>(LoadImageW(
+                moduleHandle,
+                MAKEINTRESOURCEW(IDI_ACCOUNT_ARMORY),
+                IMAGE_ICON,
+                width,
+                height,
+                LR_DEFAULTCOLOR | LR_SHARED));
+        };
+
+        if (const HICON smallIcon{ loadIconAtSystemSize(
+            GetSystemMetrics(SM_CXSMICON),
+            GetSystemMetrics(SM_CYSMICON)) })
+        {
+            static_cast<void>(SendMessageW(
+                windowHandle,
+                WM_SETICON,
+                ICON_SMALL,
+                reinterpret_cast<LPARAM>(smallIcon)));
+        }
+
+        if (const HICON largeIcon{ loadIconAtSystemSize(
+            GetSystemMetrics(SM_CXICON),
+            GetSystemMetrics(SM_CYICON)) })
+        {
+            static_cast<void>(SendMessageW(
+                windowHandle,
+                WM_SETICON,
+                ICON_BIG,
+                reinterpret_cast<LPARAM>(largeIcon)));
+        }
+    }
+}
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -39,5 +87,6 @@ namespace winrt::AccountVault::implementation
     {
         window = make<MainWindow>();
         window.Activate();
+        setNativeWindowIcons(window);
     }
 }

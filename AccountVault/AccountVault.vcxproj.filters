@@ -30,6 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
     <ClInclude Include="Models\Account.h">
       <Filter>Models</Filter>
     </ClInclude>
@@ -172,6 +175,14 @@
     <Filter Include="Themes">
       <UniqueIdentifier>{b33c93be-236b-480e-aea4-70bdf681d786}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{85aa3705-e494-4b68-a5e3-1f74482851a4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AccountArmory.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
