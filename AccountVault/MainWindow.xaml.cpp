@@ -1079,7 +1079,7 @@ namespace winrt::AccountVault::implementation
         editor.ColumnSpacing(24);
 
         ColumnDefinition tokenColumn;
-        tokenColumn.Width(GridLengthHelper::FromPixels(220));
+        tokenColumn.Width(GridLengthHelper::FromPixels(200));
         editor.ColumnDefinitions().Append(tokenColumn);
 
         ColumnDefinition pickerColumn;
@@ -1088,7 +1088,7 @@ namespace winrt::AccountVault::implementation
         editor.ColumnDefinitions().Append(pickerColumn);
 
         ColumnDefinition previewColumn;
-        previewColumn.Width(GridLengthHelper::FromPixels(280));
+        previewColumn.Width(GridLengthHelper::FromPixels(320));
         editor.ColumnDefinitions().Append(previewColumn);
 
         StackPanel tokenPanel;
@@ -1244,19 +1244,21 @@ namespace winrt::AccountVault::implementation
 
         StackPanel previewPanel;
         previewPanel.Spacing(10);
+        previewPanel.HorizontalAlignment(HorizontalAlignment::Stretch);
 
         TextBlock previewHeading;
         previewHeading.Text(L"LIVE PREVIEW");
         previewHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
         previewHeading.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
         previewHeading.Foreground(previewAccentBrush);
+        previewHeading.Margin(Thickness{ 0, 0, 0, 2 });
 
         Border previewFrame;
-        // Keep the preview's outer box, inner content box, and card box
-        // explicit so the card cannot consume or clip the frame padding.
-        previewFrame.Width(280);
-        previewFrame.MinHeight(260);
-        previewFrame.Padding(Thickness{ 16 });
+        // Keep the preview large enough to read without turning the unused
+        // lower portion of the modal into an empty canvas.
+        previewFrame.MinHeight(300);
+        previewFrame.HorizontalAlignment(HorizontalAlignment::Stretch);
+        previewFrame.Padding(Thickness{ 0 });
         previewFrame.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
         previewFrame.Background(previewBackgroundBrush);
         previewFrame.BorderBrush(
@@ -1266,37 +1268,50 @@ namespace winrt::AccountVault::implementation
                 .as<Brush>());
         previewFrame.BorderThickness(Thickness{ 1 });
 
+        Border previewContentContainer;
+        previewContentContainer.HorizontalAlignment(
+            HorizontalAlignment::Stretch);
+        previewContentContainer.VerticalAlignment(
+            VerticalAlignment::Center);
+        previewContentContainer.Margin(Thickness{ 18, 14, 18, 14 });
+
         StackPanel previewBody;
-        previewBody.Width(246);
-        previewBody.Spacing(12);
+        previewBody.HorizontalAlignment(HorizontalAlignment::Stretch);
+        previewBody.Spacing(14);
 
         TextBlock previewTitle;
         previewTitle.Text(L"Launcher accounts");
         previewTitle.FontSize(20);
         previewTitle.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
         previewTitle.Foreground(previewTextBrush);
+        previewTitle.Margin(Thickness{ 0, 0, 0, 2 });
 
         TextBlock previewSubtitle;
         previewSubtitle.Text(L"A preview of the active palette.");
         previewSubtitle.TextWrapping(TextWrapping::Wrap);
         previewSubtitle.Foreground(previewMutedTextBrush);
+        previewSubtitle.Margin(Thickness{ 0 });
 
         Border previewCard;
-        previewCard.Width(246);
-        previewCard.Padding(Thickness{ 12 });
+        previewCard.HorizontalAlignment(HorizontalAlignment::Stretch);
+        previewCard.Padding(Thickness{ 0, 16, 0, 16 });
+        previewCard.Margin(Thickness{ 0, 16, 0, 16 });
         previewCard.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
         previewCard.Background(previewSurfaceBrush);
         previewCard.BorderBrush(previewSurfaceAltBrush);
         previewCard.BorderThickness(Thickness{ 1 });
 
         StackPanel previewCardBody;
-        previewCardBody.Width(220);
-        previewCardBody.Spacing(8);
+        previewCardBody.Width(160);
+        previewCardBody.HorizontalAlignment(HorizontalAlignment::Center);
+        previewCardBody.Margin(Thickness{ 0 });
+        previewCardBody.Spacing(10);
 
         Border previewBadge;
         previewBadge.Padding(Thickness{ 9, 5, 9, 5 });
         previewBadge.CornerRadius(CornerRadius{ 5, 5, 5, 5 });
-        previewBadge.HorizontalAlignment(HorizontalAlignment::Left);
+        previewBadge.HorizontalAlignment(HorizontalAlignment::Center);
+        previewBadge.Margin(Thickness{ 0, 0, 0, 2 });
         previewBadge.Background(previewSurfaceAltBrush);
 
         TextBlock previewBadgeText;
@@ -1309,21 +1324,28 @@ namespace winrt::AccountVault::implementation
 
         TextBlock previewUsername;
         previewUsername.Text(L"night_shift");
+        previewUsername.HorizontalAlignment(HorizontalAlignment::Center);
+        previewUsername.TextAlignment(TextAlignment::Center);
         previewUsername.Foreground(previewTextBrush);
 
         TextBlock previewEmail;
         previewEmail.Text(L"night@example.com");
+        previewEmail.HorizontalAlignment(HorizontalAlignment::Center);
+        previewEmail.TextAlignment(TextAlignment::Center);
         previewEmail.Foreground(previewMutedTextBrush);
 
         Border previewAction;
+        previewAction.Width(160);
         previewAction.Padding(Thickness{ 10, 7, 10, 7 });
-        previewAction.HorizontalAlignment(HorizontalAlignment::Stretch);
+        previewAction.HorizontalAlignment(HorizontalAlignment::Center);
+        previewAction.Margin(Thickness{ 0, 6, 0, 0 });
         previewAction.CornerRadius(CornerRadius{ 5, 5, 5, 5 });
         previewAction.Background(previewSurfaceAltBrush);
 
         TextBlock previewActionText;
         previewActionText.Text(L"Copy password");
         previewActionText.HorizontalAlignment(HorizontalAlignment::Center);
+        previewActionText.TextAlignment(TextAlignment::Center);
         previewActionText.Foreground(previewAccentBrush);
         previewAction.Child(previewActionText);
 
@@ -1336,7 +1358,8 @@ namespace winrt::AccountVault::implementation
         previewBody.Children().Append(previewTitle);
         previewBody.Children().Append(previewSubtitle);
         previewBody.Children().Append(previewCard);
-        previewFrame.Child(previewBody);
+        previewContentContainer.Child(previewBody);
+        previewFrame.Child(previewContentContainer);
 
         previewPanel.Children().Append(previewHeading);
         previewPanel.Children().Append(previewFrame);
