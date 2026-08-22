@@ -11,8 +11,10 @@ namespace account_vault::models
     {
         RecordId recordId{};
         std::wstring launcher;
-        std::wstring launcherAccountId;
-        std::wstring email;
-        std::wstring password;
+        std::wstring launcherUsername;
+        std::wstring launcherPassword;
+        std::wstring emailAddress;
+        std::wstring emailProviderWebsite;
+        std::wstring emailPassword;
     };
 }

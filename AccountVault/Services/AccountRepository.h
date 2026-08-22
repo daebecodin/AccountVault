@@ -19,18 +19,22 @@ namespace account_vault::services
 
         [[nodiscard]] RecordId add(
             std::wstring launcher,
-            std::wstring launcherAccountId,
-            std::wstring email,
-            std::wstring password)
+            std::wstring launcherUsername,
+            std::wstring launcherPassword,
+            std::wstring emailAddress,
+            std::wstring emailProviderWebsite,
+            std::wstring emailPassword)
         {
             const RecordId id{ m_nextId++ };
 
             m_accounts.push_back(Account{
                 .recordId = id,
                 .launcher = std::move(launcher),
-                .launcherAccountId = std::move(launcherAccountId),
-                .email = std::move(email),
-                .password = std::move(password),
+                .launcherUsername = std::move(launcherUsername),
+                .launcherPassword = std::move(launcherPassword),
+                .emailAddress = std::move(emailAddress),
+                .emailProviderWebsite = std::move(emailProviderWebsite),
+                .emailPassword = std::move(emailPassword),
             });
 
             return id;
@@ -49,6 +53,34 @@ namespace account_vault::services
             }
 
             m_accounts.erase(account);
+            return true;
+        }
+
+        [[nodiscard]] bool update(
+            RecordId id,
+            std::wstring launcher,
+            std::wstring launcherUsername,
+            std::wstring launcherPassword,
+            std::wstring emailAddress,
+            std::wstring emailProviderWebsite,
+            std::wstring emailPassword)
+        {
+            const auto account = std::ranges::find(
+                m_accounts,
+                id,
+                &Account::recordId);
+
+            if (account == m_accounts.end())
+            {
+                return false;
+            }
+
+            account->launcher = std::move(launcher);
+            account->launcherUsername = std::move(launcherUsername);
+            account->launcherPassword = std::move(launcherPassword);
+            account->emailAddress = std::move(emailAddress);
+            account->emailProviderWebsite = std::move(emailProviderWebsite);
+            account->emailPassword = std::move(emailPassword);
             return true;
         }
 
@@ -78,8 +110,9 @@ namespace account_vault::services
                 const bool queryMatches =
                     loweredQuery.empty() ||
                     containsIgnoreCase(account.launcher, loweredQuery) ||
-                    containsIgnoreCase(account.launcherAccountId, loweredQuery) ||
-                    containsIgnoreCase(account.email, loweredQuery);
+                    containsIgnoreCase(account.launcherUsername, loweredQuery) ||
+                    containsIgnoreCase(account.emailAddress, loweredQuery) ||
+                    containsIgnoreCase(account.emailProviderWebsite, loweredQuery);
 
                 if (launcherMatches && queryMatches)
                 {

@@ -16,8 +16,8 @@ using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::ApplicationModel::DataTransfer;
-using namespace Windows::UI;
 using namespace Windows::Foundation;
+using namespace Windows::UI;
 
 namespace winrt::AccountVault::implementation
 {
@@ -26,13 +26,28 @@ namespace winrt::AccountVault::implementation
         InitializeComponent();
 
         // Temporary data makes the first UI run immediately useful.
-        // Delete these four calls when you are ready to begin with an empty vault.
+        // Delete these calls when you are ready to begin with an empty vault.
         static_cast<void>(m_repository.add(
-            L"Steam", L"night_shift", L"night@example.com", L"demo-password"));
+            L"Steam",
+            L"night_shift",
+            L"demo-launcher-password",
+            L"night@example.com",
+            L"https://mail.google.com",
+            L"demo-email-password"));
         static_cast<void>(m_repository.add(
-            L"Riot", L"pixelpilot#NA1", L"pilot@example.com", L"demo-password"));
+            L"Riot",
+            L"pixelpilot#NA1",
+            L"demo-launcher-password",
+            L"pilot@example.com",
+            L"https://outlook.live.com",
+            L"demo-email-password"));
         static_cast<void>(m_repository.add(
-            L"Epic", L"orbit_runner", L"orbit@example.com", L"demo-password"));
+            L"Epic",
+            L"orbit_runner",
+            L"demo-launcher-password",
+            L"orbit@example.com",
+            L"https://mail.yahoo.com",
+            L"demo-email-password"));
 
         m_windowReady = true;
         refreshAccounts();
@@ -154,7 +169,7 @@ namespace winrt::AccountVault::implementation
         StackPanel idPanel;
         idPanel.Spacing(3);
         TextBlock idLabel;
-        idLabel.Text(L"ACCOUNT ID");
+        idLabel.Text(L"LAUNCHER USERNAME");
         idLabel.FontSize(11);
         idLabel.Foreground(
             Application::Current()
@@ -162,7 +177,7 @@ namespace winrt::AccountVault::implementation
                 .Lookup(box_value(L"AppMutedTextBrush"))
                 .as<Brush>());
         TextBlock idValue;
-        idValue.Text(account.launcherAccountId);
+        idValue.Text(account.launcherUsername);
         idValue.Foreground(
             Application::Current()
                 .Resources()
@@ -182,7 +197,7 @@ namespace winrt::AccountVault::implementation
                 .Lookup(box_value(L"AppMutedTextBrush"))
                 .as<Brush>());
         TextBlock emailValue;
-        emailValue.Text(account.email);
+        emailValue.Text(account.emailAddress);
         emailValue.Foreground(
             Application::Current()
                 .Resources()
@@ -205,14 +220,21 @@ namespace winrt::AccountVault::implementation
             return button;
         };
 
-        Button copyId{ makeButton(L"Copy ID") };
-        copyId.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        Button details{ makeButton(L"Details") };
+        details.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            const auto button{ sender.as<Button>() };
+            showAccountDetailsDialog(recordIdFrom(button));
+        });
+
+        Button copyUsername{ makeButton(L"Copy username") };
+        copyUsername.Click([this](IInspectable const& sender, RoutedEventArgs const&)
         {
             const auto button{ sender.as<Button>() };
             const Account* account{ m_repository.find(recordIdFrom(button)) };
             if (account)
             {
-                copyToClipboard(account->launcherAccountId, L"Account ID");
+                copyToClipboard(account->launcherUsername, L"Launcher username");
             }
         });
 
@@ -223,18 +245,29 @@ namespace winrt::AccountVault::implementation
             const Account* account{ m_repository.find(recordIdFrom(button)) };
             if (account)
             {
-                copyToClipboard(account->email, L"Email");
+                copyToClipboard(account->emailAddress, L"Email address");
             }
         });
 
-        Button copyPassword{ makeButton(L"Copy password") };
-        copyPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        Button copyLauncherPassword{ makeButton(L"Copy launcher PW") };
+        copyLauncherPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
         {
             const auto button{ sender.as<Button>() };
             const Account* account{ m_repository.find(recordIdFrom(button)) };
             if (account)
             {
-                copyToClipboard(account->password, L"Password");
+                copyToClipboard(account->launcherPassword, L"Launcher password");
+            }
+        });
+
+        Button copyEmailPassword{ makeButton(L"Copy email PW") };
+        copyEmailPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            const auto button{ sender.as<Button>() };
+            const Account* account{ m_repository.find(recordIdFrom(button)) };
+            if (account)
+            {
+                copyToClipboard(account->emailPassword, L"Email password");
             }
         });
 
@@ -245,9 +278,11 @@ namespace winrt::AccountVault::implementation
             removeAccount(recordIdFrom(button));
         });
 
-        actions.Children().Append(copyId);
+        actions.Children().Append(details);
+        actions.Children().Append(copyUsername);
         actions.Children().Append(copyEmail);
-        actions.Children().Append(copyPassword);
+        actions.Children().Append(copyLauncherPassword);
+        actions.Children().Append(copyEmailPassword);
         actions.Children().Append(remove);
 
         Grid::SetColumn(launcherBadge, 0);
@@ -281,6 +316,208 @@ namespace winrt::AccountVault::implementation
         {
             refreshAccounts();
             StatusText().Text(L"Account removed from memory");
+        }
+    }
+
+    fire_and_forget MainWindow::showAccountDetailsDialog(RecordId id)
+    {
+        auto lifetime{ get_strong() };
+
+        const Account* account{ m_repository.find(id) };
+        if (!account)
+        {
+            StatusText().Text(L"That account no longer exists");
+            co_return;
+        }
+
+        ContentDialog dialog;
+        dialog.XamlRoot(Content().XamlRoot());
+        dialog.Title(box_value(L"Account details"));
+        dialog.PrimaryButtonText(L"Edit");
+        dialog.CloseButtonText(L"Close");
+
+        StackPanel fields;
+        fields.Spacing(12);
+
+        TextBlock launcherHeading;
+        launcherHeading.Text(L"LAUNCHER ACCOUNT");
+        launcherHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
+        launcherHeading.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+        launcherHeading.Foreground(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppAccentBrush"))
+                .as<Brush>());
+
+        ComboBox launcher;
+        launcher.Header(box_value(L"Launcher"));
+        launcher.IsEnabled(false);
+        for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
+        {
+            ComboBoxItem item;
+            item.Content(box_value(name));
+            launcher.Items().Append(item);
+        }
+
+        if (account->launcher == L"Steam")
+        {
+            launcher.SelectedIndex(0);
+        }
+        else if (account->launcher == L"Riot")
+        {
+            launcher.SelectedIndex(1);
+        }
+        else if (account->launcher == L"Epic")
+        {
+            launcher.SelectedIndex(2);
+        }
+        else
+        {
+            launcher.SelectedIndex(3);
+        }
+
+        TextBox launcherUsername;
+        launcherUsername.Header(box_value(L"Launcher username / account ID"));
+        launcherUsername.Text(account->launcherUsername);
+        launcherUsername.IsReadOnly(true);
+
+        TextBox launcherPassword;
+        launcherPassword.Header(box_value(L"Launcher password"));
+        launcherPassword.Text(account->launcherPassword);
+        launcherPassword.IsReadOnly(true);
+
+        TextBlock linkedEmail;
+        std::wstring linkedEmailText{ L"Linked email: " };
+        linkedEmailText += account->emailAddress;
+        linkedEmail.Text(hstring{ linkedEmailText });
+        linkedEmail.Foreground(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppMutedTextBrush"))
+                .as<Brush>());
+
+        Border separator;
+        separator.Height(1);
+        separator.Margin(Thickness{ 0, 6, 0, 6 });
+        separator.Background(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppBorderBrush"))
+                .as<Brush>());
+
+        TextBlock emailHeading;
+        emailHeading.Text(L"EMAIL ACCOUNT");
+        emailHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
+        emailHeading.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+        emailHeading.Foreground(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppAccentBrush"))
+                .as<Brush>());
+
+        TextBox emailProviderWebsite;
+        emailProviderWebsite.Header(box_value(L"Provider website"));
+        emailProviderWebsite.Text(account->emailProviderWebsite);
+        emailProviderWebsite.IsReadOnly(true);
+
+        TextBox emailAddress;
+        emailAddress.Header(box_value(L"Email address (shared with launcher)"));
+        emailAddress.Text(account->emailAddress);
+        emailAddress.IsReadOnly(true);
+        emailAddress.TextChanged(
+            [&linkedEmail](IInspectable const& sender, TextChangedEventArgs const&)
+            {
+                const auto textBox{ sender.as<TextBox>() };
+                std::wstring mirrorText{ L"Linked email: " };
+                mirrorText += textBox.Text().c_str();
+                linkedEmail.Text(hstring{ mirrorText });
+            });
+
+        TextBox emailPassword;
+        emailPassword.Header(box_value(L"Email password"));
+        emailPassword.Text(account->emailPassword);
+        emailPassword.IsReadOnly(true);
+
+        TextBlock validation;
+        validation.Visibility(Visibility::Collapsed);
+        SolidColorBrush validationBrush;
+        validationBrush.Color(color(248, 81, 73));
+        validation.Foreground(validationBrush);
+
+        fields.Children().Append(launcherHeading);
+        fields.Children().Append(launcher);
+        fields.Children().Append(launcherUsername);
+        fields.Children().Append(launcherPassword);
+        fields.Children().Append(linkedEmail);
+        fields.Children().Append(separator);
+        fields.Children().Append(emailHeading);
+        fields.Children().Append(emailProviderWebsite);
+        fields.Children().Append(emailAddress);
+        fields.Children().Append(emailPassword);
+        fields.Children().Append(validation);
+        dialog.Content(fields);
+
+        bool editing{ false };
+        bool saved{ false };
+
+        dialog.PrimaryButtonClick(
+            [&, this](ContentDialog const& sender, ContentDialogButtonClickEventArgs const& args)
+            {
+                if (!editing)
+                {
+                    args.Cancel(true);
+                    editing = true;
+                    launcher.IsEnabled(true);
+                    launcherUsername.IsReadOnly(false);
+                    launcherPassword.IsReadOnly(false);
+                    emailProviderWebsite.IsReadOnly(false);
+                    emailAddress.IsReadOnly(false);
+                    emailPassword.IsReadOnly(false);
+                    sender.PrimaryButtonText(L"Save changes");
+                    launcherUsername.Focus(FocusState::Programmatic);
+                    return;
+                }
+
+                if (launcher.SelectedIndex() < 0 ||
+                    launcherUsername.Text().empty() ||
+                    launcherPassword.Text().empty() ||
+                    emailProviderWebsite.Text().empty() ||
+                    emailAddress.Text().empty() ||
+                    emailPassword.Text().empty())
+                {
+                    args.Cancel(true);
+                    validation.Text(L"All launcher and email fields are required.");
+                    validation.Visibility(Visibility::Visible);
+                    return;
+                }
+
+                const auto launcherItem = launcher.SelectedItem().as<ComboBoxItem>();
+                const hstring launcherName =
+                    unbox_value<hstring>(launcherItem.Content());
+
+                saved = m_repository.update(
+                    id,
+                    launcherName.c_str(),
+                    launcherUsername.Text().c_str(),
+                    launcherPassword.Text().c_str(),
+                    emailAddress.Text().c_str(),
+                    emailProviderWebsite.Text().c_str(),
+                    emailPassword.Text().c_str());
+
+                if (!saved)
+                {
+                    args.Cancel(true);
+                    validation.Text(L"The account could not be updated.");
+                    validation.Visibility(Visibility::Visible);
+                }
+            });
+
+        co_await dialog.ShowAsync();
+
+        if (saved)
+        {
+            refreshAccounts();
+            StatusText().Text(L"Account details updated");
         }
     }
 
@@ -350,7 +587,7 @@ namespace winrt::AccountVault::implementation
         return ColorHelper::FromArgb(255, red, green, blue);
     }
 
-    std::wstring MainWindow::selectedLauncher() 
+    std::wstring MainWindow::selectedLauncher()
     {
         const int selectedIndex{ LauncherFilter().SelectedIndex() };
 
@@ -377,13 +614,18 @@ namespace winrt::AccountVault::implementation
 
         ContentDialog dialog;
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Add launcher account"));
+        dialog.Title(box_value(L"Add account"));
         dialog.PrimaryButtonText(L"Add");
         dialog.CloseButtonText(L"Cancel");
         dialog.DefaultButton(ContentDialogButton::Primary);
 
         StackPanel fields;
         fields.Spacing(12);
+
+        TextBlock launcherHeading;
+        launcherHeading.Text(L"LAUNCHER ACCOUNT");
+        launcherHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
+        launcherHeading.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
 
         ComboBox launcher;
         launcher.Header(box_value(L"Launcher"));
@@ -395,22 +637,39 @@ namespace winrt::AccountVault::implementation
             launcher.Items().Append(item);
         }
 
-        TextBox accountId;
-        accountId.Header(box_value(L"Launcher account ID"));
-        accountId.PlaceholderText(L"Username, ID, or Riot ID");
+        TextBox launcherUsername;
+        launcherUsername.Header(box_value(L"Launcher username / account ID"));
+        launcherUsername.PlaceholderText(L"Username, ID, or Riot ID");
 
-        TextBox email;
-        email.Header(box_value(L"Account email"));
-        email.PlaceholderText(L"name@example.com");
+        PasswordBox launcherPassword;
+        launcherPassword.Header(box_value(L"Launcher password"));
+        launcherPassword.PlaceholderText(L"Launcher password");
 
-        PasswordBox password;
-        password.Header(box_value(L"Account / launcher password"));
-        password.PlaceholderText(L"Password");
+        TextBlock emailHeading;
+        emailHeading.Text(L"EMAIL ACCOUNT");
+        emailHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
+        emailHeading.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
 
+        TextBox emailProviderWebsite;
+        emailProviderWebsite.Header(box_value(L"Provider website"));
+        emailProviderWebsite.PlaceholderText(L"https://mail.google.com");
+
+        TextBox emailAddress;
+        emailAddress.Header(box_value(L"Email address (shared with launcher)"));
+        emailAddress.PlaceholderText(L"name@example.com");
+
+        PasswordBox emailPassword;
+        emailPassword.Header(box_value(L"Email password"));
+        emailPassword.PlaceholderText(L"Email password");
+
+        fields.Children().Append(launcherHeading);
         fields.Children().Append(launcher);
-        fields.Children().Append(accountId);
-        fields.Children().Append(email);
-        fields.Children().Append(password);
+        fields.Children().Append(launcherUsername);
+        fields.Children().Append(launcherPassword);
+        fields.Children().Append(emailHeading);
+        fields.Children().Append(emailProviderWebsite);
+        fields.Children().Append(emailAddress);
+        fields.Children().Append(emailPassword);
         dialog.Content(fields);
 
         if (co_await dialog.ShowAsync() != ContentDialogResult::Primary)
@@ -419,11 +678,13 @@ namespace winrt::AccountVault::implementation
         }
 
         if (launcher.SelectedIndex() < 0 ||
-            accountId.Text().empty() ||
-            email.Text().empty() ||
-            password.Password().empty())
+            launcherUsername.Text().empty() ||
+            launcherPassword.Password().empty() ||
+            emailProviderWebsite.Text().empty() ||
+            emailAddress.Text().empty() ||
+            emailPassword.Password().empty())
         {
-            StatusText().Text(L"All four account fields are required");
+            StatusText().Text(L"All launcher and email fields are required");
             co_return;
         }
 
@@ -433,9 +694,11 @@ namespace winrt::AccountVault::implementation
 
         static_cast<void>(m_repository.add(
             launcherName.c_str(),
-            accountId.Text().c_str(),
-            email.Text().c_str(),
-            password.Password().c_str()));
+            launcherUsername.Text().c_str(),
+            launcherPassword.Password().c_str(),
+            emailAddress.Text().c_str(),
+            emailProviderWebsite.Text().c_str(),
+            emailPassword.Password().c_str()));
 
         refreshAccounts();
         StatusText().Text(L"Account added to memory");

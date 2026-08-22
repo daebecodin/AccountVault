@@ -59,6 +59,7 @@ namespace winrt::AccountVault::implementation
             Microsoft::UI::Xaml::Controls::Button const& button) const;
 
         winrt::fire_and_forget showAddAccountDialog();
+        winrt::fire_and_forget showAccountDetailsDialog(RecordId id);
         winrt::fire_and_forget showColorDialog();
     };
 }

@@ -40,7 +40,7 @@
                     FontWeight="SemiBold"
                     Foreground="{StaticResource AppTextBrush}" />
                 <TextBlock
-                    Text="Search and copy account details without keeping plaintext on disk."
+                    Text="Manage linked launcher and email credentials in one record."
                     Foreground="{StaticResource AppMutedTextBrush}" />
             </StackPanel>
 
@@ -65,7 +65,7 @@
             <TextBox
                 x:Name="SearchBox"
                 Height="42"
-                PlaceholderText="Search launcher, account ID, or email"
+                PlaceholderText="Search launcher, username, email, or provider website"
                 TextChanged="SearchBox_TextChanged" />
 
             <ComboBox
