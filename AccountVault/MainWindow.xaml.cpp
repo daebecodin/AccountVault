@@ -122,9 +122,10 @@ namespace winrt::AccountVault::implementation
     void MainWindow::appendAccountCard(Account const& account)
     {
         Grid card;
-        card.Padding(Thickness{ 16 });
-        card.Margin(Thickness{ 0, 0, 0, 10 });
-        card.ColumnSpacing(14);
+        card.MinHeight(94);
+        card.Padding(Thickness{ 18, 14, 18, 14 });
+        card.Margin(Thickness{ 0, 0, 0, 12 });
+        card.ColumnSpacing(22);
         card.Background(
             Application::Current()
                 .Resources()
@@ -137,7 +138,7 @@ namespace winrt::AccountVault::implementation
         card.ColumnDefinitions().Append(ColumnDefinition{});
 
         card.ColumnDefinitions().GetAt(0).Width(
-            GridLengthHelper::FromPixels(120));
+            GridLengthHelper::FromPixels(112));
         card.ColumnDefinitions().GetAt(1).Width(
             GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
         card.ColumnDefinitions().GetAt(2).Width(
@@ -145,7 +146,7 @@ namespace winrt::AccountVault::implementation
         card.ColumnDefinitions().GetAt(3).Width(GridLengthHelper::Auto());
 
         Border launcherBadge;
-        launcherBadge.Padding(Thickness{ 10, 6, 10, 6 });
+        launcherBadge.Padding(Thickness{ 12, 7, 12, 7 });
         launcherBadge.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
         launcherBadge.HorizontalAlignment(HorizontalAlignment::Left);
         launcherBadge.VerticalAlignment(VerticalAlignment::Center);
@@ -167,7 +168,8 @@ namespace winrt::AccountVault::implementation
         launcherBadge.Child(launcherText);
 
         StackPanel idPanel;
-        idPanel.Spacing(3);
+        idPanel.Spacing(5);
+        idPanel.VerticalAlignment(VerticalAlignment::Center);
         TextBlock idLabel;
         idLabel.Text(L"LAUNCHER USERNAME");
         idLabel.FontSize(11);
@@ -178,6 +180,7 @@ namespace winrt::AccountVault::implementation
                 .as<Brush>());
         TextBlock idValue;
         idValue.Text(account.launcherUsername);
+        idValue.FontSize(15);
         idValue.Foreground(
             Application::Current()
                 .Resources()
@@ -187,7 +190,8 @@ namespace winrt::AccountVault::implementation
         idPanel.Children().Append(idValue);
 
         StackPanel emailPanel;
-        emailPanel.Spacing(3);
+        emailPanel.Spacing(5);
+        emailPanel.VerticalAlignment(VerticalAlignment::Center);
         TextBlock emailLabel;
         emailLabel.Text(L"EMAIL");
         emailLabel.FontSize(11);
@@ -198,6 +202,7 @@ namespace winrt::AccountVault::implementation
                 .as<Brush>());
         TextBlock emailValue;
         emailValue.Text(account.emailAddress);
+        emailValue.FontSize(15);
         emailValue.Foreground(
             Application::Current()
                 .Resources()
@@ -206,17 +211,38 @@ namespace winrt::AccountVault::implementation
         emailPanel.Children().Append(emailLabel);
         emailPanel.Children().Append(emailValue);
 
-        StackPanel actions;
-        actions.Orientation(Orientation::Horizontal);
-        actions.Spacing(8);
+        Grid actions;
+        actions.Width(440);
+        actions.ColumnSpacing(8);
+        actions.RowSpacing(8);
+        actions.VerticalAlignment(VerticalAlignment::Center);
+
+        for (int column = 0; column < 3; ++column)
+        {
+            ColumnDefinition definition;
+            definition.Width(
+                GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            actions.ColumnDefinitions().Append(definition);
+        }
+
+        RowDefinition topActionRow;
+        topActionRow.Height(GridLengthHelper::Auto());
+        actions.RowDefinitions().Append(topActionRow);
+
+        RowDefinition bottomActionRow;
+        bottomActionRow.Height(GridLengthHelper::Auto());
+        actions.RowDefinitions().Append(bottomActionRow);
 
         const auto makeButton = [&](hstring const& label)
         {
             Button button;
             button.Content(box_value(label));
             button.Tag(box_value(account.recordId));
-            button.Padding(Thickness{ 11, 5, 11, 5 });
+            button.Height(34);
+            button.Padding(Thickness{ 10, 0, 10, 0 });
             button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Center);
             return button;
         };
 
@@ -278,6 +304,16 @@ namespace winrt::AccountVault::implementation
             removeAccount(recordIdFrom(button));
         });
 
+        Grid::SetColumn(details, 0);
+        Grid::SetColumn(copyUsername, 1);
+        Grid::SetColumn(copyEmail, 2);
+        Grid::SetRow(copyLauncherPassword, 1);
+        Grid::SetColumn(copyLauncherPassword, 0);
+        Grid::SetRow(copyEmailPassword, 1);
+        Grid::SetColumn(copyEmailPassword, 1);
+        Grid::SetRow(remove, 1);
+        Grid::SetColumn(remove, 2);
+
         actions.Children().Append(details);
         actions.Children().Append(copyUsername);
         actions.Children().Append(copyEmail);
@@ -335,9 +371,33 @@ namespace winrt::AccountVault::implementation
         dialog.Title(box_value(L"Account details"));
         dialog.PrimaryButtonText(L"Edit");
         dialog.CloseButtonText(L"Close");
+        dialog.MaxWidth(900);
 
         StackPanel fields;
-        fields.Spacing(12);
+        fields.Spacing(16);
+
+        Grid sections;
+        sections.ColumnSpacing(20);
+
+        ColumnDefinition launcherColumn;
+        launcherColumn.Width(
+            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        sections.ColumnDefinitions().Append(launcherColumn);
+
+        ColumnDefinition separatorColumn;
+        separatorColumn.Width(GridLengthHelper::Auto());
+        sections.ColumnDefinitions().Append(separatorColumn);
+
+        ColumnDefinition emailColumn;
+        emailColumn.Width(
+            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        sections.ColumnDefinitions().Append(emailColumn);
+
+        StackPanel launcherFields;
+        launcherFields.Spacing(12);
+
+        StackPanel emailFields;
+        emailFields.Spacing(12);
 
         TextBlock launcherHeading;
         launcherHeading.Text(L"LAUNCHER ACCOUNT");
@@ -397,8 +457,9 @@ namespace winrt::AccountVault::implementation
                 .as<Brush>());
 
         Border separator;
-        separator.Height(1);
-        separator.Margin(Thickness{ 0, 6, 0, 6 });
+        separator.Width(1);
+        separator.Margin(Thickness{ 0, 4, 0, 4 });
+        separator.VerticalAlignment(VerticalAlignment::Stretch);
         separator.Background(
             Application::Current()
                 .Resources()
@@ -444,18 +505,38 @@ namespace winrt::AccountVault::implementation
         validationBrush.Color(color(248, 81, 73));
         validation.Foreground(validationBrush);
 
-        fields.Children().Append(launcherHeading);
-        fields.Children().Append(launcher);
-        fields.Children().Append(launcherUsername);
-        fields.Children().Append(launcherPassword);
-        fields.Children().Append(linkedEmail);
-        fields.Children().Append(separator);
-        fields.Children().Append(emailHeading);
-        fields.Children().Append(emailProviderWebsite);
-        fields.Children().Append(emailAddress);
-        fields.Children().Append(emailPassword);
+        launcherFields.Children().Append(launcherHeading);
+        launcherFields.Children().Append(launcher);
+        launcherFields.Children().Append(launcherUsername);
+        launcherFields.Children().Append(launcherPassword);
+        launcherFields.Children().Append(linkedEmail);
+
+        emailFields.Children().Append(emailHeading);
+        emailFields.Children().Append(emailProviderWebsite);
+        emailFields.Children().Append(emailAddress);
+        emailFields.Children().Append(emailPassword);
+
+        Grid::SetColumn(launcherFields, 0);
+        Grid::SetColumn(separator, 1);
+        Grid::SetColumn(emailFields, 2);
+
+        sections.Children().Append(launcherFields);
+        sections.Children().Append(separator);
+        sections.Children().Append(emailFields);
+
+        fields.Children().Append(sections);
         fields.Children().Append(validation);
-        dialog.Content(fields);
+
+        ScrollViewer detailsScroller;
+        detailsScroller.MaxHeight(560);
+        detailsScroller.HorizontalScrollBarVisibility(
+            ScrollBarVisibility::Disabled);
+        detailsScroller.VerticalScrollBarVisibility(
+            ScrollBarVisibility::Auto);
+        detailsScroller.HorizontalContentAlignment(
+            HorizontalAlignment::Stretch);
+        detailsScroller.Content(fields);
+        dialog.Content(detailsScroller);
 
         bool editing{ false };
         bool saved{ false };
