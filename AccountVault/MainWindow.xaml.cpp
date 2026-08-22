@@ -372,6 +372,8 @@ namespace winrt::AccountVault::implementation
         dialog.PrimaryButtonText(L"Edit");
         dialog.CloseButtonText(L"Close");
         dialog.MaxWidth(900);
+        dialog.HorizontalAlignment(HorizontalAlignment::Center);
+        dialog.VerticalAlignment(VerticalAlignment::Center);
 
         StackPanel fields;
         fields.Spacing(16);
@@ -593,7 +595,17 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        co_await dialog.ShowAsync();
+        Grid::SetRowSpan(dialog, 4);
+        RootGrid().Children().Append(dialog);
+
+        co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
+
+        auto rootChildren{ RootGrid().Children() };
+        std::uint32_t dialogIndex{};
+        if (rootChildren.IndexOf(dialog, dialogIndex))
+        {
+            rootChildren.RemoveAt(dialogIndex);
+        }
 
         if (saved)
         {
