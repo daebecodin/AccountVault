@@ -3,6 +3,9 @@
 #include "MainWindow.g.h"
 #include "Services/AccountRepository.h"
 
+#include <string>
+#include <vector>
+
 namespace winrt::AccountVault::implementation
 {
     struct MainWindow : MainWindowT<MainWindow>
@@ -33,7 +36,21 @@ namespace winrt::AccountVault::implementation
         using Account = account_vault::models::Account;
         using RecordId = account_vault::models::RecordId;
 
+        struct ThemeDefinition
+        {
+            std::wstring name;
+            Windows::UI::Color background;
+            Windows::UI::Color surface;
+            Windows::UI::Color surfaceAlt;
+            Windows::UI::Color accent;
+            Windows::UI::Color text;
+            Windows::UI::Color mutedText;
+        };
+
+        static constexpr int BuiltInThemeCount{ 10 };
+
         account_vault::services::AccountRepository m_repository;
+        std::vector<ThemeDefinition> m_customThemes;
         bool m_windowReady{ false };
 
         void refreshAccounts();
@@ -41,6 +58,7 @@ namespace winrt::AccountVault::implementation
         void copyToClipboard(std::wstring const& value, std::wstring_view label);
         void removeAccount(RecordId id);
         void applyPreset(int selectedIndex);
+        void applyTheme(ThemeDefinition const& theme);
 
         void setBrushColor(
             std::wstring_view resourceName,

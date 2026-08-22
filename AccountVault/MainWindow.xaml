@@ -91,10 +91,16 @@
                 Style="{StaticResource ToolbarComboBoxStyle}"
                 SelectedIndex="0"
                 SelectionChanged="ThemePicker_SelectionChanged">
-                <ComboBoxItem Content="Console Dark" />
-                <ComboBoxItem Content="Midnight" />
-                <ComboBoxItem Content="Light" />
-                <ComboBoxItem Content="Custom" IsEnabled="False" />
+                <ComboBoxItem Content="Catppuccin Mocha" />
+                <ComboBoxItem Content="Tokyo Night" />
+                <ComboBoxItem Content="Dracula" />
+                <ComboBoxItem Content="Ayu Mirage" />
+                <ComboBoxItem Content="Dainty Dark" />
+                <ComboBoxItem Content="GitHub Dark" />
+                <ComboBoxItem Content="Atom One Dark" />
+                <ComboBoxItem Content="Houston" />
+                <ComboBoxItem Content="Night Owl" />
+                <ComboBoxItem Content="Matcha" />
             </ComboBox>
 
             <Button
