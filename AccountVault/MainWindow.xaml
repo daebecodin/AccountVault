@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="AccountVault.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:AccountVault"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Account Vault">
+
+    <Grid
+        x:Name="RootGrid"
+        Padding="28"
+        Background="{StaticResource AppBackgroundBrush}">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Spacing="4">
+                <TextBlock
+                    Text="ACCOUNT VAULT"
+                    FontFamily="Cascadia Mono"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource AppAccentBrush}" />
+                <TextBlock
+                    Text="Launcher accounts"
+                    FontSize="30"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource AppTextBrush}" />
+                <TextBlock
+                    Text="Search and copy account details without keeping plaintext on disk."
+                    Foreground="{StaticResource AppMutedTextBrush}" />
+            </StackPanel>
+
+            <Button
+                Grid.Column="1"
+                Content="+ Add account"
+                Padding="18,10"
+                VerticalAlignment="Center"
+                Background="{StaticResource AppAccentBrush}"
+                Foreground="#0C0F0D"
+                Click="AddAccountButton_Click" />
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,24,0,18" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="SearchBox"
+                Height="42"
+                PlaceholderText="Search launcher, account ID, or email"
+                TextChanged="SearchBox_TextChanged" />
+
+            <ComboBox
+                x:Name="LauncherFilter"
+                Grid.Column="1"
+                Style="{StaticResource ToolbarComboBoxStyle}"
+                SelectedIndex="0"
+                SelectionChanged="LauncherFilter_SelectionChanged">
+                <ComboBoxItem Content="All launchers" />
+                <ComboBoxItem Content="Steam" />
+                <ComboBoxItem Content="Riot" />
+                <ComboBoxItem Content="Epic" />
+                <ComboBoxItem Content="Other" />
+            </ComboBox>
+
+            <ComboBox
+                x:Name="ThemePicker"
+                Grid.Column="2"
+                Style="{StaticResource ToolbarComboBoxStyle}"
+                SelectedIndex="0"
+                SelectionChanged="ThemePicker_SelectionChanged">
+                <ComboBoxItem Content="Console Dark" />
+                <ComboBoxItem Content="Midnight" />
+                <ComboBoxItem Content="Light" />
+                <ComboBoxItem Content="Custom" IsEnabled="False" />
+            </ComboBox>
+
+            <Button
+                Grid.Column="3"
+                Content="Customize colors"
+                Height="42"
+                Click="CustomizeColorsButton_Click" />
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <ListView
+                x:Name="AccountsList"
+                SelectionMode="None"
+                Background="Transparent"
+                HorizontalContentAlignment="Stretch" />
+
+            <StackPanel
+                x:Name="EmptyState"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="8">
+                <TextBlock
+                    Text="No accounts found"
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    HorizontalAlignment="Center"
+                    Foreground="{StaticResource AppTextBrush}" />
+                <TextBlock
+                    Text="Add an account or change your search."
+                    Foreground="{StaticResource AppMutedTextBrush}" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,16,0,0">
+            <TextBlock
+                x:Name="StatusText"
+                Text="Milestone 1: accounts are stored in memory only."
+                FontFamily="Cascadia Mono"
+                FontSize="12"
+                Foreground="{StaticResource AppMutedTextBrush}" />
+        </Grid>
+    </Grid>
+</Window>

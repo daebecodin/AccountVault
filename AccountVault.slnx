@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="AccountVault/AccountVault.vcxproj" Id="1a8f8282-3df5-4f97-9d77-9f1ee793d0c2">
+    <Deploy />
+  </Project>
+</Solution>
