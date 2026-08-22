@@ -10,7 +10,9 @@ Changed automatically in this update:
   artwork onto an icon plate
 - Explicit multi-resolution Assets\AccountArmory.ico for the title bar and
   executable
-- MainWindow assigns the ICO to AppWindow after InitializeComponent()
+- AccountArmory.rc embeds the ICO into the executable
+- App.xaml.cpp assigns both native icon sizes after the window is activated,
+  avoiding the generic file-icon fallback caused by a missing deployed path
 
 Keep these internal identifiers unchanged:
 - Visual Studio project filename: AccountVault.vcxproj

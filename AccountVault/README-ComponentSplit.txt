@@ -16,9 +16,10 @@ Windows shell themes. The taskbar variants crop the source transparency before
 scaling, so the artwork occupies the available icon canvas more fully.
 
 Assets\AccountArmory.ico contains 16, 24, 32, 48, 64, 128, and 256 pixel
-frames. MainWindow assigns its deployed absolute path to AppWindow after XAML
-initialization, which prevents the title bar from using the generic file icon.
-The project also embeds this ICO as the executable icon.
+frames. AccountArmory.rc embeds the ICO directly into AccountVault.exe. After
+the window is activated, App.xaml.cpp loads the embedded small and large icon
+frames and sends WM_SETICON to the WinUI window. This avoids any dependency on
+an external ICO deployment path and prevents the generic file icon fallback.
 
 Product-facing branding reads "Account Armory" in the window title and main
 heading. The internal AccountVault C++/WinRT namespace, project name, and binary
@@ -44,6 +45,12 @@ Source responsibilities
 
 MainWindow.xaml.cpp
   Window construction, UI event handlers, filtering, and account-list refresh.
+
+App.xaml.cpp
+  App launch, window activation, and native title-bar/taskbar icon assignment.
+
+AccountArmory.rc and resource.h
+  Native multi-resolution icon resource compiled into the executable.
 
 Components\AccountCard.cpp
   Account-card construction, card actions, clipboard operations, and removal.
