@@ -108,26 +108,19 @@ namespace winrt::AccountVault::implementation
         emailPanel.Children().Append(emailValue);
 
         Grid actions;
-        actions.Width(440);
-        actions.ColumnSpacing(8);
-        actions.RowSpacing(8);
+        actions.Width(460);
+        actions.ColumnSpacing(12);
         actions.VerticalAlignment(VerticalAlignment::Center);
 
-        for (int column = 0; column < 3; ++column)
-        {
-            ColumnDefinition definition;
-            definition.Width(
-                GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-            actions.ColumnDefinitions().Append(definition);
-        }
+        ColumnDefinition copyGroupColumn;
+        copyGroupColumn.Width(
+            GridLengthHelper::FromValueAndType(2, GridUnitType::Star));
+        actions.ColumnDefinitions().Append(copyGroupColumn);
 
-        RowDefinition topActionRow;
-        topActionRow.Height(GridLengthHelper::Auto());
-        actions.RowDefinitions().Append(topActionRow);
-
-        RowDefinition bottomActionRow;
-        bottomActionRow.Height(GridLengthHelper::Auto());
-        actions.RowDefinitions().Append(bottomActionRow);
+        ColumnDefinition accountGroupColumn;
+        accountGroupColumn.Width(
+            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        actions.ColumnDefinitions().Append(accountGroupColumn);
 
         const auto makeButton = [&](hstring const& label)
         {
@@ -200,22 +193,102 @@ namespace winrt::AccountVault::implementation
             removeAccount(recordIdFrom(button));
         });
 
-        Grid::SetColumn(details, 0);
-        Grid::SetColumn(copyUsername, 1);
-        Grid::SetColumn(copyEmail, 2);
+        Grid copyActions;
+        copyActions.ColumnSpacing(8);
+        copyActions.RowSpacing(8);
+
+        for (int column = 0; column < 2; ++column)
+        {
+            ColumnDefinition definition;
+            definition.Width(
+                GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            copyActions.ColumnDefinitions().Append(definition);
+        }
+
+        for (int row = 0; row < 2; ++row)
+        {
+            RowDefinition definition;
+            definition.Height(GridLengthHelper::Auto());
+            copyActions.RowDefinitions().Append(definition);
+        }
+
+        Grid::SetColumn(copyUsername, 0);
+        Grid::SetColumn(copyEmail, 1);
         Grid::SetRow(copyLauncherPassword, 1);
         Grid::SetColumn(copyLauncherPassword, 0);
         Grid::SetRow(copyEmailPassword, 1);
         Grid::SetColumn(copyEmailPassword, 1);
-        Grid::SetRow(remove, 1);
-        Grid::SetColumn(remove, 2);
 
-        actions.Children().Append(details);
-        actions.Children().Append(copyUsername);
-        actions.Children().Append(copyEmail);
-        actions.Children().Append(copyLauncherPassword);
-        actions.Children().Append(copyEmailPassword);
-        actions.Children().Append(remove);
+        copyActions.Children().Append(copyUsername);
+        copyActions.Children().Append(copyEmail);
+        copyActions.Children().Append(copyLauncherPassword);
+        copyActions.Children().Append(copyEmailPassword);
+
+        Grid accountActions;
+        accountActions.RowSpacing(8);
+
+        for (int row = 0; row < 2; ++row)
+        {
+            RowDefinition definition;
+            definition.Height(GridLengthHelper::Auto());
+            accountActions.RowDefinitions().Append(definition);
+        }
+
+        Grid::SetRow(remove, 1);
+        accountActions.Children().Append(details);
+        accountActions.Children().Append(remove);
+
+        const auto makeGroupLabel = [](hstring const& label)
+        {
+            TextBlock text;
+            text.Text(label);
+            text.FontSize(11);
+            text.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+            text.Foreground(
+                Application::Current()
+                    .Resources()
+                    .Lookup(box_value(L"AppMutedTextBrush"))
+                    .as<Brush>());
+            return text;
+        };
+
+        StackPanel copyGroupContent;
+        copyGroupContent.Spacing(8);
+        copyGroupContent.Children().Append(
+            makeGroupLabel(L"COPY CREDENTIALS"));
+        copyGroupContent.Children().Append(copyActions);
+
+        Border copyGroup;
+        copyGroup.Padding(Thickness{ 10, 9, 10, 10 });
+        copyGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
+        copyGroup.Background(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppSurfaceAltBrush"))
+                .as<Brush>());
+        copyGroup.Child(copyGroupContent);
+
+        StackPanel accountGroupContent;
+        accountGroupContent.Spacing(8);
+        accountGroupContent.Children().Append(
+            makeGroupLabel(L"ACCOUNT ACTIONS"));
+        accountGroupContent.Children().Append(accountActions);
+
+        Border accountGroup;
+        accountGroup.Padding(Thickness{ 10, 9, 10, 10 });
+        accountGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
+        accountGroup.Background(
+            Application::Current()
+                .Resources()
+                .Lookup(box_value(L"AppSurfaceAltBrush"))
+                .as<Brush>());
+        accountGroup.Child(accountGroupContent);
+
+        Grid::SetColumn(copyGroup, 0);
+        Grid::SetColumn(accountGroup, 1);
+
+        actions.Children().Append(copyGroup);
+        actions.Children().Append(accountGroup);
 
         Grid::SetColumn(launcherBadge, 0);
         Grid::SetColumn(idPanel, 1);
