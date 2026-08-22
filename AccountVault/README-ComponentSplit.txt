@@ -1,8 +1,35 @@
-AccountVault v20 - Email Provider Dropdowns
-===========================================
+Account Armory v24 - Window and Taskbar Icon Fix
+=================================================
 
 This update reorganizes the existing MainWindow implementation without
 changing the app's behavior or introducing additional WinRT runtime classes.
+
+App icon assets
+---------------
+
+The knight-and-key artwork is preserved as a true RGBA image in
+Assets\AppIconSource.png. All pixels outside the helmet and key have zero alpha.
+Transparent Windows-sized derivatives replace the project templates for the
+app list, taskbar, Store logo, lock screen, wide tile, and splash screen. The
+complete 16-through-256 target-size set is included for both light and dark
+Windows shell themes. The taskbar variants crop the source transparency before
+scaling, so the artwork occupies the available icon canvas more fully.
+
+Assets\AccountArmory.ico contains 16, 24, 32, 48, 64, 128, and 256 pixel
+frames. MainWindow assigns its deployed absolute path to AppWindow after XAML
+initialization, which prevents the title bar from using the generic file icon.
+The project also embeds this ICO as the executable icon.
+
+Product-facing branding reads "Account Armory" in the window title and main
+heading. The internal AccountVault C++/WinRT namespace, project name, and binary
+name remain intentionally unchanged. Renaming them would require coordinated
+changes to the solution, package manifest, generated XAML/WinRT metadata,
+deployment identity, and existing build paths without improving the visible
+branding.
+
+Windows can cache installed package icons. After copying the files, clean and
+rebuild the solution, uninstall the previously deployed package if its cached
+taskbar icon remains, then redeploy from Visual Studio.
 
 Email provider behavior
 -----------------------
@@ -51,8 +78,11 @@ Installation
 1. Close the running AccountVault application.
 2. Copy these files and folders into the existing AccountVault project folder.
 3. Replace AccountVault.vcxproj and AccountVault.vcxproj.filters.
-4. In Visual Studio, reload the project if prompted.
-5. Build > Clean Solution, then Build > Rebuild Solution.
+4. In Package.appxmanifest, change both application-facing DisplayName values
+   from "AccountVault" or "Account Vault" to "Account Armory". Do not change
+   the package Identity Name or the Executable/EntryPoint namespace values.
+5. In Visual Studio, reload the project if prompted.
+6. Build > Clean Solution, then Build > Rebuild Solution.
 
 Important invariant
 -------------------

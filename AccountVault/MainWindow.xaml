@@ -7,7 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="Account Vault">
+    Title="Account Armory">
 
     <Grid Background="{StaticResource AppBackgroundBrush}">
         <Grid
@@ -31,7 +31,7 @@
 
             <StackPanel Spacing="4">
                 <TextBlock
-                    Text="ACCOUNT VAULT"
+                    Text="ACCOUNT ARMORY"
                     FontFamily="Cascadia Mono"
                     FontSize="12"
                     FontWeight="SemiBold"

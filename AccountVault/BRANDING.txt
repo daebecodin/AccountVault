@@ -1,0 +1,31 @@
+Account Armory window/taskbar icon update
+==========================================
+
+Changed automatically in this update:
+- Main window title: Account Armory
+- In-app brand label: ACCOUNT ARMORY
+- All Windows icon assets: transparent knight helmet with the sword-like key
+  behind it; no colored background rectangle is stored in the PNG files
+- Full light/dark target-size asset set so Windows does not shrink the taskbar
+  artwork onto an icon plate
+- Explicit multi-resolution Assets\AccountArmory.ico for the title bar and
+  executable
+- MainWindow assigns the ICO to AppWindow after InitializeComponent()
+
+Keep these internal identifiers unchanged:
+- Visual Studio project filename: AccountVault.vcxproj
+- C++/WinRT namespace: AccountVault
+- RootNamespace and TargetName: AccountVault
+
+Package.appxmanifest (in your existing project)
+------------------------------------------------
+Change only the user-facing DisplayName text to Account Armory. Typical lines:
+
+  <Properties>
+    <DisplayName>Account Armory</DisplayName>
+  </Properties>
+
+  <uap:VisualElements DisplayName="Account Armory" ... />
+
+Do not change Identity Name, Executable, or EntryPoint. Those are runtime and
+deployment identifiers rather than the product-facing label.
