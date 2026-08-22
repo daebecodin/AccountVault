@@ -4,6 +4,8 @@
 #include "Models/ThemeDefinition.h"
 #include "Services/AccountRepository.h"
 
+#include <winrt/Microsoft.UI.Xaml.Input.h>
+
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -30,6 +32,10 @@ namespace winrt::AccountVault::implementation
         void ThemePicker_SelectionChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
+
+        void ThemeOption_RightTapped(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& args);
 
         void CustomizeColorsButton_Click(
             Windows::Foundation::IInspectable const& sender,

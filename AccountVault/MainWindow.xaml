@@ -89,18 +89,19 @@
                 Grid.Column="2"
                 MinWidth="150"
                 Style="{StaticResource ToolbarComboBoxStyle}"
-                SelectedIndex="0"
+                SelectedIndex="3"
+                ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
                 SelectionChanged="ThemePicker_SelectionChanged">
-                <ComboBoxItem Content="Catppuccin Mocha" />
-                <ComboBoxItem Content="Tokyo Night" />
-                <ComboBoxItem Content="Dracula" />
-                <ComboBoxItem Content="Ayu Mirage" />
-                <ComboBoxItem Content="Dainty Dark" />
-                <ComboBoxItem Content="GitHub Dark" />
-                <ComboBoxItem Content="Atom One Dark" />
-                <ComboBoxItem Content="Houston" />
-                <ComboBoxItem Content="Night Owl" />
-                <ComboBoxItem Content="Matcha" />
+                <ComboBoxItem Content="Catppuccin Mocha" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Tokyo Night" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Dracula" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Ayu Mirage" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Dainty Dark" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="GitHub Dark" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Atom One Dark" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Houston" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Night Owl" RightTapped="ThemeOption_RightTapped" />
+                <ComboBoxItem Content="Matcha" RightTapped="ThemeOption_RightTapped" />
             </ComboBox>
 
             <Button
