@@ -14,6 +14,7 @@ namespace account_vault::models
         std::wstring launcherUsername;
         std::wstring launcherPassword;
         std::wstring emailAddress;
+        std::wstring emailProvider;
         std::wstring emailProviderWebsite;
         std::wstring emailPassword;
     };
