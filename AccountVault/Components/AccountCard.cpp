@@ -67,7 +67,7 @@ namespace winrt::AccountVault::implementation
         idPanel.Spacing(5);
         idPanel.VerticalAlignment(VerticalAlignment::Center);
         TextBlock idLabel;
-        idLabel.Text(L"LAUNCHER USERNAME");
+        idLabel.Text(L"IN-GAME NAME");
         idLabel.FontSize(11);
         idLabel.Foreground(
             Application::Current()
@@ -255,7 +255,7 @@ namespace winrt::AccountVault::implementation
         StackPanel copyGroupContent;
         copyGroupContent.Spacing(8);
         copyGroupContent.Children().Append(
-            makeGroupLabel(L"COPY CREDENTIALS"));
+            makeGroupLabel(L"CREDENTIALS"));
         copyGroupContent.Children().Append(copyActions);
 
         Border copyGroup;
@@ -271,7 +271,7 @@ namespace winrt::AccountVault::implementation
         StackPanel accountGroupContent;
         accountGroupContent.Spacing(8);
         accountGroupContent.Children().Append(
-            makeGroupLabel(L"ACCOUNT ACTIONS"));
+            makeGroupLabel(L"ACCOUNT"));
         accountGroupContent.Children().Append(accountActions);
 
         Border accountGroup;
