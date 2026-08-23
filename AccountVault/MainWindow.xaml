@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="AccountVault.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -46,14 +45,36 @@
                     Foreground="{StaticResource AppMutedTextBrush}" />
             </StackPanel>
 
-            <Button
+            <!-- v30: one page-level account menu replaces a growing button row. -->
+            <DropDownButton
+                x:Name="AccountActionsButton"
                 Grid.Column="1"
-                Content="+ Add account"
+                Content="ACCOUNT ACTIONS"
                 Padding="18,10"
                 VerticalAlignment="Center"
-                Background="{StaticResource AppAccentBrush}"
-                Foreground="#0C0F0D"
-                Click="AddAccountButton_Click" />
+                AutomationProperties.Name="Account actions">
+                <DropDownButton.Flyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem
+                            Text="Add account"
+                            Click="AddAccountButton_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
+                            Text="Import one account..."
+                            IsEnabled="False"
+                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                        <MenuFlyoutItem
+                            Text="Import account group..."
+                            IsEnabled="False"
+                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
+                            Text="Export account group..."
+                            IsEnabled="False"
+                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                    </MenuFlyout>
+                </DropDownButton.Flyout>
+            </DropDownButton>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,28,0,22" ColumnSpacing="12">

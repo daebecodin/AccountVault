@@ -134,79 +134,94 @@ namespace winrt::AccountVault::implementation
         emailPanel.Children().Append(emailLabel);
         emailPanel.Children().Append(emailValue);
 
+        // v30: keep cards compact. Each section exposes one DropDownButton;
+        // the section actions are created as MenuFlyoutItems below.
         Grid actions;
-        actions.Width(460);
-        actions.ColumnSpacing(12);
+        actions.Width(300);
+        actions.ColumnSpacing(10);
         actions.VerticalAlignment(VerticalAlignment::Center);
 
-        ColumnDefinition copyGroupColumn;
-        copyGroupColumn.Width(
-            GridLengthHelper::FromValueAndType(2, GridUnitType::Star));
-        actions.ColumnDefinitions().Append(copyGroupColumn);
+        for (int column = 0; column < 2; ++column)
+        {
+            ColumnDefinition definition;
+            definition.Width(
+                GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+            actions.ColumnDefinitions().Append(definition);
+        }
 
-        ColumnDefinition accountGroupColumn;
-        accountGroupColumn.Width(
-            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-        actions.ColumnDefinitions().Append(accountGroupColumn);
+        const RecordId cardId{ account.recordId };
 
-        const auto makeButton = [&](hstring const& label)
+        const auto makeMenuButton = [](hstring const& label)
             {
-                Button button;
+                DropDownButton button;
                 button.Content(box_value(label));
-                button.Tag(box_value(account.recordId));
-                button.Height(34);
-                button.Padding(Thickness{ 10, 0, 10, 0 });
+                button.Height(40);
+                button.Padding(Thickness{ 12, 0, 12, 0 });
                 button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
                 button.HorizontalAlignment(HorizontalAlignment::Stretch);
                 button.HorizontalContentAlignment(HorizontalAlignment::Center);
                 return button;
             };
 
-        Button details{ makeButton(L"Details") };
-        details.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        const auto makeMenuItem = [cardId](hstring const& label)
             {
-                const auto button{ sender.as<Button>() };
-                showAccountDetailsDialog(recordIdFrom(button));
-            });
+                MenuFlyoutItem item;
+                item.Text(label);
+                item.Tag(box_value(cardId));
+                return item;
+            };
 
-        Button copyUsername{ makeButton(L"Copy username") };
-        copyUsername.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        const auto idFromMenuItem = [](IInspectable const& sender)
             {
-                const auto button{ sender.as<Button>() };
-                const Account* account{ m_repository.find(recordIdFrom(button)) };
+                return unbox_value<RecordId>(
+                    sender.as<MenuFlyoutItem>().Tag());
+            };
+
+        MenuFlyoutItem copyUsername{ makeMenuItem(L"Copy username") };
+        copyUsername.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
+            {
+                const Account* account{ m_repository.find(
+                    idFromMenuItem(sender)) };
                 if (account)
                 {
-                    copyToClipboard(account->launcherUsername, L"Launcher username");
+                    copyToClipboard(
+                        account->launcherUsername,
+                        L"Launcher username");
                 }
             });
 
-        Button copyEmail{ makeButton(L"Copy email") };
-        copyEmail.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        MenuFlyoutItem copyEmail{ makeMenuItem(L"Copy email") };
+        copyEmail.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
             {
-                const auto button{ sender.as<Button>() };
-                const Account* account{ m_repository.find(recordIdFrom(button)) };
+                const Account* account{ m_repository.find(
+                    idFromMenuItem(sender)) };
                 if (account)
                 {
                     copyToClipboard(account->emailAddress, L"Email address");
                 }
             });
 
-        Button copyLauncherPassword{ makeButton(L"Copy launcher PW") };
+        MenuFlyoutItem copyLauncherPassword{
+            makeMenuItem(L"Copy launcher password") };
         copyLauncherPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
             {
-                Button button{ nullptr };
+                MenuFlyoutItem item{ nullptr };
                 try
                 {
                     auto lifetime{ get_strong() };
-                    button = sender.as<Button>();
-                    button.IsEnabled(false);
-                    const RecordId id{ recordIdFrom(button) };
+                    item = sender.as<MenuFlyoutItem>();
+                    item.IsEnabled(false);
+                    const RecordId id{ unbox_value<RecordId>(item.Tag()) };
 
                     const bool verified{ co_await verifyUser(
                         L"Verify your identity to copy the launcher password") };
-                    button.IsEnabled(true);
+                    item.IsEnabled(true);
                     if (!verified || m_isLocked)
                     {
                         co_return;
@@ -233,9 +248,9 @@ namespace winrt::AccountVault::implementation
                 {
                     try
                     {
-                        if (button)
+                        if (item)
                         {
-                            button.IsEnabled(true);
+                            item.IsEnabled(true);
                         }
                         StatusText().Text(
                             L"Launcher password copy could not be completed");
@@ -246,22 +261,23 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        Button copyEmailPassword{ makeButton(L"Copy email PW") };
+        MenuFlyoutItem copyEmailPassword{
+            makeMenuItem(L"Copy email password") };
         copyEmailPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
             {
-                Button button{ nullptr };
+                MenuFlyoutItem item{ nullptr };
                 try
                 {
                     auto lifetime{ get_strong() };
-                    button = sender.as<Button>();
-                    button.IsEnabled(false);
-                    const RecordId id{ recordIdFrom(button) };
+                    item = sender.as<MenuFlyoutItem>();
+                    item.IsEnabled(false);
+                    const RecordId id{ unbox_value<RecordId>(item.Tag()) };
 
                     const bool verified{ co_await verifyUser(
                         L"Verify your identity to copy the email password") };
-                    button.IsEnabled(true);
+                    item.IsEnabled(true);
                     if (!verified || m_isLocked)
                     {
                         co_return;
@@ -288,9 +304,9 @@ namespace winrt::AccountVault::implementation
                 {
                     try
                     {
-                        if (button)
+                        if (item)
                         {
-                            button.IsEnabled(true);
+                            item.IsEnabled(true);
                         }
                         StatusText().Text(
                             L"Email password copy could not be completed");
@@ -301,97 +317,52 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        Button remove{ makeButton(L"Remove") };
-        remove.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        MenuFlyout credentialFlyout;
+        credentialFlyout.Items().Append(copyUsername);
+        credentialFlyout.Items().Append(copyEmail);
+        credentialFlyout.Items().Append(MenuFlyoutSeparator{});
+        credentialFlyout.Items().Append(copyLauncherPassword);
+        credentialFlyout.Items().Append(copyEmailPassword);
+
+        DropDownButton credentialActions{
+            makeMenuButton(L"CREDENTIALS") };
+        credentialActions.Flyout(credentialFlyout);
+
+        MenuFlyoutItem details{ makeMenuItem(L"Details") };
+        details.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
             {
-                const auto button{ sender.as<Button>() };
-                removeAccount(recordIdFrom(button));
+                showAccountDetailsDialog(idFromMenuItem(sender));
             });
 
-        Grid copyActions;
-        copyActions.ColumnSpacing(8);
-        copyActions.RowSpacing(8);
+        // UI reservation for the encrypted portable-backup feature. It is
+        // intentionally disabled until the export service is implemented.
+        MenuFlyoutItem exportAccount{
+            makeMenuItem(L"Export this account...") };
+        exportAccount.IsEnabled(false);
 
-        for (int column = 0; column < 2; ++column)
-        {
-            ColumnDefinition definition;
-            definition.Width(
-                GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-            copyActions.ColumnDefinitions().Append(definition);
-        }
-
-        for (int row = 0; row < 2; ++row)
-        {
-            RowDefinition definition;
-            definition.Height(GridLengthHelper::Auto());
-            copyActions.RowDefinitions().Append(definition);
-        }
-
-        Grid::SetColumn(copyUsername, 0);
-        Grid::SetColumn(copyEmail, 1);
-        Grid::SetRow(copyLauncherPassword, 1);
-        Grid::SetColumn(copyLauncherPassword, 0);
-        Grid::SetRow(copyEmailPassword, 1);
-        Grid::SetColumn(copyEmailPassword, 1);
-
-        copyActions.Children().Append(copyUsername);
-        copyActions.Children().Append(copyEmail);
-        copyActions.Children().Append(copyLauncherPassword);
-        copyActions.Children().Append(copyEmailPassword);
-
-        Grid accountActions;
-        accountActions.RowSpacing(8);
-
-        for (int row = 0; row < 2; ++row)
-        {
-            RowDefinition definition;
-            definition.Height(GridLengthHelper::Auto());
-            accountActions.RowDefinitions().Append(definition);
-        }
-
-        Grid::SetRow(remove, 1);
-        accountActions.Children().Append(details);
-        accountActions.Children().Append(remove);
-
-        const auto makeGroupLabel = [mutedTextBrush](hstring const& label)
+        MenuFlyoutItem remove{ makeMenuItem(L"Remove") };
+        remove.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
             {
-                TextBlock text;
-                text.Text(label);
-                text.FontSize(11);
-                text.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
-                text.Foreground(mutedTextBrush);
-                return text;
-            };
+                removeAccount(idFromMenuItem(sender));
+            });
 
-        StackPanel copyGroupContent;
-        copyGroupContent.Spacing(8);
-        copyGroupContent.Children().Append(
-            makeGroupLabel(L"CREDENTIALS"));
-        copyGroupContent.Children().Append(copyActions);
+        MenuFlyout accountFlyout;
+        accountFlyout.Items().Append(details);
+        accountFlyout.Items().Append(exportAccount);
+        accountFlyout.Items().Append(MenuFlyoutSeparator{});
+        accountFlyout.Items().Append(remove);
 
-        Border copyGroup;
-        copyGroup.Padding(Thickness{ 10, 9, 10, 10 });
-        copyGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
-        copyGroup.Background(surfaceAltBrush);
-        copyGroup.Child(copyGroupContent);
+        DropDownButton accountActions{ makeMenuButton(L"ACCOUNT") };
+        accountActions.Flyout(accountFlyout);
 
-        StackPanel accountGroupContent;
-        accountGroupContent.Spacing(8);
-        accountGroupContent.Children().Append(
-            makeGroupLabel(L"ACCOUNT"));
-        accountGroupContent.Children().Append(accountActions);
-
-        Border accountGroup;
-        accountGroup.Padding(Thickness{ 10, 9, 10, 10 });
-        accountGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
-        accountGroup.Background(surfaceAltBrush);
-        accountGroup.Child(accountGroupContent);
-
-        Grid::SetColumn(copyGroup, 0);
-        Grid::SetColumn(accountGroup, 1);
-
-        actions.Children().Append(copyGroup);
-        actions.Children().Append(accountGroup);
+        Grid::SetColumn(credentialActions, 0);
+        Grid::SetColumn(accountActions, 1);
+        actions.Children().Append(credentialActions);
+        actions.Children().Append(accountActions);
 
         Grid::SetColumn(launcherBadge, 0);
         Grid::SetColumn(idPanel, 1);

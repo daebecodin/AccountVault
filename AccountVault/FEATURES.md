@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29 + v30 UI  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -14,6 +14,7 @@ Internal name: `AccountVault`
 ## Rules that must stay true
 
 - Buttons identify accounts with `RecordId`, not list position.
+- Card menu items keep the card `RecordId`; opening a flyout never changes selection or data.
 - Search/filter never changes stored data.
 - JSON never contains plaintext passwords.
 - Password copy/reveal requires Windows verification.
@@ -48,12 +49,38 @@ Internal name: `AccountVault`
 | `[x]` | Clipboard clear | Clears after 30 seconds if unchanged | `Components/AccountCard.cpp` |
 | `[x]` | Search/filter | Case-insensitive search + launcher filter | `Services/AccountRepository.h` |
 | `[x]` | Incremental cards | CRUD refreshes only the affected card | `Components/AccountCard.cpp` |
+| `[x]` | Compact action menus | Two card menus + one page-level account menu | `Components/AccountCard.cpp`, `MainWindow.xaml` |
 | `[x]` | Email providers | Shared six-provider dropdown | `Services/EmailProviderCatalog.h` |
 | `[x]` | Built-in themes | Ten selectable palettes | `Themes/ThemeService.cpp` |
 | `[x]` | Startup theme | Right-click to set/remove default | `MainWindow.xaml.cpp` |
 | `[~]` | Custom themes | Editor works; themes are session-only | `Dialogs/ThemeEditorDialog.cpp` |
 | `[x]` | App auto-lock | Five-minute idle timer; lock on minimize/suspend | `MainWindow.xaml.cpp` |
 | `[ ]` | Export/import | Portable password-encrypted backup | — |
+
+## Action menus
+
+```text
+Card: CREDENTIALS
+  Copy username
+  Copy email
+  Copy launcher password
+  Copy email password
+
+Card: ACCOUNT
+  Details
+  Export this account...       [disabled until encrypted backup]
+  Remove
+
+Page: ACCOUNT ACTIONS
+  Add account
+  Import one account...        [disabled until encrypted backup]
+  Import account group...      [disabled until encrypted backup]
+  Export account group...      [disabled until encrypted backup]
+```
+
+Scope rule: individual export starts from a card. Imports and group export start
+from the page menu because they do not belong to an existing card. Group export
+will open an account-selection dialog, with all accounts selected by default.
 
 ## Account record
 
