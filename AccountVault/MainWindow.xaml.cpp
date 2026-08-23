@@ -11,8 +11,10 @@
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.Windows.System.Power.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <winrt/Windows.Graphics.h>
 #include <winrt/Windows.Storage.h>
 
+#include <algorithm>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -38,9 +40,9 @@ namespace winrt::AccountVault::implementation
     {
         InitializeComponent();
 
-        // The former 1100-effective-pixel wide breakpoint could leave a
-        // fullscreen high-DPI window in the center-only layout. Measure the
-        // actual layout host and add a rail-friendly scaled-desktop tier.
+        // Drive the shell from the measured layout width. Full rails require
+        // at least 1440 effective pixels; narrower windows use the centered
+        // workspace and its compact account-actions dropdown.
         const auto shellWeak{ get_weak() };
         AdaptiveHost().SizeChanged(
             [shellWeak](
@@ -350,6 +352,77 @@ namespace winrt::AccountVault::implementation
         }
     }
 
+    void MainWindow::applyDefaultWindowSize() noexcept
+    {
+        try
+        {
+            if (!m_appWindow)
+            {
+                return;
+            }
+
+            const auto displayArea{
+                Microsoft::UI::Windowing::DisplayArea::GetFromWindowId(
+                    m_appWindow.Id(),
+                    Microsoft::UI::Windowing::DisplayAreaFallback::Primary) };
+
+            if (!displayArea)
+            {
+                return;
+            }
+
+            const auto workArea{ displayArea.WorkArea() };
+            if (workArea.Width <= 0 || workArea.Height <= 0)
+            {
+                return;
+            }
+
+            const double aspectRatio{
+                static_cast<double>(workArea.Width) /
+                static_cast<double>(workArea.Height) };
+
+            const bool isUltrawide{
+                workArea.Width >= UltrawideStartupWidth &&
+                aspectRatio >= UltrawideAspectRatioThreshold };
+
+            const std::int32_t preferredWidth{
+                isUltrawide ? UltrawideStartupWidth : RegularStartupWidth };
+            const std::int32_t preferredHeight{
+                isUltrawide ? UltrawideStartupHeight : RegularStartupHeight };
+
+            const std::int32_t availableWidth{
+                std::max<std::int32_t>(
+                    1,
+                    workArea.Width - (2 * StartupEdgeMargin)) };
+            const std::int32_t availableHeight{
+                std::max<std::int32_t>(
+                    1,
+                    workArea.Height - (2 * StartupEdgeMargin)) };
+
+            const std::int32_t width{
+                std::min<std::int32_t>(preferredWidth, availableWidth) };
+            const std::int32_t height{
+                std::min<std::int32_t>(preferredHeight, availableHeight) };
+
+            const std::int32_t x{
+                workArea.X + ((workArea.Width - width) / 2) };
+            const std::int32_t y{
+                workArea.Y + ((workArea.Height - height) / 2) };
+
+            m_appWindow.MoveAndResize(
+                Windows::Graphics::RectInt32{
+                    x,
+                    y,
+                    width,
+                    height },
+                    displayArea);
+        }
+        catch (...)
+        {
+            // Keep the platform-selected bounds if display discovery fails.
+        }
+    }
+
     void MainWindow::updateWindowDimensions(
         double width,
         double height) noexcept
@@ -387,10 +460,6 @@ namespace winrt::AccountVault::implementation
         {
             nextLayout = ShellLayout::Wide;
         }
-        else if (width >= RailShellMinWidth)
-        {
-            nextLayout = ShellLayout::Rails;
-        }
         else if (width >= CenterOnlyShellMinWidth)
         {
             nextLayout = ShellLayout::CenterOnly;
@@ -406,7 +475,6 @@ namespace winrt::AccountVault::implementation
             // Keep the visual-state group deterministic: one active trigger,
             // with no competing MinWindowWidth matches.
             WideShellTrigger().IsActive(false);
-            RailShellTrigger().IsActive(false);
             CenterOnlyShellTrigger().IsActive(false);
             CompactShellTrigger().IsActive(false);
 
@@ -414,9 +482,6 @@ namespace winrt::AccountVault::implementation
             {
             case ShellLayout::Wide:
                 WideShellTrigger().IsActive(true);
-                break;
-            case ShellLayout::Rails:
-                RailShellTrigger().IsActive(true);
                 break;
             case ShellLayout::CenterOnly:
                 CenterOnlyShellTrigger().IsActive(true);
@@ -428,14 +493,31 @@ namespace winrt::AccountVault::implementation
                 return;
             }
 
-            const bool showRails{
-                nextLayout == ShellLayout::Wide ||
-                nextLayout == ShellLayout::Rails
+            const bool showRails{ nextLayout == ShellLayout::Wide };
+
+            if (showRails)
+            {
+                CompactNavigation().IsPaneOpen(false);
+            }
+
+            CompactNavigation().CompactPaneLength(
+                showRails ? 0.0 : 48.0);
+
+            CompactNavigation().IsPaneToggleButtonVisible(!showRails);
+
+            const double shellMargin{
+                nextLayout == ShellLayout::Wide ? 24.0 :
+                nextLayout == ShellLayout::Compact ? 12.0 : 18.0
             };
 
-            const bool useWideWidths{
-                nextLayout == ShellLayout::Wide
-            };
+            ShellFrame().Margin(
+                Thickness{
+                    shellMargin,
+                    shellMargin,
+                    shellMargin,
+                    shellMargin });
+
+            RootGrid().Padding(Thickness{ 0.0, 0.0, 0.0, 0.0 });
 
             LeftRail().Visibility(
                 showRails ? Visibility::Visible : Visibility::Collapsed);
@@ -448,14 +530,14 @@ namespace winrt::AccountVault::implementation
 
             LeftRailColumn().Width(
                 GridLengthHelper::FromPixels(
-                    showRails ? (useWideWidths ? 176.0 : 150.0) : 0.0));
+                    showRails ? 220.0 : 0.0));
 
             RightRailColumn().Width(
                 GridLengthHelper::FromPixels(
-                    showRails ? (useWideWidths ? 196.0 : 174.0) : 0.0));
+                    showRails ? 240.0 : 0.0));
 
             RootGrid().ColumnSpacing(
-                showRails ? (useWideWidths ? 18.0 : 14.0) : 0.0);
+                showRails ? 20.0 : 0.0);
 
             m_shellLayout = nextLayout;
         }
@@ -576,6 +658,7 @@ namespace winrt::AccountVault::implementation
                 true);
 
             m_appWindow = this->AppWindow();
+            applyDefaultWindowSize();
             m_appWindowChangedToken = m_appWindow.Changed(
                 [weak, dispatcher](
                     Microsoft::UI::Windowing::AppWindow const&,
@@ -738,6 +821,14 @@ namespace winrt::AccountVault::implementation
 
         m_isLocked = true;
         m_unlockInProgress = false;
+
+        try
+        {
+            CompactNavigation().IsPaneOpen(false);
+        }
+        catch (...)
+        {
+        }
 
         try
         {

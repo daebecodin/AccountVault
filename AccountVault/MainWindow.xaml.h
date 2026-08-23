@@ -76,15 +76,19 @@ namespace winrt::AccountVault::implementation
             Unknown,
             Compact,
             CenterOnly,
-            Rails,
             Wide
         };
 
         static constexpr int BuiltInThemeCount{ 10 };
         static constexpr int AutoLockTimeoutSeconds{ 5 * 60 };
+        static constexpr std::int32_t StartupEdgeMargin{ 48 };
+        static constexpr std::int32_t RegularStartupWidth{ 1440 };
+        static constexpr std::int32_t RegularStartupHeight{ 900 };
+        static constexpr std::int32_t UltrawideStartupWidth{ 2300 };
+        static constexpr std::int32_t UltrawideStartupHeight{ 984 };
+        static constexpr double UltrawideAspectRatioThreshold{ 2.0 };
         static constexpr double CenterOnlyShellMinWidth{ 760.0 };
-        static constexpr double RailShellMinWidth{ 820.0 };
-        static constexpr double WideShellMinWidth{ 1180.0 };
+        static constexpr double WideShellMinWidth{ 1440.0 };
 
         account_vault::services::AccountRepository m_repository;
         account_vault::services::AccountStorageService m_accountStorage;
@@ -116,6 +120,7 @@ namespace winrt::AccountVault::implementation
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
         void removeAccount(RecordId id);
+        void applyDefaultWindowSize() noexcept;
         void updateWindowDimensions(double width, double height) noexcept;
         void updateShellLayout(double width) noexcept;
         void initializeAutoLock();

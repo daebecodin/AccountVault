@@ -133,12 +133,15 @@
                         <StateTrigger x:Name="WideShellTrigger" IsActive="False" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="RootGrid.Padding" Value="28,28,28,22" />
-                        <Setter Target="RootGrid.ColumnSpacing" Value="18" />
-                        <Setter Target="LeftRailColumn.Width" Value="176" />
-                        <Setter Target="RightRailColumn.Width" Value="196" />
+                        <Setter Target="ShellFrame.Margin" Value="24" />
+                        <Setter Target="RootGrid.Padding" Value="0" />
+                        <Setter Target="RootGrid.ColumnSpacing" Value="20" />
+                        <Setter Target="LeftRailColumn.Width" Value="220" />
+                        <Setter Target="RightRailColumn.Width" Value="240" />
                         <Setter Target="LeftRail.Visibility" Value="Visible" />
                         <Setter Target="RightRail.Visibility" Value="Visible" />
+                        <Setter Target="CompactNavigation.CompactPaneLength" Value="0" />
+                        <Setter Target="CompactNavigation.IsPaneToggleButtonVisible" Value="False" />
                         <Setter Target="AccountActionsButton.Visibility" Value="Collapsed" />
                         <Setter Target="HeaderTitle.FontSize" Value="30" />
                         <Setter Target="HeaderSubtitle.Visibility" Value="Visible" />
@@ -182,75 +185,20 @@
                     </VisualState.Setters>
                 </VisualState>
 
-                <!--
-                    Both rails remain visible on narrower desktop windows, but
-                    the center toolbar uses two rows so it never becomes cramped.
-                -->
-                <VisualState x:Name="RailShell">
-                    <VisualState.StateTriggers>
-                        <StateTrigger x:Name="RailShellTrigger" IsActive="False" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="RootGrid.Padding" Value="24,24,24,20" />
-                        <Setter Target="RootGrid.ColumnSpacing" Value="14" />
-                        <Setter Target="LeftRailColumn.Width" Value="150" />
-                        <Setter Target="RightRailColumn.Width" Value="174" />
-                        <Setter Target="LeftRail.Visibility" Value="Visible" />
-                        <Setter Target="RightRail.Visibility" Value="Visible" />
-                        <Setter Target="AccountActionsButton.Visibility" Value="Collapsed" />
-                        <Setter Target="HeaderTitle.FontSize" Value="30" />
-                        <Setter Target="HeaderSubtitle.Visibility" Value="Visible" />
-
-                        <Setter Target="ToolbarGrid.Margin" Value="0,24,0,20" />
-                        <Setter Target="ToolbarColumn0.Width" Value="*" />
-                        <Setter Target="ToolbarColumn1.Width" Value="*" />
-                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
-                        <Setter Target="ToolbarColumn3.Width" Value="0" />
-                        <Setter Target="SearchBox.(Grid.Row)" Value="0" />
-                        <Setter Target="SearchBox.(Grid.Column)" Value="0" />
-                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="3" />
-                        <Setter Target="LauncherFilter.(Grid.Row)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.Column)" Value="0" />
-                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.MinWidth" Value="0" />
-                        <Setter Target="ThemePicker.(Grid.Row)" Value="1" />
-                        <Setter Target="ThemePicker.(Grid.Column)" Value="1" />
-                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="ThemePicker.MinWidth" Value="0" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="1" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="2" />
-                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
-
-                        <Setter Target="StatusSizeColumn.Width" Value="Auto" />
-                        <Setter Target="StatusDividerColumn.Width" Value="Auto" />
-                        <Setter Target="StatusTimerColumn.Width" Value="Auto" />
-                        <Setter Target="WindowSizeText.(Grid.Row)" Value="0" />
-                        <Setter Target="WindowSizeText.(Grid.Column)" Value="1" />
-                        <Setter Target="WindowSizeText.Margin" Value="0" />
-                        <Setter Target="WindowSizeText.MinWidth" Value="0" />
-                        <Setter Target="WindowSizeText.TextAlignment" Value="Right" />
-                        <Setter Target="StatusDividerText.(Grid.Row)" Value="0" />
-                        <Setter Target="StatusDividerText.(Grid.Column)" Value="2" />
-                        <Setter Target="StatusDividerText.Visibility" Value="Visible" />
-                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
-                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="3" />
-                        <Setter Target="AutoLockStatusText.Margin" Value="0" />
-                        <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
-                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Left" />
-                    </VisualState.Setters>
-                </VisualState>
-
                 <VisualState x:Name="CenterOnlyShell">
                     <VisualState.StateTriggers>
                         <StateTrigger x:Name="CenterOnlyShellTrigger" IsActive="False" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="RootGrid.Padding" Value="28,28,28,22" />
+                        <Setter Target="ShellFrame.Margin" Value="18" />
+                        <Setter Target="RootGrid.Padding" Value="0" />
                         <Setter Target="RootGrid.ColumnSpacing" Value="0" />
                         <Setter Target="LeftRailColumn.Width" Value="0" />
                         <Setter Target="RightRailColumn.Width" Value="0" />
                         <Setter Target="LeftRail.Visibility" Value="Collapsed" />
                         <Setter Target="RightRail.Visibility" Value="Collapsed" />
+                        <Setter Target="CompactNavigation.CompactPaneLength" Value="48" />
+                        <Setter Target="CompactNavigation.IsPaneToggleButtonVisible" Value="True" />
                         <Setter Target="AccountActionsButton.Visibility" Value="Visible" />
                         <Setter Target="AccountActionsButton.Content" Value="ACCOUNT ACTIONS" />
                         <Setter Target="AccountActionsButton.Padding" Value="18,10" />
@@ -301,12 +249,15 @@
                         <StateTrigger x:Name="CompactShellTrigger" IsActive="False" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="RootGrid.Padding" Value="18,20,18,16" />
+                        <Setter Target="ShellFrame.Margin" Value="12" />
+                        <Setter Target="RootGrid.Padding" Value="0" />
                         <Setter Target="RootGrid.ColumnSpacing" Value="0" />
                         <Setter Target="LeftRailColumn.Width" Value="0" />
                         <Setter Target="RightRailColumn.Width" Value="0" />
                         <Setter Target="LeftRail.Visibility" Value="Collapsed" />
                         <Setter Target="RightRail.Visibility" Value="Collapsed" />
+                        <Setter Target="CompactNavigation.CompactPaneLength" Value="48" />
+                        <Setter Target="CompactNavigation.IsPaneToggleButtonVisible" Value="True" />
                         <Setter Target="AccountActionsButton.Visibility" Value="Visible" />
                         <Setter Target="AccountActionsButton.Content" Value="ACTIONS" />
                         <Setter Target="AccountActionsButton.Padding" Value="12,10" />
@@ -352,13 +303,23 @@
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
-        <Grid
-            x:Name="RootGrid"
-            MaxWidth="1800"
-            Padding="28,28,28,22"
-            ColumnSpacing="18"
-            RowSpacing="14"
-            HorizontalAlignment="Stretch">
+        <!--
+            Outer shell owns the responsive window margin and maximum content
+            width. The three-column RootGrid can then use the full shell width,
+            allowing both rails to remain substantial on ultrawide displays.
+        -->
+        <Border
+            x:Name="ShellFrame"
+            MaxWidth="2240"
+            Margin="24"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+            <Grid
+                x:Name="RootGrid"
+                Padding="0"
+                ColumnSpacing="20"
+                RowSpacing="14"
+                HorizontalAlignment="Stretch">
 
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="LeftRailColumn" Width="0" />
@@ -373,7 +334,6 @@
             <!-- Container 1: future left-side navigation. -->
             <Border
                 x:Name="LeftRail"
-                Grid.RowSpan="2"
                 Padding="14,16"
                 Background="{StaticResource AppSurfaceBrush}"
                 BorderBrush="{StaticResource AppBorderBrush}"
@@ -405,12 +365,46 @@
                 </Grid>
             </Border>
 
-            <!-- Container 2: account workspace. -->
-            <Border
-                x:Name="AccountWorkspace"
+            <!--
+                Container 2: account workspace hosted by WinUI NavigationView.
+                Below the wide-shell breakpoint, LeftCompact keeps a slim icon
+                rail visible and opens its pane over the account workspace.
+            -->
+            <NavigationView
+                x:Name="CompactNavigation"
                 Grid.Column="1"
-                Background="Transparent"
-                AutomationProperties.Name="Account workspace">
+                PaneDisplayMode="LeftCompact"
+                OpenPaneLength="288"
+                CompactPaneLength="48"
+                IsPaneOpen="False"
+                IsPaneToggleButtonVisible="True"
+                IsBackButtonVisible="Collapsed"
+                IsSettingsVisible="False"
+                AlwaysShowHeader="False"
+                AutomationProperties.Name="Navigation drawer">
+                <NavigationView.PaneHeader>
+                    <TextBlock
+                        Margin="8,0,0,0"
+                        Text="NAVIGATION"
+                        FontFamily="Cascadia Mono"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AppAccentBrush}" />
+                </NavigationView.PaneHeader>
+
+                <NavigationView.PaneFooter>
+                    <TextBlock
+                        Margin="8,0,0,12"
+                        Text="COMING SOON"
+                        FontFamily="Cascadia Mono"
+                        FontSize="11"
+                        Foreground="{StaticResource AppMutedTextBrush}" />
+                </NavigationView.PaneFooter>
+
+                <Border
+                    x:Name="AccountWorkspace"
+                    Background="Transparent"
+                    AutomationProperties.Name="Account workspace">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -587,14 +581,15 @@
                                 Foreground="{StaticResource AppMutedTextBrush}" />
                         </StackPanel>
                     </Grid>
-                </Grid>
-            </Border>
+                    </Grid>
+                </Border>
+            </NavigationView>
 
-            <!-- Container 3: status belongs only to the center column. -->
+            <!-- Container 3: status spans the full shell below all columns. -->
             <Border
                 x:Name="StatusContainer"
                 Grid.Row="1"
-                Grid.Column="1"
+                Grid.ColumnSpan="3"
                 Padding="12,8"
                 Background="{StaticResource AppSurfaceBrush}"
                 BorderBrush="{StaticResource AppBorderBrush}"
@@ -657,7 +652,6 @@
             <!-- Container 4: wide-window global account actions. -->
             <Border
                 x:Name="RightRail"
-                Grid.RowSpan="2"
                 Grid.Column="2"
                 Padding="14,16"
                 Background="{StaticResource AppSurfaceBrush}"
@@ -751,6 +745,7 @@
                     </StackPanel>
                 </Border>
             </Border>
-        </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
