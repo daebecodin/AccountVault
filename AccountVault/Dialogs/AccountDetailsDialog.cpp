@@ -108,6 +108,22 @@ namespace winrt::AccountVault::implementation
         launcherPassword.Header(box_value(L"New launcher password (optional)"));
         launcherPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
         launcherPassword.IsEnabled(false);
+        launcherPassword.Visibility(Visibility::Collapsed);
+
+        StackPanel launcherRevealPanel;
+        launcherRevealPanel.Spacing(8);
+
+        Button revealLauncherPassword;
+        revealLauncherPassword.Content(box_value(L"Reveal launcher password"));
+        revealLauncherPassword.HorizontalAlignment(HorizontalAlignment::Left);
+
+        TextBox revealedLauncherPassword;
+        revealedLauncherPassword.Header(box_value(L"Launcher password"));
+        revealedLauncherPassword.IsReadOnly(true);
+        revealedLauncherPassword.Visibility(Visibility::Collapsed);
+
+        launcherRevealPanel.Children().Append(revealLauncherPassword);
+        launcherRevealPanel.Children().Append(revealedLauncherPassword);
 
         TextBlock linkedEmail;
         std::wstring linkedEmailText{ L"Linked email: " };
@@ -214,6 +230,22 @@ namespace winrt::AccountVault::implementation
         emailPassword.Header(box_value(L"New email password (optional)"));
         emailPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
         emailPassword.IsEnabled(false);
+        emailPassword.Visibility(Visibility::Collapsed);
+
+        StackPanel emailRevealPanel;
+        emailRevealPanel.Spacing(8);
+
+        Button revealEmailPassword;
+        revealEmailPassword.Content(box_value(L"Reveal email password"));
+        revealEmailPassword.HorizontalAlignment(HorizontalAlignment::Left);
+
+        TextBox revealedEmailPassword;
+        revealedEmailPassword.Header(box_value(L"Email password"));
+        revealedEmailPassword.IsReadOnly(true);
+        revealedEmailPassword.Visibility(Visibility::Collapsed);
+
+        emailRevealPanel.Children().Append(revealEmailPassword);
+        emailRevealPanel.Children().Append(revealedEmailPassword);
 
         TextBlock validation;
         validation.Visibility(Visibility::Collapsed);
@@ -221,9 +253,91 @@ namespace winrt::AccountVault::implementation
         validationBrush.Color(color(248, 81, 73));
         validation.Foreground(validationBrush);
 
+        revealLauncherPassword.Click(
+            [&, this](IInspectable const&, RoutedEventArgs const&)
+                -> fire_and_forget
+            {
+                if (revealedLauncherPassword.Visibility() ==
+                    Visibility::Visible)
+                {
+                    revealedLauncherPassword.Text(L"");
+                    revealedLauncherPassword.Visibility(Visibility::Collapsed);
+                    revealLauncherPassword.Content(
+                        box_value(L"Reveal launcher password"));
+                    co_return;
+                }
+
+                if (!(co_await verifyUser(
+                        L"Verify your identity to reveal the launcher password")))
+                {
+                    co_return;
+                }
+
+                const Account* current{ m_repository.find(id) };
+                const auto password{ !current
+                    ? std::nullopt
+                    : current->protectedLauncherPassword.empty()
+                        ? m_credentials.legacyLauncherPassword(id)
+                        : m_credentials.unprotectPassword(
+                            current->protectedLauncherPassword) };
+
+                if (!password)
+                {
+                    validation.Text(
+                        L"The launcher password could not be decrypted.");
+                    validation.Visibility(Visibility::Visible);
+                    co_return;
+                }
+
+                revealedLauncherPassword.Text(hstring{ *password });
+                revealedLauncherPassword.Visibility(Visibility::Visible);
+                revealLauncherPassword.Content(box_value(L"Hide password"));
+            });
+
+        revealEmailPassword.Click(
+            [&, this](IInspectable const&, RoutedEventArgs const&)
+                -> fire_and_forget
+            {
+                if (revealedEmailPassword.Visibility() == Visibility::Visible)
+                {
+                    revealedEmailPassword.Text(L"");
+                    revealedEmailPassword.Visibility(Visibility::Collapsed);
+                    revealEmailPassword.Content(
+                        box_value(L"Reveal email password"));
+                    co_return;
+                }
+
+                if (!(co_await verifyUser(
+                        L"Verify your identity to reveal the email password")))
+                {
+                    co_return;
+                }
+
+                const Account* current{ m_repository.find(id) };
+                const auto password{ !current
+                    ? std::nullopt
+                    : current->protectedEmailPassword.empty()
+                        ? m_credentials.legacyEmailPassword(id)
+                        : m_credentials.unprotectPassword(
+                            current->protectedEmailPassword) };
+
+                if (!password)
+                {
+                    validation.Text(
+                        L"The email password could not be decrypted.");
+                    validation.Visibility(Visibility::Visible);
+                    co_return;
+                }
+
+                revealedEmailPassword.Text(hstring{ *password });
+                revealedEmailPassword.Visibility(Visibility::Visible);
+                revealEmailPassword.Content(box_value(L"Hide password"));
+            });
+
         launcherFields.Children().Append(launcherHeading);
         launcherFields.Children().Append(launcher);
         launcherFields.Children().Append(launcherUsername);
+        launcherFields.Children().Append(launcherRevealPanel);
         launcherFields.Children().Append(launcherPassword);
         launcherFields.Children().Append(linkedEmail);
 
@@ -231,6 +345,7 @@ namespace winrt::AccountVault::implementation
         emailFields.Children().Append(providerLinkPanel);
         emailFields.Children().Append(emailProvider);
         emailFields.Children().Append(emailAddress);
+        emailFields.Children().Append(emailRevealPanel);
         emailFields.Children().Append(emailPassword);
 
         Grid::SetColumn(launcherFields, 0);
@@ -270,11 +385,19 @@ namespace winrt::AccountVault::implementation
                     editing = true;
                     launcher.IsEnabled(true);
                     launcherUsername.IsReadOnly(false);
+                    revealedLauncherPassword.Text(L"");
+                    revealedLauncherPassword.Visibility(Visibility::Collapsed);
+                    launcherRevealPanel.Visibility(Visibility::Collapsed);
+                    launcherPassword.Visibility(Visibility::Visible);
                     launcherPassword.IsEnabled(true);
                     providerLinkPanel.Visibility(Visibility::Collapsed);
                     emailProvider.Visibility(Visibility::Visible);
                     emailProvider.IsEnabled(true);
                     emailAddress.IsReadOnly(false);
+                    revealedEmailPassword.Text(L"");
+                    revealedEmailPassword.Visibility(Visibility::Collapsed);
+                    emailRevealPanel.Visibility(Visibility::Collapsed);
+                    emailPassword.Visibility(Visibility::Visible);
                     emailPassword.IsEnabled(true);
                     sender.PrimaryButtonText(L"Save changes");
                     launcherUsername.Focus(FocusState::Programmatic);
@@ -372,6 +495,9 @@ namespace winrt::AccountVault::implementation
         RootGrid().Children().Append(dialog);
 
         co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
+
+        revealedLauncherPassword.Text(L"");
+        revealedEmailPassword.Text(L"");
 
         auto rootChildren{ RootGrid().Children() };
         std::uint32_t dialogIndex{};

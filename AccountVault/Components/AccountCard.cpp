@@ -152,15 +152,25 @@ namespace winrt::AccountVault::implementation
         });
 
         Button copyLauncherPassword{ makeButton(L"Copy launcher PW") };
-        copyLauncherPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        copyLauncherPassword.Click([this](
+            IInspectable const& sender,
+            RoutedEventArgs const&) -> fire_and_forget
         {
+            auto lifetime{ get_strong() };
             const auto button{ sender.as<Button>() };
-            const Account* account{
-                m_repository.find(recordIdFrom(button)) };
+            const RecordId id{ recordIdFrom(button) };
+
+            if (!(co_await verifyUser(
+                    L"Verify your identity to copy the launcher password")))
+            {
+                co_return;
+            }
+
+            const Account* account{ m_repository.find(id) };
             const auto password{ !account
                 ? std::nullopt
                 : account->protectedLauncherPassword.empty()
-                    ? m_credentials.legacyLauncherPassword(account->recordId)
+                    ? m_credentials.legacyLauncherPassword(id)
                     : m_credentials.unprotectPassword(
                         account->protectedLauncherPassword) };
             if (password)
@@ -174,15 +184,25 @@ namespace winrt::AccountVault::implementation
         });
 
         Button copyEmailPassword{ makeButton(L"Copy email PW") };
-        copyEmailPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
+        copyEmailPassword.Click([this](
+            IInspectable const& sender,
+            RoutedEventArgs const&) -> fire_and_forget
         {
+            auto lifetime{ get_strong() };
             const auto button{ sender.as<Button>() };
-            const Account* account{
-                m_repository.find(recordIdFrom(button)) };
+            const RecordId id{ recordIdFrom(button) };
+
+            if (!(co_await verifyUser(
+                    L"Verify your identity to copy the email password")))
+            {
+                co_return;
+            }
+
+            const Account* account{ m_repository.find(id) };
             const auto password{ !account
                 ? std::nullopt
                 : account->protectedEmailPassword.empty()
-                    ? m_credentials.legacyEmailPassword(account->recordId)
+                    ? m_credentials.legacyEmailPassword(id)
                     : m_credentials.unprotectPassword(
                         account->protectedEmailPassword) };
             if (password)

@@ -33,6 +33,9 @@
     <ClCompile Include="Services\CredentialService.cpp">
       <Filter>Services</Filter>
     </ClCompile>
+    <ClCompile Include="Services\UserVerificationService.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
     <ClCompile Include="Themes\ThemeService.cpp">
       <Filter>Themes</Filter>
     </ClCompile>

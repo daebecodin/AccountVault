@@ -159,6 +159,7 @@
     <ClCompile Include="Services\AccountPersistence.cpp" />
     <ClCompile Include="Services\AccountStorageService.cpp" />
     <ClCompile Include="Services\CredentialService.cpp" />
+    <ClCompile Include="Services\UserVerificationService.cpp" />
     <ClCompile Include="Themes\ThemeService.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ResourceCompile Include="AccountArmory.rc" />

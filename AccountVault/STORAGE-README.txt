@@ -18,9 +18,10 @@ Windows DPAPI
 Runtime invariant
 -----------------
 
-Account owns metadata and ciphertext only. Plaintext passwords exist only while
-the user enters them, while DPAPI protects/unprotects them, or while clipboard
-content is being prepared.
+Account owns metadata and ciphertext only. Windows Hello verification is
+required immediately before DPAPI decrypts a password for reveal or copy.
+Plaintext exists only while the user enters it, while it is displayed after
+verification, or while clipboard content is being prepared.
 
 Persistence behavior
 --------------------
@@ -47,11 +48,11 @@ Manual verification
 7. Edit metadata without entering passwords and confirm both passwords remain.
 8. Change one password and confirm only that password changes.
 9. Remove an account, restart, and confirm it remains removed.
+10. Confirm reveal and password-copy actions require Windows Hello.
 
 Security work still required before public release
 --------------------------------------------------
 
-- Require Windows Hello or equivalent user verification before secret access.
 - Clear password clipboard contents after a short timeout when still unchanged.
 - Add automated persistence, corruption, rollback, and migration tests.
 - Perform a security review and publish an explicit threat model/privacy policy.

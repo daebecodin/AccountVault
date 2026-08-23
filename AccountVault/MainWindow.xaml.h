@@ -65,6 +65,8 @@ namespace winrt::AccountVault::implementation
             std::optional<std::uint32_t> index = std::nullopt);
         void refreshAccountCard(RecordId id);
         void copyToClipboard(std::wstring const& value, std::wstring_view label);
+        Windows::Foundation::IAsyncOperation<bool> verifyUser(
+            winrt::hstring const& message);
         void removeAccount(RecordId id);
 
         [[nodiscard]] std::optional<RecordId> addAccount(
