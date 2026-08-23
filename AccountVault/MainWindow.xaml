@@ -8,7 +8,9 @@
     mc:Ignorable="d"
     Title="Account Armory">
 
-    <Grid Background="{StaticResource AppBackgroundBrush}">
+    <Grid
+        Background="{StaticResource AppBackgroundBrush}"
+        AutomationProperties.Name="Account Armory main window">
         <Grid
             x:Name="RootGrid"
             MaxWidth="1560"
@@ -51,7 +53,9 @@
                 Content="ACCOUNT ACTIONS"
                 Padding="18,10"
                 VerticalAlignment="Center"
-                AutomationProperties.Name="Account actions">
+                AccessKey="A"
+                AutomationProperties.Name="Account actions"
+                AutomationProperties.HelpText="Add, import, or export accounts">
                 <DropDownButton.Flyout>
                     <MenuFlyout>
                         <MenuFlyoutItem
@@ -84,6 +88,9 @@
             <TextBox
                 x:Name="SearchBox"
                 Height="44"
+                AccessKey="S"
+                AutomationProperties.Name="Search accounts"
+                AutomationProperties.HelpText="Search by launcher, username, email, or provider website"
                 PlaceholderText="Search launcher, username, email, or provider website"
                 TextChanged="SearchBox_TextChanged" />
 
@@ -91,6 +98,8 @@
                 x:Name="LauncherFilter"
                 Grid.Column="1"
                 MinWidth="145"
+                AccessKey="L"
+                AutomationProperties.Name="Launcher filter"
                 Style="{StaticResource ToolbarComboBoxStyle}"
                 SelectedIndex="0"
                 SelectionChanged="LauncherFilter_SelectionChanged">
@@ -105,6 +114,9 @@
                 x:Name="ThemePicker"
                 Grid.Column="2"
                 MinWidth="150"
+                AccessKey="T"
+                AutomationProperties.Name="Theme"
+                AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
                 Style="{StaticResource ToolbarComboBoxStyle}"
                 SelectedIndex="3"
                 ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
@@ -125,6 +137,8 @@
                 Grid.Column="3"
                 Content="Customize colors"
                 Height="44"
+                AccessKey="C"
+                AutomationProperties.Name="Customize colors"
                 Padding="16,0"
                 Click="CustomizeColorsButton_Click" />
         </Grid>
@@ -133,6 +147,8 @@
             <ListView
                 x:Name="AccountsList"
                 SelectionMode="None"
+                AutomationProperties.Name="Accounts"
+                AutomationProperties.HelpText="Stored launcher and email accounts"
                 Background="Transparent"
                 HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -172,6 +188,8 @@
             <TextBlock
                 x:Name="StatusText"
                 Text="Passwords are encrypted locally with Windows DPAPI."
+                AutomationProperties.Name="Application status"
+                AutomationProperties.LiveSetting="Polite"
                 FontFamily="Cascadia Mono"
                 FontSize="12"
                 TextTrimming="CharacterEllipsis"
@@ -183,6 +201,7 @@
                 Grid.Column="1"
                 MinWidth="132"
                 Text="AUTO-LOCK 05:00"
+                AutomationProperties.Name="Automatic lock countdown"
                 TextAlignment="Right"
                 FontFamily="Cascadia Mono"
                 FontSize="12"
@@ -197,6 +216,8 @@
             Canvas.ZIndex="1000"
             Padding="24"
             Background="{StaticResource AppBackgroundBrush}"
+            AutomationProperties.Name="Account Armory locked"
+            AutomationProperties.LiveSetting="Assertive"
             Visibility="Collapsed">
             <Border
                 MaxWidth="420"
@@ -226,6 +247,7 @@
                         MinWidth="150"
                         Padding="18,10"
                         HorizontalAlignment="Center"
+                        AccessKey="U"
                         AutomationProperties.Name="Unlock Account Armory"
                         Background="{StaticResource AppAccentBrush}"
                         Foreground="#0C0F0D"

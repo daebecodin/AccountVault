@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29 + v30 UI + v31 + v32 + v33  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29 + v30 UI + v31  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -34,7 +34,6 @@ Internal name: `AccountVault`
 - Imported accounts always receive fresh local `RecordId` values.
 - Wrong passwords or modified backups import zero accounts.
 - Import changes the repository only after the complete candidate state saves.
-- Temporary C++ plaintext strings are wiped on normal, early-return, and exception paths.
 
 ## Feature overview
 
@@ -61,9 +60,6 @@ Internal name: `AccountVault`
 | `[~]` | Custom themes | Editor works; themes are session-only | `Dialogs/ThemeEditorDialog.cpp` |
 | `[x]` | App auto-lock | Five-minute idle timer; lock on minimize/suspend | `MainWindow.xaml.cpp` |
 | `[x]` | Export/import | AES-GCM backup for one or all accounts | `Services/PortableBackupService.cpp`, `Dialogs/BackupDialog.cpp` |
-| `[x]` | Plaintext hardening | Shared wipe guards for create/edit/copy/reveal/migration/backup | `Security/SensitiveData.h` |
-| `[x]` | Accessibility pass | Automation names, access keys, live status behavior | `MainWindow.xaml` |
-| `[x]` | Security/release docs | Privacy, threat model, security and release checklists | release `.md` files |
 
 ## Action menus
 
@@ -250,13 +246,10 @@ and unsupported format.
 
 Still exposed temporarily in:
 
-- Guarded `std::wstring` values during the active operation
-- WinRT strings owned by `PasswordBox`, visible controls, or JSON APIs
-- Coroutine frames until explicit wipe or scope exit
+- `std::wstring`
+- `PasswordBox`
+- Coroutine frames
 - Clipboard readers before auto-clear
-
-`Security/SensitiveData.h` uses `SecureZeroMemory`. Explicit wipes shorten the
-normal path; scope guards cover exceptions and early returns.
 
 ### Windows verification `[x]`
 
@@ -286,7 +279,6 @@ Rule: verification applies to one action; no session is cached.
 - Roaming disabled
 - Clears after 30 seconds
 - Clears only when sequence number is unchanged
-- Lock and shutdown clear the unchanged Account Armory clipboard value
 - Busy/failed clipboard access does not crash the app
 
 Limits: closing the app stops the timer; another app may read the value first.
@@ -435,25 +427,6 @@ Option B: protect repository with synchronization/snapshots
 Internal rename requires coordinated XAML, IDL, namespace, project, generated
 type, and package changes.
 
-## Release preparation `[~]`
-
-Added:
-
-- `PRIVACY.md`
-- `THREAT-MODEL.md`
-- `SECURITY-REVIEW.md`
-- `ACCESSIBILITY-CHECKLIST.md`
-- `RELEASE-CHECKLIST.md`
-
-Still required before publishing:
-
-- [ ] Partner Center identity values
-- [ ] Production signing certificate/Store association
-- [ ] Replace privacy-policy support placeholder
-- [ ] Accessibility Insights FastPass
-- [ ] Windows App Certification Kit
-- [ ] Clean-machine install and signed upgrade test
-
 ## Next work
 
 ### High priority
@@ -463,8 +436,8 @@ Still required before publishing:
 
 ### Security
 
-- [x] Clear temporary C++ plaintext strings where practical.
-- [x] Review clipboard, reveal, logs, and crash-dump exposure.
+- [ ] Clear plaintext strings where practical.
+- [ ] Review crash dumps and logs.
 
 ### Reliability/UI
 
@@ -475,7 +448,7 @@ Still required before publishing:
 
 ### Release
 
-- [x] Draft privacy policy and threat model.
+- [ ] Privacy policy and threat model.
 - [ ] MSIX signing/versioning.
 - [ ] Clean-machine install test.
 - [ ] Store assets/listing.
@@ -501,7 +474,6 @@ Still required before publishing:
 - [ ] Both countdown labels update once per second.
 - [ ] Manual Hide and dialog close clear revealed text.
 - [ ] Clipboard clears after 30 seconds.
-- [ ] Closing the app clears its unchanged copied password.
 - [ ] New clipboard content is preserved.
 - [ ] Countdown stays fixed at the far right when normal status text changes.
 - [ ] Pointer/keyboard input resets the countdown to five minutes.
@@ -556,13 +528,6 @@ Remaining issue:
 
 ### 2026-08-23
 
-- Added v32.1 build fix: restored `PortableBackupService.h` with `#pragma once`
-  after an accidental self-include caused compiler include-depth exhaustion.
-- Added v32 shared sensitive-data wiping across create, edit, copy, reveal,
-  migration, and backup paths; shutdown now clears unchanged copied passwords.
-- Added v33 accessibility names, access keys, and screen-reader live-region rules.
-- Added privacy, threat-model, security-review, accessibility, signing/versioning,
-  and clean-machine release checklists.
 - Added v31 password-encrypted `.aabackup` import/export for individual accounts
   and the full vault, with fresh import IDs and transactional repository updates.
 - Added v29 storage reliability: state validation, durable temp-file flush,
