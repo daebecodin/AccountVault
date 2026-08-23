@@ -6,6 +6,7 @@
 #include <winrt/Windows.UI.Text.h>
 
 #include <chrono>
+#include <limits>
 #include <string>
 
 using namespace winrt;
@@ -18,6 +19,7 @@ using namespace Windows::Foundation;
 namespace
 {
     constexpr auto ClipboardClearDelay{ std::chrono::seconds{ 30 } };
+    constexpr double CompactAccountCardWidth{ 760.0 };
 
     winrt::fire_and_forget clearClipboardAfterDelay(
         DWORD expectedSequence,
@@ -92,6 +94,15 @@ namespace winrt::AccountVault::implementation
         card.ColumnDefinitions().GetAt(2).Width(
             GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
         card.ColumnDefinitions().GetAt(3).Width(GridLengthHelper::Auto());
+
+        // Empty Auto rows collapse while the card is wide. They become the
+        // vertical slots used by the compact layout below.
+        for (int row{}; row < 4; ++row)
+        {
+            RowDefinition definition;
+            definition.Height(GridLengthHelper::Auto());
+            card.RowDefinitions().Append(definition);
+        }
 
         Border launcherBadge;
         launcherBadge.Padding(Thickness{ 12, 7, 12, 7 });
@@ -383,6 +394,107 @@ namespace winrt::AccountVault::implementation
         card.Children().Append(idPanel);
         card.Children().Append(emailPanel);
         card.Children().Append(actions);
+
+        // Account cards are created in C++, so they cannot use the page's
+        // declarative AdaptiveTriggers. Give each card its own width-based
+        // invariant: below the breakpoint every field occupies one row and
+        // no fixed-width action block can force horizontal clipping.
+        const auto weakCard{ make_weak(card) };
+        const auto weakLauncherBadge{ make_weak(launcherBadge) };
+        const auto weakIdPanel{ make_weak(idPanel) };
+        const auto weakEmailPanel{ make_weak(emailPanel) };
+        const auto weakActions{ make_weak(actions) };
+
+        card.SizeChanged(
+            [weakCard,
+            weakLauncherBadge,
+            weakIdPanel,
+            weakEmailPanel,
+            weakActions](
+                IInspectable const&,
+                SizeChangedEventArgs const& args)
+            {
+                const auto currentCard{ weakCard.get() };
+                const auto currentLauncherBadge{ weakLauncherBadge.get() };
+                const auto currentIdPanel{ weakIdPanel.get() };
+                const auto currentEmailPanel{ weakEmailPanel.get() };
+                const auto currentActions{ weakActions.get() };
+
+                if (!currentCard ||
+                    !currentLauncherBadge ||
+                    !currentIdPanel ||
+                    !currentEmailPanel ||
+                    !currentActions)
+                {
+                    return;
+                }
+
+                const bool compact{
+                    args.NewSize().Width < CompactAccountCardWidth };
+
+                if (compact)
+                {
+                    currentCard.MinHeight(0);
+                    currentCard.ColumnSpacing(0);
+                    currentCard.RowSpacing(14);
+
+                    currentCard.ColumnDefinitions().GetAt(0).Width(
+                        GridLengthHelper::FromValueAndType(
+                            1,
+                            GridUnitType::Star));
+                    currentCard.ColumnDefinitions().GetAt(1).Width(
+                        GridLengthHelper::FromPixels(0));
+                    currentCard.ColumnDefinitions().GetAt(2).Width(
+                        GridLengthHelper::FromPixels(0));
+                    currentCard.ColumnDefinitions().GetAt(3).Width(
+                        GridLengthHelper::FromPixels(0));
+
+                    Grid::SetRow(currentLauncherBadge, 0);
+                    Grid::SetColumn(currentLauncherBadge, 0);
+                    Grid::SetRow(currentIdPanel, 1);
+                    Grid::SetColumn(currentIdPanel, 0);
+                    Grid::SetRow(currentEmailPanel, 2);
+                    Grid::SetColumn(currentEmailPanel, 0);
+                    Grid::SetRow(currentActions, 3);
+                    Grid::SetColumn(currentActions, 0);
+
+                    currentActions.Width(
+                        std::numeric_limits<double>::quiet_NaN());
+                    currentActions.HorizontalAlignment(
+                        HorizontalAlignment::Stretch);
+                    return;
+                }
+
+                currentCard.MinHeight(94);
+                currentCard.ColumnSpacing(22);
+                currentCard.RowSpacing(0);
+
+                currentCard.ColumnDefinitions().GetAt(0).Width(
+                    GridLengthHelper::FromPixels(112));
+                currentCard.ColumnDefinitions().GetAt(1).Width(
+                    GridLengthHelper::FromValueAndType(
+                        1,
+                        GridUnitType::Star));
+                currentCard.ColumnDefinitions().GetAt(2).Width(
+                    GridLengthHelper::FromValueAndType(
+                        1,
+                        GridUnitType::Star));
+                currentCard.ColumnDefinitions().GetAt(3).Width(
+                    GridLengthHelper::Auto());
+
+                Grid::SetRow(currentLauncherBadge, 0);
+                Grid::SetColumn(currentLauncherBadge, 0);
+                Grid::SetRow(currentIdPanel, 0);
+                Grid::SetColumn(currentIdPanel, 1);
+                Grid::SetRow(currentEmailPanel, 0);
+                Grid::SetColumn(currentEmailPanel, 2);
+                Grid::SetRow(currentActions, 0);
+                Grid::SetColumn(currentActions, 3);
+
+                currentActions.Width(300);
+                currentActions.HorizontalAlignment(
+                    HorizontalAlignment::Stretch);
+            });
 
         auto items{ AccountsList().Items() };
         if (index && *index < items.Size())

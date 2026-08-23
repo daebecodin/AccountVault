@@ -38,6 +38,32 @@ namespace winrt::AccountVault::implementation
     {
         InitializeComponent();
 
+        // The former 1100-effective-pixel wide breakpoint could leave a
+        // fullscreen high-DPI window in the center-only layout. Measure the
+        // actual layout host and add a rail-friendly scaled-desktop tier.
+        const auto shellWeak{ get_weak() };
+        AdaptiveHost().SizeChanged(
+            [shellWeak](
+                IInspectable const&,
+                SizeChangedEventArgs const& args)
+            {
+                if (const auto self{ shellWeak.get() })
+                {
+                    self->updateShellLayout(args.NewSize().Width);
+                }
+            });
+        AdaptiveHost().Loaded(
+            [shellWeak](
+                IInspectable const&,
+                RoutedEventArgs const&)
+            {
+                if (const auto self{ shellWeak.get() })
+                {
+                    self->updateShellLayout(
+                        self->AdaptiveHost().ActualWidth());
+                }
+            });
+
         MenuFlyout defaultMenu;
 
         MenuFlyoutItem setDefault;
@@ -318,6 +344,92 @@ namespace winrt::AccountVault::implementation
         {
         }
     }
+
+    void MainWindow::updateShellLayout(double width) noexcept
+    {
+        ShellLayout nextLayout{ ShellLayout::Compact };
+        if (width >= WideShellMinWidth)
+        {
+            nextLayout = ShellLayout::Wide;
+        }
+        else if (width >= RailShellMinWidth)
+        {
+            nextLayout = ShellLayout::Rails;
+        }
+        else if (width >= CenterOnlyShellMinWidth)
+        {
+            nextLayout = ShellLayout::CenterOnly;
+        }
+
+        if (nextLayout == m_shellLayout)
+        {
+            return;
+        }
+
+        try
+        {
+            // Keep the visual-state group deterministic: one active trigger,
+            // with no competing MinWindowWidth matches.
+            WideShellTrigger().IsActive(false);
+            RailShellTrigger().IsActive(false);
+            CenterOnlyShellTrigger().IsActive(false);
+            CompactShellTrigger().IsActive(false);
+
+            switch (nextLayout)
+            {
+            case ShellLayout::Wide:
+                WideShellTrigger().IsActive(true);
+                break;
+            case ShellLayout::Rails:
+                RailShellTrigger().IsActive(true);
+                break;
+            case ShellLayout::CenterOnly:
+                CenterOnlyShellTrigger().IsActive(true);
+                break;
+            case ShellLayout::Compact:
+                CompactShellTrigger().IsActive(true);
+                break;
+            default:
+                return;
+            }
+
+            m_shellLayout = nextLayout;
+
+            const bool showRails{
+                nextLayout == ShellLayout::Wide || nextLayout == ShellLayout::Rails
+            };
+
+            const bool useWideWidths{
+                nextLayout == ShellLayout::Wide
+            };
+
+            LeftRail().Visibility(
+                showRails ? Visibility::Visible : Visibility::Collapsed);
+
+            RightRail().Visibility(
+                showRails ? Visibility::Visible : Visibility::Collapsed);
+
+            AccountActionsButton().Visibility(
+                showRails ? Visibility::Collapsed : Visibility::Visible);
+
+            LeftRailColumn().Width(
+                GridLengthHelper::FromPixels(
+                    showRails ? (useWideWidths ? 176.0 : 150.0) : 0.0));
+
+            RightRailColumn().Width(
+                GridLengthHelper::FromPixels(
+                    showRails ? (useWideWidths ? 196.0 : 174.0) : 0.0));
+
+            RootGrid().ColumnSpacing(
+                showRails ? (useWideWidths ? 18.0 : 14.0) : 0.0);
+        }
+        catch (...)
+        {
+            // Permit a later SizeChanged/Loaded event to retry initialization.
+            m_shellLayout = ShellLayout::Unknown;
+        }
+    }
+
     void MainWindow::AddAccountButton_Click(
         IInspectable const&,
         RoutedEventArgs const&)

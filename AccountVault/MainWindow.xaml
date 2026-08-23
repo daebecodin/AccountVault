@@ -9,252 +9,684 @@
     Title="Account Armory">
 
     <Grid
+        x:Name="AdaptiveHost"
         Background="{StaticResource AppBackgroundBrush}"
         AutomationProperties.Name="Account Armory main window">
+        <Grid.Resources>
+            <!--
+                Rail actions stay transparent at rest. Hover and pressed states
+                reference AppAccentBrush, which ThemeService updates in place.
+            -->
+            <Style x:Key="ActionRailButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="Padding" Value="10,6" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FontFamily" Value="Cascadia Mono" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid Background="Transparent">
+                                <Border
+                                    x:Name="HoverFill"
+                                    Background="{StaticResource AppAccentBrush}"
+                                    CornerRadius="4"
+                                    Opacity="0" />
+
+                                <Border
+                                    x:Name="AccentIndicator"
+                                    Width="2"
+                                    Margin="0,5,0,5"
+                                    HorizontalAlignment="Left"
+                                    Background="{StaticResource AppAccentBrush}"
+                                    CornerRadius="1"
+                                    Opacity="0" />
+
+                                <Border
+                                    x:Name="FocusStroke"
+                                    BorderBrush="{StaticResource AppAccentBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Opacity="0" />
+
+                                <ContentPresenter
+                                    x:Name="ButtonContent"
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Foreground="{TemplateBinding Foreground}" />
+
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualStateGroup.Transitions>
+                                            <VisualTransition To="Normal" GeneratedDuration="0:0:0.12" />
+                                            <VisualTransition To="PointerOver" GeneratedDuration="0:0:0.12" />
+                                            <VisualTransition To="Pressed" GeneratedDuration="0:0:0.06" />
+                                        </VisualStateGroup.Transitions>
+
+                                        <VisualState x:Name="Normal" />
+
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="HoverFill.Opacity" Value="0.10" />
+                                                <Setter Target="AccentIndicator.Opacity" Value="1" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="HoverFill.Opacity" Value="0.18" />
+                                                <Setter Target="AccentIndicator.Opacity" Value="1" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="ButtonContent.Opacity" Value="0.40" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+
+                                    <VisualStateGroup x:Name="FocusStates">
+                                        <VisualState x:Name="Unfocused" />
+                                        <VisualState x:Name="PointerFocused" />
+                                        <VisualState x:Name="Focused">
+                                            <VisualState.Setters>
+                                                <Setter Target="FocusStroke.Opacity" Value="1" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Grid.Resources>
+
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="WindowWidthStates">
+                <!--
+                    MainWindow.xaml.cpp activates exactly one StateTrigger from
+                    the measured AdaptiveHost width. This avoids relying on a
+                    Window-root AdaptiveTrigger to discover the active bounds.
+                -->
+                <VisualState x:Name="WideShell">
+                    <VisualState.StateTriggers>
+                        <StateTrigger x:Name="WideShellTrigger" IsActive="False" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="RootGrid.Padding" Value="28,28,28,22" />
+                        <Setter Target="RootGrid.ColumnSpacing" Value="18" />
+                        <Setter Target="LeftRailColumn.Width" Value="176" />
+                        <Setter Target="RightRailColumn.Width" Value="196" />
+                        <Setter Target="LeftRail.Visibility" Value="Visible" />
+                        <Setter Target="RightRail.Visibility" Value="Visible" />
+                        <Setter Target="AccountActionsButton.Visibility" Value="Collapsed" />
+                        <Setter Target="HeaderTitle.FontSize" Value="30" />
+                        <Setter Target="HeaderSubtitle.Visibility" Value="Visible" />
+
+                        <Setter Target="ToolbarGrid.Margin" Value="0,28,0,22" />
+                        <Setter Target="ToolbarColumn0.Width" Value="*" />
+                        <Setter Target="ToolbarColumn1.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn3.Width" Value="Auto" />
+                        <Setter Target="SearchBox.(Grid.Row)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Column)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.Row)" Value="0" />
+                        <Setter Target="LauncherFilter.(Grid.Column)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.MinWidth" Value="145" />
+                        <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
+                        <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
+                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="ThemePicker.MinWidth" Value="150" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="0" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
+                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
+
+                        <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.Margin" Value="0" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!--
+                    Both rails remain visible on narrower desktop windows, but
+                    the center toolbar uses two rows so it never becomes cramped.
+                -->
+                <VisualState x:Name="RailShell">
+                    <VisualState.StateTriggers>
+                        <StateTrigger x:Name="RailShellTrigger" IsActive="False" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="RootGrid.Padding" Value="24,24,24,20" />
+                        <Setter Target="RootGrid.ColumnSpacing" Value="14" />
+                        <Setter Target="LeftRailColumn.Width" Value="150" />
+                        <Setter Target="RightRailColumn.Width" Value="174" />
+                        <Setter Target="LeftRail.Visibility" Value="Visible" />
+                        <Setter Target="RightRail.Visibility" Value="Visible" />
+                        <Setter Target="AccountActionsButton.Visibility" Value="Collapsed" />
+                        <Setter Target="HeaderTitle.FontSize" Value="30" />
+                        <Setter Target="HeaderSubtitle.Visibility" Value="Visible" />
+
+                        <Setter Target="ToolbarGrid.Margin" Value="0,24,0,20" />
+                        <Setter Target="ToolbarColumn0.Width" Value="*" />
+                        <Setter Target="ToolbarColumn1.Width" Value="*" />
+                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Row)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Column)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="LauncherFilter.(Grid.Row)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.Column)" Value="0" />
+                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.MinWidth" Value="0" />
+                        <Setter Target="ThemePicker.(Grid.Row)" Value="1" />
+                        <Setter Target="ThemePicker.(Grid.Column)" Value="1" />
+                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="ThemePicker.MinWidth" Value="0" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="1" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="2" />
+                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
+
+                        <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.Margin" Value="0" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <VisualState x:Name="CenterOnlyShell">
+                    <VisualState.StateTriggers>
+                        <StateTrigger x:Name="CenterOnlyShellTrigger" IsActive="False" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="RootGrid.Padding" Value="28,28,28,22" />
+                        <Setter Target="RootGrid.ColumnSpacing" Value="0" />
+                        <Setter Target="LeftRailColumn.Width" Value="0" />
+                        <Setter Target="RightRailColumn.Width" Value="0" />
+                        <Setter Target="LeftRail.Visibility" Value="Collapsed" />
+                        <Setter Target="RightRail.Visibility" Value="Collapsed" />
+                        <Setter Target="AccountActionsButton.Visibility" Value="Visible" />
+                        <Setter Target="AccountActionsButton.Content" Value="ACCOUNT ACTIONS" />
+                        <Setter Target="AccountActionsButton.Padding" Value="18,10" />
+                        <Setter Target="HeaderTitle.FontSize" Value="30" />
+                        <Setter Target="HeaderSubtitle.Visibility" Value="Visible" />
+
+                        <Setter Target="ToolbarGrid.Margin" Value="0,28,0,22" />
+                        <Setter Target="ToolbarColumn0.Width" Value="*" />
+                        <Setter Target="ToolbarColumn1.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn3.Width" Value="Auto" />
+                        <Setter Target="SearchBox.(Grid.Row)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Column)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.Row)" Value="0" />
+                        <Setter Target="LauncherFilter.(Grid.Column)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.MinWidth" Value="145" />
+                        <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
+                        <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
+                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="ThemePicker.MinWidth" Value="150" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="0" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
+                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
+
+                        <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.Margin" Value="0" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                    </VisualState.Setters>
+                </VisualState>
+
+                <VisualState x:Name="CompactShell">
+                    <VisualState.StateTriggers>
+                        <StateTrigger x:Name="CompactShellTrigger" IsActive="False" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="RootGrid.Padding" Value="18,20,18,16" />
+                        <Setter Target="RootGrid.ColumnSpacing" Value="0" />
+                        <Setter Target="LeftRailColumn.Width" Value="0" />
+                        <Setter Target="RightRailColumn.Width" Value="0" />
+                        <Setter Target="LeftRail.Visibility" Value="Collapsed" />
+                        <Setter Target="RightRail.Visibility" Value="Collapsed" />
+                        <Setter Target="AccountActionsButton.Visibility" Value="Visible" />
+                        <Setter Target="AccountActionsButton.Content" Value="ACTIONS" />
+                        <Setter Target="AccountActionsButton.Padding" Value="12,10" />
+                        <Setter Target="HeaderTitle.FontSize" Value="26" />
+                        <Setter Target="HeaderSubtitle.Visibility" Value="Collapsed" />
+
+                        <Setter Target="ToolbarGrid.Margin" Value="0,20,0,18" />
+                        <Setter Target="ToolbarColumn0.Width" Value="*" />
+                        <Setter Target="ToolbarColumn1.Width" Value="0" />
+                        <Setter Target="ToolbarColumn2.Width" Value="0" />
+                        <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Row)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.Column)" Value="0" />
+                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.Row)" Value="1" />
+                        <Setter Target="LauncherFilter.(Grid.Column)" Value="0" />
+                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="LauncherFilter.MinWidth" Value="0" />
+                        <Setter Target="ThemePicker.(Grid.Row)" Value="2" />
+                        <Setter Target="ThemePicker.(Grid.Column)" Value="0" />
+                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="ThemePicker.MinWidth" Value="0" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="3" />
+                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="0" />
+                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
+
+                        <Setter Target="StatusTimerColumn.Width" Value="0" />
+                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="1" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="0" />
+                        <Setter Target="AutoLockStatusText.Margin" Value="0,4,0,0" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Left" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid
             x:Name="RootGrid"
-            MaxWidth="1560"
-            Padding="36,32,36,24"
+            MaxWidth="1800"
+            Padding="28,28,28,22"
+            ColumnSpacing="18"
+            RowSpacing="14"
             HorizontalAlignment="Stretch">
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <Grid>
             <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LeftRailColumn" Width="0" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition x:Name="RightRailColumn" Width="0" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-            <StackPanel Spacing="4">
-                <TextBlock
-                    Text="ACCOUNT ARMORY"
-                    FontFamily="Cascadia Mono"
-                    FontSize="12"
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource AppAccentBrush}" />
-                <TextBlock
-                    Text="Launcher accounts"
-                    FontSize="30"
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource AppTextBrush}" />
-                <TextBlock
-                    Text="Manage linked launcher and email credentials in one record."
-                    Foreground="{StaticResource AppMutedTextBrush}" />
-            </StackPanel>
-
-            <DropDownButton
-                x:Name="AccountActionsButton"
-                Grid.Column="1"
-                Content="ACCOUNT ACTIONS"
-                Padding="18,10"
-                VerticalAlignment="Center"
-                AccessKey="A"
-                AutomationProperties.Name="Account actions"
-                AutomationProperties.HelpText="Add, import, or export accounts">
-                <DropDownButton.Flyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem
-                            Text="Add account"
-                            Click="AddAccountButton_Click" />
-                        <MenuFlyoutSeparator />
-                        <MenuFlyoutItem
-                            Text="Import one account..."
-                            Click="ImportOneAccountButton_Click" />
-                        <MenuFlyoutItem
-                            Text="Import all accounts..."
-                            Click="ImportAllAccountsButton_Click" />
-                        <MenuFlyoutSeparator />
-                        <MenuFlyoutItem
-                            Text="Export all accounts..."
-                            Click="ExportAllAccountsButton_Click" />
-                    </MenuFlyout>
-                </DropDownButton.Flyout>
-            </DropDownButton>
-        </Grid>
-
-        <Grid Grid.Row="1" Margin="0,28,0,22" ColumnSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBox
-                x:Name="SearchBox"
-                Height="44"
-                AccessKey="S"
-                AutomationProperties.Name="Search accounts"
-                AutomationProperties.HelpText="Search by launcher, username, email, or provider website"
-                PlaceholderText="Search launcher, username, email, or provider website"
-                TextChanged="SearchBox_TextChanged" />
-
-            <ComboBox
-                x:Name="LauncherFilter"
-                Grid.Column="1"
-                MinWidth="145"
-                AccessKey="L"
-                AutomationProperties.Name="Launcher filter"
-                Style="{StaticResource ToolbarComboBoxStyle}"
-                SelectedIndex="0"
-                SelectionChanged="LauncherFilter_SelectionChanged">
-                <ComboBoxItem Content="All launchers" />
-                <ComboBoxItem Content="Steam" />
-                <ComboBoxItem Content="Riot" />
-                <ComboBoxItem Content="Epic" />
-                <ComboBoxItem Content="Other" />
-            </ComboBox>
-
-            <ComboBox
-                x:Name="ThemePicker"
-                Grid.Column="2"
-                MinWidth="150"
-                AccessKey="T"
-                AutomationProperties.Name="Theme"
-                AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
-                Style="{StaticResource ToolbarComboBoxStyle}"
-                SelectedIndex="3"
-                ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
-                SelectionChanged="ThemePicker_SelectionChanged">
-                <ComboBoxItem Content="Catppuccin Mocha" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Tokyo Night" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Dracula" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Ayu Mirage" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Dainty Dark" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="GitHub Dark" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Atom One Dark" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Houston" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Night Owl" RightTapped="ThemeOption_RightTapped" />
-                <ComboBoxItem Content="Matcha" RightTapped="ThemeOption_RightTapped" />
-            </ComboBox>
-
-            <Button
-                Grid.Column="3"
-                Content="Customize colors"
-                Height="44"
-                AccessKey="C"
-                AutomationProperties.Name="Customize colors"
-                Padding="16,0"
-                Click="CustomizeColorsButton_Click" />
-        </Grid>
-
-        <Grid Grid.Row="2">
-            <ListView
-                x:Name="AccountsList"
-                SelectionMode="None"
-                AutomationProperties.Name="Accounts"
-                AutomationProperties.HelpText="Stored launcher and email accounts"
-                Background="Transparent"
-                HorizontalContentAlignment="Stretch"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="0" />
-                        <Setter Property="MinHeight" Value="0" />
-                    </Style>
-                </ListView.ItemContainerStyle>
-            </ListView>
-
-            <StackPanel
-                x:Name="EmptyState"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Spacing="8">
-                <TextBlock
-                    Text="No accounts found"
-                    FontSize="20"
-                    FontWeight="SemiBold"
-                    HorizontalAlignment="Center"
-                    Foreground="{StaticResource AppTextBrush}" />
-                <TextBlock
-                    Text="Add an account or change your search."
-                    Foreground="{StaticResource AppMutedTextBrush}" />
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="3" Margin="0,20,0,0" ColumnSpacing="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBlock
-                x:Name="StatusText"
-                Text="Passwords are encrypted locally with Windows DPAPI."
-                AutomationProperties.Name="Application status"
-                AutomationProperties.LiveSetting="Polite"
-                FontFamily="Cascadia Mono"
-                FontSize="12"
-                TextTrimming="CharacterEllipsis"
-                VerticalAlignment="Center"
-                Foreground="{StaticResource AppMutedTextBrush}" />
-
-            <TextBlock
-                x:Name="AutoLockStatusText"
-                Grid.Column="1"
-                MinWidth="132"
-                Text="AUTO-LOCK 05:00"
-                AutomationProperties.Name="Automatic lock countdown"
-                TextAlignment="Right"
-                FontFamily="Cascadia Mono"
-                FontSize="12"
-                FontWeight="SemiBold"
-                VerticalAlignment="Center"
-                Foreground="{StaticResource AppAccentBrush}" />
-        </Grid>
-
-        <Border
-            x:Name="LockOverlay"
-            Grid.RowSpan="3"
-            Canvas.ZIndex="1000"
-            Padding="24"
-            Background="{StaticResource AppBackgroundBrush}"
-            AutomationProperties.Name="Account Armory locked"
-            AutomationProperties.LiveSetting="Assertive"
-            Visibility="Collapsed">
+            <!-- Container 1: future left-side navigation. -->
             <Border
-                MaxWidth="420"
-                Padding="30"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
+                x:Name="LeftRail"
+                Grid.RowSpan="2"
+                Padding="14,16"
                 Background="{StaticResource AppSurfaceBrush}"
-                BorderBrush="{StaticResource AppAccentBrush}"
+                BorderBrush="{StaticResource AppBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="12">
-                <StackPanel Spacing="14">
+                CornerRadius="8"
+                Visibility="Collapsed"
+                AutomationProperties.Name="Navigation">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
                     <TextBlock
-                        Text="ACCOUNT ARMORY LOCKED"
-                        TextAlignment="Center"
+                        Text="NAVIGATION"
                         FontFamily="Cascadia Mono"
-                        FontSize="13"
+                        FontSize="11"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource AppAccentBrush}" />
+
                     <TextBlock
-                        Text="Your account information is hidden. Verify with Windows Hello to continue."
-                        TextAlignment="Center"
-                        TextWrapping="Wrap"
-                        Foreground="{StaticResource AppTextBrush}" />
-                    <Button
-                        x:Name="UnlockButton"
-                        Content="Unlock"
-                        MinWidth="150"
-                        Padding="18,10"
+                        Grid.Row="1"
+                        Text="COMING SOON"
                         HorizontalAlignment="Center"
-                        AccessKey="U"
-                        AutomationProperties.Name="Unlock Account Armory"
-                        Background="{StaticResource AppAccentBrush}"
-                        Foreground="#0C0F0D"
-                        Click="UnlockButton_Click" />
+                        VerticalAlignment="Center"
+                        FontFamily="Cascadia Mono"
+                        FontSize="11"
+                        Foreground="{StaticResource AppMutedTextBrush}" />
+                </Grid>
+            </Border>
+
+            <!-- Container 2: account workspace. -->
+            <Border
+                x:Name="AccountWorkspace"
+                Grid.Column="1"
+                Background="Transparent"
+                AutomationProperties.Name="Account workspace">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid x:Name="HeaderGrid" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                Text="ACCOUNT ARMORY"
+                                FontFamily="Cascadia Mono"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource AppAccentBrush}" />
+                            <TextBlock
+                                x:Name="HeaderTitle"
+                                Text="Launcher accounts"
+                                FontSize="30"
+                                FontWeight="SemiBold"
+                                TextWrapping="Wrap"
+                                Foreground="{StaticResource AppTextBrush}" />
+                            <TextBlock
+                                x:Name="HeaderSubtitle"
+                                Text="Manage linked launcher and email credentials in one record."
+                                TextWrapping="Wrap"
+                                Foreground="{StaticResource AppMutedTextBrush}" />
+                        </StackPanel>
+
+                        <!-- Compact/center-only replacement for the right rail. -->
+                        <DropDownButton
+                            x:Name="AccountActionsButton"
+                            Grid.Column="1"
+                            Content="ACCOUNT ACTIONS"
+                            Padding="18,10"
+                            VerticalAlignment="Center"
+                            AccessKey="A"
+                            AutomationProperties.Name="Account actions"
+                            AutomationProperties.HelpText="Add, import, or export accounts">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Add account" Click="AddAccountButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Import one account..." Click="ImportOneAccountButton_Click" />
+                                    <MenuFlyoutItem Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                    </Grid>
+
+                    <Grid
+                        x:Name="ToolbarGrid"
+                        Grid.Row="1"
+                        Margin="0,28,0,22"
+                        ColumnSpacing="12"
+                        RowSpacing="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="ToolbarColumn0" Width="*" />
+                            <ColumnDefinition x:Name="ToolbarColumn1" Width="Auto" />
+                            <ColumnDefinition x:Name="ToolbarColumn2" Width="Auto" />
+                            <ColumnDefinition x:Name="ToolbarColumn3" Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox
+                            x:Name="SearchBox"
+                            Height="44"
+                            AccessKey="S"
+                            AutomationProperties.Name="Search accounts"
+                            AutomationProperties.HelpText="Search by launcher, username, email, or provider website"
+                            PlaceholderText="Search launcher, username, email, or provider website"
+                            TextChanged="SearchBox_TextChanged" />
+
+                        <ComboBox
+                            x:Name="LauncherFilter"
+                            Grid.Column="1"
+                            MinWidth="145"
+                            AccessKey="L"
+                            AutomationProperties.Name="Launcher filter"
+                            Style="{StaticResource ToolbarComboBoxStyle}"
+                            SelectedIndex="0"
+                            SelectionChanged="LauncherFilter_SelectionChanged">
+                            <ComboBoxItem Content="All launchers" />
+                            <ComboBoxItem Content="Steam" />
+                            <ComboBoxItem Content="Riot" />
+                            <ComboBoxItem Content="Epic" />
+                            <ComboBoxItem Content="Other" />
+                        </ComboBox>
+
+                        <ComboBox
+                            x:Name="ThemePicker"
+                            Grid.Column="2"
+                            MinWidth="150"
+                            AccessKey="T"
+                            AutomationProperties.Name="Theme"
+                            AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
+                            Style="{StaticResource ToolbarComboBoxStyle}"
+                            SelectedIndex="3"
+                            ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
+                            SelectionChanged="ThemePicker_SelectionChanged">
+                            <ComboBoxItem Content="Catppuccin Mocha" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Tokyo Night" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Dracula" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Ayu Mirage" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Dainty Dark" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="GitHub Dark" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Atom One Dark" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Houston" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Night Owl" RightTapped="ThemeOption_RightTapped" />
+                            <ComboBoxItem Content="Matcha" RightTapped="ThemeOption_RightTapped" />
+                        </ComboBox>
+
+                        <Button
+                            x:Name="CustomizeColorsButton"
+                            Grid.Column="3"
+                            Content="Customize colors"
+                            Height="44"
+                            HorizontalAlignment="Stretch"
+                            AccessKey="C"
+                            AutomationProperties.Name="Customize colors"
+                            Padding="16,0"
+                            Click="CustomizeColorsButton_Click" />
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <ListView
+                            x:Name="AccountsList"
+                            SelectionMode="None"
+                            AutomationProperties.Name="Accounts"
+                            AutomationProperties.HelpText="Stored launcher and email accounts"
+                            Background="Transparent"
+                            HorizontalContentAlignment="Stretch"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+
+                        <StackPanel
+                            x:Name="EmptyState"
+                            MaxWidth="360"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                            <TextBlock
+                                Text="No accounts found"
+                                FontSize="20"
+                                FontWeight="SemiBold"
+                                HorizontalAlignment="Center"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap"
+                                Foreground="{StaticResource AppTextBrush}" />
+                            <TextBlock
+                                Text="Add an account or change your search."
+                                TextAlignment="Center"
+                                TextWrapping="Wrap"
+                                Foreground="{StaticResource AppMutedTextBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Container 3: status belongs only to the center column. -->
+            <Border
+                x:Name="StatusContainer"
+                Grid.Row="1"
+                Grid.Column="1"
+                Padding="12,8"
+                Background="{StaticResource AppSurfaceBrush}"
+                BorderBrush="{StaticResource AppBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                AutomationProperties.Name="Application status bar">
+                <Grid x:Name="StatusGrid" ColumnSpacing="20" RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="StatusTimerColumn" Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        x:Name="StatusText"
+                        Text="Passwords are encrypted locally with Windows DPAPI."
+                        AutomationProperties.Name="Application status"
+                        AutomationProperties.LiveSetting="Polite"
+                        FontFamily="Cascadia Mono"
+                        FontSize="12"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource AppMutedTextBrush}" />
+
+                    <TextBlock
+                        x:Name="AutoLockStatusText"
+                        Grid.Column="1"
+                        MinWidth="132"
+                        Text="AUTO-LOCK 05:00"
+                        AutomationProperties.Name="Automatic lock countdown"
+                        TextAlignment="Right"
+                        FontFamily="Cascadia Mono"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource AppAccentBrush}" />
+                </Grid>
+            </Border>
+
+            <!-- Container 4: wide-window global account actions. -->
+            <Border
+                x:Name="RightRail"
+                Grid.RowSpan="2"
+                Grid.Column="2"
+                Padding="14,16"
+                Background="{StaticResource AppSurfaceBrush}"
+                BorderBrush="{StaticResource AppBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Visibility="Collapsed"
+                AutomationProperties.Name="Account actions">
+                <StackPanel Spacing="3">
+                    <TextBlock
+                        Margin="10,0,0,10"
+                        Text="ACCOUNT ACTIONS"
+                        FontFamily="Cascadia Mono"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AppAccentBrush}" />
+
+                    <Button
+                        Content="Add account"
+                        Style="{StaticResource ActionRailButtonStyle}"
+                        AccessKey="A"
+                        AutomationProperties.Name="Add account"
+                        Click="AddAccountButton_Click" />
+
+                    <Button
+                        Content="Import one account..."
+                        Style="{StaticResource ActionRailButtonStyle}"
+                        AccessKey="O"
+                        AutomationProperties.Name="Import one account"
+                        Click="ImportOneAccountButton_Click" />
+
+                    <Button
+                        Content="Import all accounts..."
+                        Style="{StaticResource ActionRailButtonStyle}"
+                        AccessKey="I"
+                        AutomationProperties.Name="Import all accounts"
+                        Click="ImportAllAccountsButton_Click" />
+
+                    <Button
+                        Content="Export all accounts..."
+                        Style="{StaticResource ActionRailButtonStyle}"
+                        AccessKey="E"
+                        AutomationProperties.Name="Export all accounts"
+                        Click="ExportAllAccountsButton_Click" />
                 </StackPanel>
             </Border>
-        </Border>
+
+            <Border
+                x:Name="LockOverlay"
+                Grid.RowSpan="2"
+                Grid.ColumnSpan="3"
+                Canvas.ZIndex="1000"
+                Padding="24"
+                Background="{StaticResource AppBackgroundBrush}"
+                AutomationProperties.Name="Account Armory locked"
+                AutomationProperties.LiveSetting="Assertive"
+                Visibility="Collapsed">
+                <Border
+                    MaxWidth="420"
+                    Padding="30"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{StaticResource AppSurfaceBrush}"
+                    BorderBrush="{StaticResource AppAccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel Spacing="14">
+                        <TextBlock
+                            Text="ACCOUNT ARMORY LOCKED"
+                            TextAlignment="Center"
+                            FontFamily="Cascadia Mono"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource AppAccentBrush}" />
+                        <TextBlock
+                            Text="Your account information is hidden. Verify with Windows Hello to continue."
+                            TextAlignment="Center"
+                            TextWrapping="Wrap"
+                            Foreground="{StaticResource AppTextBrush}" />
+                        <Button
+                            x:Name="UnlockButton"
+                            Content="Unlock"
+                            MinWidth="150"
+                            Padding="18,10"
+                            HorizontalAlignment="Center"
+                            AccessKey="U"
+                            AutomationProperties.Name="Unlock Account Armory"
+                            Background="{StaticResource AppAccentBrush}"
+                            Foreground="#0C0F0D"
+                            Click="UnlockButton_Click" />
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
     </Grid>
 </Window>

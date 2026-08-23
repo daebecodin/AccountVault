@@ -71,8 +71,20 @@ namespace winrt::AccountVault::implementation
         using PortableAccount = account_vault::services::PortableAccount;
         using ThemeDefinition = account_vault::models::ThemeDefinition;
 
+        enum class ShellLayout
+        {
+            Unknown,
+            Compact,
+            CenterOnly,
+            Rails,
+            Wide
+        };
+
         static constexpr int BuiltInThemeCount{ 10 };
         static constexpr int AutoLockTimeoutSeconds{ 5 * 60 };
+        static constexpr double CenterOnlyShellMinWidth{ 760.0 };
+        static constexpr double RailShellMinWidth{ 820.0 };
+        static constexpr double WideShellMinWidth{ 1180.0 };
 
         account_vault::services::AccountRepository m_repository;
         account_vault::services::AccountStorageService m_accountStorage;
@@ -84,6 +96,7 @@ namespace winrt::AccountVault::implementation
         bool m_isLocked{ false };
         bool m_unlockInProgress{ false };
         bool m_backupOperationInProgress{ false };
+        ShellLayout m_shellLayout{ ShellLayout::Unknown };
         std::uint64_t m_lockGeneration{};
         std::uint32_t m_accountClipboardSequence{};
         std::chrono::steady_clock::time_point m_autoLockDeadline{};
@@ -101,6 +114,7 @@ namespace winrt::AccountVault::implementation
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
         void removeAccount(RecordId id);
+        void updateShellLayout(double width) noexcept;
         void initializeAutoLock();
         void noteUserActivity() noexcept;
         void updateAutoLockStatus() noexcept;
