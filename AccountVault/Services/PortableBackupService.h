@@ -9,6 +9,7 @@ namespace account_vault::services
 {
     struct PortableAccount
     {
+        std::wstring kind{ L"launcher" };
         std::wstring launcher;
         std::wstring launcherUsername;
         std::wstring launcherPassword;
@@ -16,6 +17,14 @@ namespace account_vault::services
         std::wstring emailProvider;
         std::wstring emailProviderWebsite;
         std::wstring emailPassword;
+        std::wstring serviceName;
+        std::wstring category;
+        std::wstring username;
+        std::wstring website;
+        std::wstring recoveryEmail;
+        std::wstring notes;
+        std::wstring password;
+        std::wstring recoveryEmailPassword;
     };
 
     struct BackupReadResult

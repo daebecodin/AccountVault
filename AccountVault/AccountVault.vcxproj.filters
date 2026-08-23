@@ -21,6 +21,12 @@
     <ClCompile Include="Dialogs\AccountDetailsDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="Dialogs\CredentialDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="Dialogs\BackupDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
@@ -31,6 +37,9 @@
       <Filter>Services</Filter>
     </ClCompile>
     <ClCompile Include="Services\CredentialService.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
+    <ClCompile Include="Services\PortableBackupService.cpp">
       <Filter>Services</Filter>
     </ClCompile>
     <ClCompile Include="Services\UserVerificationService.cpp">
@@ -51,6 +60,9 @@
     <ClInclude Include="Models\ThemeDefinition.h">
       <Filter>Models</Filter>
     </ClInclude>
+    <ClInclude Include="Security\SensitiveData.h">
+      <Filter>Services</Filter>
+    </ClInclude>
     <ClInclude Include="Services\AccountRepository.h">
       <Filter>Services</Filter>
     </ClInclude>
@@ -61,6 +73,9 @@
       <Filter>Services</Filter>
     </ClInclude>
     <ClInclude Include="Services\EmailProviderCatalog.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\PortableBackupService.h">
       <Filter>Services</Filter>
     </ClInclude>
   </ItemGroup>
@@ -220,10 +235,5 @@
     <Content Include="Assets\AccountArmory.ico">
       <Filter>Assets</Filter>
     </Content>
-    <None Include="FEATURES.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
-    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
 </Project>

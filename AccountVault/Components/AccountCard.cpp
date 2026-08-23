@@ -30,23 +30,23 @@ namespace
             co_await winrt::resume_after(ClipboardClearDelay);
 
             dispatcher.TryEnqueue([expectedSequence]()
+            {
+                // A changed sequence means the user or another app copied
+                // something newer. Never erase that newer clipboard value.
+                if (expectedSequence != 0 &&
+                    ::GetClipboardSequenceNumber() == expectedSequence)
                 {
-                    // A changed sequence means the user or another app copied
-                    // something newer. Never erase that newer clipboard value.
-                    if (expectedSequence != 0 &&
-                        ::GetClipboardSequenceNumber() == expectedSequence)
+                    try
                     {
-                        try
-                        {
-                            Clipboard::Clear();
-                        }
-                        catch (...)
-                        {
-                            // Clipboard access can be temporarily unavailable.
-                            // Auto-clear failure must never terminate the app.
-                        }
+                        Clipboard::Clear();
                     }
-                });
+                    catch (...)
+                    {
+                        // Clipboard access can be temporarily unavailable.
+                        // Auto-clear failure must never terminate the app.
+                    }
+                }
+            });
         }
         catch (...)
         {
@@ -62,6 +62,7 @@ namespace winrt::AccountVault::implementation
         Account const& account,
         std::optional<std::uint32_t> index)
     {
+        const bool credential{ account.kind == AccountKind::Credential };
         const auto resources{ Application::Current().Resources() };
         const auto surfaceBrush{
             resources.Lookup(box_value(L"AppSurfaceBrush")).as<Brush>() };
@@ -123,7 +124,8 @@ namespace winrt::AccountVault::implementation
         launcherBadge.Background(surfaceAltBrush);
 
         TextBlock launcherText;
-        launcherText.Text(account.launcher);
+        launcherText.Text(
+            credential ? account.category : account.launcher);
         launcherText.FontFamily(FontFamily{ L"Cascadia Mono" });
         launcherText.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
         launcherText.Foreground(accentBrush);
@@ -133,11 +135,12 @@ namespace winrt::AccountVault::implementation
         idPanel.Spacing(5);
         idPanel.VerticalAlignment(VerticalAlignment::Center);
         TextBlock idLabel;
-        idLabel.Text(L"IN-GAME NAME");
+        idLabel.Text(credential ? L"SERVICE" : L"IN-GAME NAME");
         idLabel.FontSize(11);
         idLabel.Foreground(mutedTextBrush);
         TextBlock idValue;
-        idValue.Text(account.launcherUsername);
+        idValue.Text(
+            credential ? account.serviceName : account.launcherUsername);
         idValue.FontSize(15);
         idValue.Foreground(textBrush);
         idPanel.Children().Append(idLabel);
@@ -175,180 +178,244 @@ namespace winrt::AccountVault::implementation
         const RecordId cardId{ account.recordId };
 
         const auto makeMenuButton = [](hstring const& label)
-            {
-                DropDownButton button;
-                button.Content(box_value(label));
-                button.Height(40);
-                button.Padding(Thickness{ 12, 0, 12, 0 });
-                button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
-                button.HorizontalAlignment(HorizontalAlignment::Stretch);
-                button.HorizontalContentAlignment(HorizontalAlignment::Center);
-                return button;
-            };
+        {
+            DropDownButton button;
+            button.Content(box_value(label));
+            button.Height(40);
+            button.Padding(Thickness{ 12, 0, 12, 0 });
+            button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Center);
+            return button;
+        };
 
         const auto makeMenuItem = [cardId](hstring const& label)
-            {
-                MenuFlyoutItem item;
-                item.Text(label);
-                item.Tag(box_value(cardId));
-                return item;
-            };
+        {
+            MenuFlyoutItem item;
+            item.Text(label);
+            item.Tag(box_value(cardId));
+            return item;
+        };
 
         const auto idFromMenuItem = [](IInspectable const& sender)
-            {
-                return unbox_value<RecordId>(
-                    sender.as<MenuFlyoutItem>().Tag());
-            };
+        {
+            return unbox_value<RecordId>(
+                sender.as<MenuFlyoutItem>().Tag());
+        };
 
         MenuFlyoutItem copyUsername{ makeMenuItem(L"Copy username") };
         copyUsername.Click([this, idFromMenuItem](
             IInspectable const& sender,
             RoutedEventArgs const&)
+        {
+            const Account* account{ m_repository.find(
+                idFromMenuItem(sender)) };
+            if (account)
             {
-                const Account* account{ m_repository.find(
-                    idFromMenuItem(sender)) };
-                if (account)
+                const std::wstring& value{
+                    account->kind == AccountKind::Credential
+                        ? account->username
+                        : account->launcherUsername };
+                if (value.empty())
                 {
-                    copyToClipboard(
-                        account->launcherUsername,
-                        L"Launcher username");
+                    StatusText().Text(L"No username is stored for this credential");
+                    return;
                 }
-            });
+                copyToClipboard(
+                    value,
+                    account->kind == AccountKind::Credential
+                        ? L"Username"
+                        : L"Launcher username");
+            }
+        });
 
         MenuFlyoutItem copyEmail{ makeMenuItem(L"Copy email") };
         copyEmail.Click([this, idFromMenuItem](
             IInspectable const& sender,
             RoutedEventArgs const&)
+        {
+            const Account* account{ m_repository.find(
+                idFromMenuItem(sender)) };
+            if (account)
             {
-                const Account* account{ m_repository.find(
-                    idFromMenuItem(sender)) };
-                if (account)
-                {
-                    copyToClipboard(account->emailAddress, L"Email address");
-                }
-            });
+                copyToClipboard(account->emailAddress, L"Email address");
+            }
+        });
+
+        MenuFlyoutItem copyRecoveryEmail{
+            makeMenuItem(L"Copy recovery email") };
+        copyRecoveryEmail.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
+        {
+            const Account* account{ m_repository.find(
+                idFromMenuItem(sender)) };
+            if (!account || account->recoveryEmail.empty())
+            {
+                StatusText().Text(L"No recovery email is stored for this credential");
+                return;
+            }
+            copyToClipboard(account->recoveryEmail, L"Recovery email");
+        });
 
         MenuFlyoutItem copyLauncherPassword{
-            makeMenuItem(L"Copy launcher password") };
+            makeMenuItem(
+                credential ? L"Copy password" : L"Copy launcher password") };
         copyLauncherPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
+        {
+            MenuFlyoutItem item{ nullptr };
+            try
             {
-                MenuFlyoutItem item{ nullptr };
-                try
+                auto lifetime{ get_strong() };
+                item = sender.as<MenuFlyoutItem>();
+                item.IsEnabled(false);
+                const RecordId id{ unbox_value<RecordId>(item.Tag()) };
+
+                const Account* pendingAccount{ m_repository.find(id) };
+                const bool generic{
+                    pendingAccount &&
+                    pendingAccount->kind == AccountKind::Credential };
+                const bool verified{ co_await verifyUser(
+                    generic
+                        ? L"Verify your identity to copy the password"
+                        : L"Verify your identity to copy the launcher password") };
+                item.IsEnabled(true);
+                if (!verified || m_isLocked)
                 {
-                    auto lifetime{ get_strong() };
-                    item = sender.as<MenuFlyoutItem>();
-                    item.IsEnabled(false);
-                    const RecordId id{ unbox_value<RecordId>(item.Tag()) };
+                    co_return;
+                }
 
-                    const bool verified{ co_await verifyUser(
-                        L"Verify your identity to copy the launcher password") };
-                    item.IsEnabled(true);
-                    if (!verified || m_isLocked)
-                    {
-                        co_return;
-                    }
-
-                    const Account* account{ m_repository.find(id) };
-                    auto password{ !account
-                        ? std::nullopt
+                const Account* account{ m_repository.find(id) };
+                auto password{ !account
+                    ? std::nullopt
+                    : account->kind == AccountKind::Credential
+                        ? m_credentials.unprotectPassword(
+                            account->protectedPassword)
                         : account->protectedLauncherPassword.empty()
                             ? m_credentials.legacyLauncherPassword(id)
                             : m_credentials.unprotectPassword(
                                 account->protectedLauncherPassword) };
-                    auto wipePassword{
-                        account_vault::security::wipeOnExit(password) };
-                    if (password)
+                auto wipePassword{
+                    account_vault::security::wipeOnExit(password) };
+                if (password)
+                {
+                    copyToClipboard(
+                        *password,
+                        account && account->kind == AccountKind::Credential
+                            ? L"Password"
+                            : L"Launcher password");
+                    account_vault::security::wipe(password);
+                }
+                else
+                {
+                    StatusText().Text(L"Password could not be retrieved");
+                }
+            }
+            catch (...)
+            {
+                try
+                {
+                    if (item)
                     {
-                        copyToClipboard(*password, L"Launcher password");
-                        account_vault::security::wipe(password);
+                        item.IsEnabled(true);
                     }
-                    else
-                    {
-                        StatusText().Text(
-                            L"Launcher password could not be retrieved");
-                    }
+                    StatusText().Text(
+                        L"Password copy could not be completed");
                 }
                 catch (...)
                 {
-                    try
-                    {
-                        if (item)
-                        {
-                            item.IsEnabled(true);
-                        }
-                        StatusText().Text(
-                            L"Launcher password copy could not be completed");
-                    }
-                    catch (...)
-                    {
-                    }
                 }
-            });
+            }
+        });
 
         MenuFlyoutItem copyEmailPassword{
-            makeMenuItem(L"Copy email password") };
+            makeMenuItem(
+                credential
+                    ? L"Copy recovery email password"
+                    : L"Copy email password") };
         copyEmailPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
+        {
+            MenuFlyoutItem item{ nullptr };
+            try
             {
-                MenuFlyoutItem item{ nullptr };
-                try
+                auto lifetime{ get_strong() };
+                item = sender.as<MenuFlyoutItem>();
+                item.IsEnabled(false);
+                const RecordId id{ unbox_value<RecordId>(item.Tag()) };
+
+                const Account* pendingAccount{ m_repository.find(id) };
+                const bool generic{
+                    pendingAccount &&
+                    pendingAccount->kind == AccountKind::Credential };
+                const bool verified{ co_await verifyUser(
+                    generic
+                        ? L"Verify your identity to copy the recovery email password"
+                        : L"Verify your identity to copy the email password") };
+                item.IsEnabled(true);
+                if (!verified || m_isLocked)
                 {
-                    auto lifetime{ get_strong() };
-                    item = sender.as<MenuFlyoutItem>();
-                    item.IsEnabled(false);
-                    const RecordId id{ unbox_value<RecordId>(item.Tag()) };
+                    co_return;
+                }
 
-                    const bool verified{ co_await verifyUser(
-                        L"Verify your identity to copy the email password") };
-                    item.IsEnabled(true);
-                    if (!verified || m_isLocked)
-                    {
-                        co_return;
-                    }
-
-                    const Account* account{ m_repository.find(id) };
-                    auto password{ !account
-                        ? std::nullopt
+                const Account* account{ m_repository.find(id) };
+                auto password{ !account
+                    ? std::nullopt
+                    : account->kind == AccountKind::Credential
+                        ? account->protectedRecoveryEmailPassword.empty()
+                            ? std::nullopt
+                            : m_credentials.unprotectPassword(
+                                account->protectedRecoveryEmailPassword)
                         : account->protectedEmailPassword.empty()
                             ? m_credentials.legacyEmailPassword(id)
                             : m_credentials.unprotectPassword(
                                 account->protectedEmailPassword) };
-                    auto wipePassword{
-                        account_vault::security::wipeOnExit(password) };
-                    if (password)
+                auto wipePassword{
+                    account_vault::security::wipeOnExit(password) };
+                if (password)
+                {
+                    copyToClipboard(
+                        *password,
+                        account && account->kind == AccountKind::Credential
+                            ? L"Recovery email password"
+                            : L"Email password");
+                    account_vault::security::wipe(password);
+                }
+                else
+                {
+                    StatusText().Text(
+                        generic
+                            ? L"No recovery email password is stored"
+                            : L"Email password could not be retrieved");
+                }
+            }
+            catch (...)
+            {
+                try
+                {
+                    if (item)
                     {
-                        copyToClipboard(*password, L"Email password");
-                        account_vault::security::wipe(password);
+                        item.IsEnabled(true);
                     }
-                    else
-                    {
-                        StatusText().Text(
-                            L"Email password could not be retrieved");
-                    }
+                    StatusText().Text(
+                        L"Email password copy could not be completed");
                 }
                 catch (...)
                 {
-                    try
-                    {
-                        if (item)
-                        {
-                            item.IsEnabled(true);
-                        }
-                        StatusText().Text(
-                            L"Email password copy could not be completed");
-                    }
-                    catch (...)
-                    {
-                    }
                 }
-            });
+            }
+        });
 
         MenuFlyout credentialFlyout;
         credentialFlyout.Items().Append(copyUsername);
         credentialFlyout.Items().Append(copyEmail);
+        if (credential)
+        {
+            credentialFlyout.Items().Append(copyRecoveryEmail);
+        }
         credentialFlyout.Items().Append(MenuFlyoutSeparator{});
         credentialFlyout.Items().Append(copyLauncherPassword);
         credentialFlyout.Items().Append(copyEmailPassword);
@@ -361,26 +428,38 @@ namespace winrt::AccountVault::implementation
         details.Click([this, idFromMenuItem](
             IInspectable const& sender,
             RoutedEventArgs const&)
+        {
+            const RecordId id{ idFromMenuItem(sender) };
+            const Account* account{ m_repository.find(id) };
+            if (account && account->kind == AccountKind::Credential)
             {
-                showAccountDetailsDialog(idFromMenuItem(sender));
-            });
+                showCredentialDetailsDialog(id);
+            }
+            else
+            {
+                showAccountDetailsDialog(id);
+            }
+        });
 
         MenuFlyoutItem exportAccount{
-            makeMenuItem(L"Export this account...") };
+            makeMenuItem(
+                credential
+                    ? L"Export this credential..."
+                    : L"Export this account...") };
         exportAccount.Click([this, idFromMenuItem](
             IInspectable const& sender,
             RoutedEventArgs const&)
-            {
-                showExportBackup(idFromMenuItem(sender));
-            });
+        {
+            showExportBackup(idFromMenuItem(sender));
+        });
 
         MenuFlyoutItem remove{ makeMenuItem(L"Remove") };
         remove.Click([this, idFromMenuItem](
             IInspectable const& sender,
             RoutedEventArgs const&)
-            {
-                removeAccount(idFromMenuItem(sender));
-            });
+        {
+            removeAccount(idFromMenuItem(sender));
+        });
 
         MenuFlyout accountFlyout;
         accountFlyout.Items().Append(details);
@@ -388,7 +467,8 @@ namespace winrt::AccountVault::implementation
         accountFlyout.Items().Append(MenuFlyoutSeparator{});
         accountFlyout.Items().Append(remove);
 
-        DropDownButton accountActions{ makeMenuButton(L"ACCOUNT") };
+        DropDownButton accountActions{
+            makeMenuButton(credential ? L"RECORD" : L"ACCOUNT") };
         accountActions.Flyout(accountFlyout);
 
         Grid::SetColumn(credentialActions, 0);
@@ -418,10 +498,10 @@ namespace winrt::AccountVault::implementation
 
         card.SizeChanged(
             [weakCard,
-            weakLauncherBadge,
-            weakIdPanel,
-            weakEmailPanel,
-            weakActions](
+             weakLauncherBadge,
+             weakIdPanel,
+             weakEmailPanel,
+             weakActions](
                 IInspectable const&,
                 SizeChangedEventArgs const& args)
             {
@@ -534,13 +614,11 @@ namespace winrt::AccountVault::implementation
             }
         }
 
-        const std::wstring query{ SearchBox().Text().c_str() };
-        const std::wstring launcher{ selectedLauncher() };
-        const auto matches{ m_repository.search(query, launcher) };
+        const auto matches{ visibleAccounts() };
 
         for (std::uint32_t index = 0;
-            index < static_cast<std::uint32_t>(matches.size());
-            ++index)
+             index < static_cast<std::uint32_t>(matches.size());
+             ++index)
         {
             if (matches[index]->recordId == id)
             {
@@ -583,38 +661,52 @@ namespace winrt::AccountVault::implementation
 
         try
         {
-            if (!m_storageReady)
-            {
-                StatusText().Text(
-                    L"Account storage is unavailable; no data was changed");
-                return;
-            }
+        if (!m_storageReady)
+        {
+            StatusText().Text(
+                L"Account storage is unavailable; no data was changed");
+            return;
+        }
 
-            if (!m_repository.find(id))
-            {
-                StatusText().Text(L"That account no longer exists");
-                return;
-            }
+        const Account* accountToRemove{ m_repository.find(id) };
+        if (!accountToRemove)
+        {
+            StatusText().Text(L"That account no longer exists");
+            return;
+        }
+        const bool removedCredential{
+            accountToRemove->kind == AccountKind::Credential };
 
-            const auto oldAccounts{ m_repository.accounts() };
-            const RecordId oldNextId{ m_repository.nextId() };
-            if (!m_repository.remove(id))
-            {
-                StatusText().Text(L"The account could not be removed");
-                return;
-            }
+        const auto oldAccounts{ m_repository.accounts() };
+        const RecordId oldNextId{ m_repository.nextId() };
+        if (!m_repository.remove(id))
+        {
+            StatusText().Text(L"The account could not be removed");
+            return;
+        }
 
-            std::wstring error;
-            if (!persistAccounts(error))
-            {
-                m_repository.replaceAll(oldAccounts, oldNextId);
-                StatusText().Text(L"The account removal could not be saved");
-                return;
-            }
+        std::wstring error;
+        if (!persistAccounts(error))
+        {
+            m_repository.replaceAll(oldAccounts, oldNextId);
+            StatusText().Text(L"The account removal could not be saved");
+            return;
+        }
 
-            removalPersisted = true;
+        removalPersisted = true;
+        if (removedCredential)
+        {
+            rebuildRecordFilter();
+            refreshAccounts();
+        }
+        else
+        {
             refreshAccountCard(id);
-            StatusText().Text(L"Account and credentials removed");
+        }
+        StatusText().Text(
+            removedCredential
+                ? L"Credential removed"
+                : L"Account and credentials removed");
         }
         catch (...)
         {

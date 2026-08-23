@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "PortableBackupService.h"
+#include "../Security/SensitiveData.h"
 
 #include <bcrypt.h>
 #include <wincrypt.h>
@@ -28,7 +29,8 @@ namespace
     constexpr wchar_t KdfName[]{ L"PBKDF2-HMAC-SHA256" };
     constexpr wchar_t CipherName[]{ L"AES-256-GCM" };
     constexpr double EnvelopeVersion{ 1.0 };
-    constexpr double PayloadVersion{ 1.0 };
+    constexpr double LegacyPayloadVersion{ 1.0 };
+    constexpr double PayloadVersion{ 2.0 };
     constexpr std::uint64_t ProductionIterations{ 600000 };
     constexpr std::uint64_t MinimumAcceptedIterations{ 100000 };
     constexpr std::uint64_t MaximumAcceptedIterations{ 2000000 };
@@ -57,10 +59,7 @@ namespace
 
         ~ByteWipeGuard()
         {
-            if (!m_bytes.empty())
-            {
-                SecureZeroMemory(m_bytes.data(), m_bytes.size());
-            }
+            account_vault::security::wipe(m_bytes);
         }
 
     private:
@@ -69,36 +68,23 @@ namespace
 
     void secureWipe(ByteVector& bytes) noexcept
     {
-        if (!bytes.empty())
-        {
-            SecureZeroMemory(bytes.data(), bytes.size());
-        }
-        bytes.clear();
+        account_vault::security::wipe(bytes);
     }
 
     void secureWipe(std::string& text) noexcept
     {
-        if (!text.empty())
-        {
-            SecureZeroMemory(text.data(), text.size());
-        }
-        text.clear();
+        account_vault::security::wipe(text);
     }
 
     void secureWipe(std::wstring& text) noexcept
     {
-        if (!text.empty())
-        {
-            SecureZeroMemory(
-                text.data(),
-                text.size() * sizeof(wchar_t));
-        }
-        text.clear();
+        account_vault::security::wipe(text);
     }
 
     void secureWipe(
         account_vault::services::PortableAccount& account) noexcept
     {
+        secureWipe(account.kind);
         secureWipe(account.launcher);
         secureWipe(account.launcherUsername);
         secureWipe(account.launcherPassword);
@@ -106,6 +92,14 @@ namespace
         secureWipe(account.emailProvider);
         secureWipe(account.emailProviderWebsite);
         secureWipe(account.emailPassword);
+        secureWipe(account.serviceName);
+        secureWipe(account.category);
+        secureWipe(account.username);
+        secureWipe(account.website);
+        secureWipe(account.recoveryEmail);
+        secureWipe(account.notes);
+        secureWipe(account.password);
+        secureWipe(account.recoveryEmailPassword);
     }
 
     void secureWipe(
@@ -537,6 +531,7 @@ namespace
         for (auto const& account : accounts)
         {
             const std::wstring_view fields[]{
+                std::wstring_view{ account.kind },
                 std::wstring_view{ account.launcher },
                 std::wstring_view{ account.launcherUsername },
                 std::wstring_view{ account.launcherPassword },
@@ -544,6 +539,14 @@ namespace
                 std::wstring_view{ account.emailProvider },
                 std::wstring_view{ account.emailProviderWebsite },
                 std::wstring_view{ account.emailPassword },
+                std::wstring_view{ account.serviceName },
+                std::wstring_view{ account.category },
+                std::wstring_view{ account.username },
+                std::wstring_view{ account.website },
+                std::wstring_view{ account.recoveryEmail },
+                std::wstring_view{ account.notes },
+                std::wstring_view{ account.password },
+                std::wstring_view{ account.recoveryEmailPassword },
             };
             for (auto field : fields)
             {
@@ -554,6 +557,8 @@ namespace
             }
 
             JsonObject object;
+            object.Insert(L"kind", JsonValue::CreateStringValue(
+                hstring{ account.kind }));
             object.Insert(L"launcher", JsonValue::CreateStringValue(
                 hstring{ account.launcher }));
             object.Insert(L"launcherUsername", JsonValue::CreateStringValue(
@@ -568,6 +573,24 @@ namespace
                 hstring{ account.emailProviderWebsite }));
             object.Insert(L"emailPassword", JsonValue::CreateStringValue(
                 hstring{ account.emailPassword }));
+            object.Insert(L"serviceName", JsonValue::CreateStringValue(
+                hstring{ account.serviceName }));
+            object.Insert(L"category", JsonValue::CreateStringValue(
+                hstring{ account.category }));
+            object.Insert(L"username", JsonValue::CreateStringValue(
+                hstring{ account.username }));
+            object.Insert(L"website", JsonValue::CreateStringValue(
+                hstring{ account.website }));
+            object.Insert(L"recoveryEmail", JsonValue::CreateStringValue(
+                hstring{ account.recoveryEmail }));
+            object.Insert(L"notes", JsonValue::CreateStringValue(
+                hstring{ account.notes }));
+            object.Insert(L"password", JsonValue::CreateStringValue(
+                hstring{ account.password }));
+            object.Insert(
+                L"recoveryEmailPassword",
+                JsonValue::CreateStringValue(
+                    hstring{ account.recoveryEmailPassword }));
             values.Append(object);
         }
 
@@ -593,7 +616,10 @@ namespace
         }
 
         const JsonObject root{ JsonObject::Parse(to_hstring(payload)) };
-        if (root.GetNamedNumber(L"payloadVersion") != PayloadVersion)
+        const double payloadVersion{
+            root.GetNamedNumber(L"payloadVersion") };
+        if (payloadVersion != LegacyPayloadVersion &&
+            payloadVersion != PayloadVersion)
         {
             throw std::runtime_error{ "Unsupported backup payload version." };
         }
@@ -611,7 +637,17 @@ namespace
             for (std::uint32_t index{}; index < values.Size(); ++index)
             {
                 const JsonObject object{ values.GetObjectAt(index) };
+                const std::wstring kind{
+                    payloadVersion == LegacyPayloadVersion
+                        ? L"launcher"
+                        : requiredField(object, L"kind") };
+                if (kind != L"launcher" && kind != L"credential")
+                {
+                    throw std::runtime_error{
+                        "Invalid backup record kind." };
+                }
                 accounts.push_back(account_vault::services::PortableAccount{
+                    .kind = kind,
                     .launcher = requiredField(object, L"launcher"),
                     .launcherUsername = requiredField(
                         object,
@@ -627,6 +663,33 @@ namespace
                     .emailPassword = requiredField(
                         object,
                         L"emailPassword"),
+                    .serviceName = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"serviceName")
+                        : std::wstring{},
+                    .category = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"category")
+                        : std::wstring{},
+                    .username = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"username")
+                        : std::wstring{},
+                    .website = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"website")
+                        : std::wstring{},
+                    .recoveryEmail = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"recoveryEmail")
+                        : std::wstring{},
+                    .notes = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"notes")
+                        : std::wstring{},
+                    .password = payloadVersion == PayloadVersion
+                        ? requiredField(object, L"password")
+                        : std::wstring{},
+                    .recoveryEmailPassword =
+                        payloadVersion == PayloadVersion
+                            ? requiredField(
+                                object,
+                                L"recoveryEmailPassword")
+                            : std::wstring{},
                 });
             }
         }
@@ -906,12 +969,21 @@ namespace
         account_vault::services::PortableAccount const& right)
     {
         return left.launcher == right.launcher &&
+            left.kind == right.kind &&
             left.launcherUsername == right.launcherUsername &&
             left.launcherPassword == right.launcherPassword &&
             left.emailAddress == right.emailAddress &&
             left.emailProvider == right.emailProvider &&
             left.emailProviderWebsite == right.emailProviderWebsite &&
-            left.emailPassword == right.emailPassword;
+            left.emailPassword == right.emailPassword &&
+            left.serviceName == right.serviceName &&
+            left.category == right.category &&
+            left.username == right.username &&
+            left.website == right.website &&
+            left.recoveryEmail == right.recoveryEmail &&
+            left.notes == right.notes &&
+            left.password == right.password &&
+            left.recoveryEmailPassword == right.recoveryEmailPassword;
     }
 
     void runDeveloperBackupTestsOnce() noexcept

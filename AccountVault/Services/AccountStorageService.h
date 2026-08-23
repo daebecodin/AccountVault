@@ -8,8 +8,6 @@
 
 namespace account_vault::services
 {
-    // This seam is used only by deterministic storage tests. Production code
-    // always uses None.
     enum class StorageFailurePoint
     {
         None,
@@ -35,10 +33,8 @@ namespace account_vault::services
     class AccountStorageService
     {
     public:
-        // Production storage: Windows ApplicationData LocalFolder.
         AccountStorageService();
 
-        // Test storage: an isolated directory plus optional fault injection.
         explicit AccountStorageService(
             std::filesystem::path storageDirectory,
             StorageFailurePoint failurePoint = StorageFailurePoint::None);

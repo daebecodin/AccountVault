@@ -45,7 +45,7 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::TextChangedEventArgs const& args);
 
-        void LauncherFilter_SelectionChanged(
+        void RecordFilter_SelectionChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
@@ -67,6 +67,7 @@ namespace winrt::AccountVault::implementation
 
     private:
         using Account = account_vault::models::Account;
+        using AccountKind = account_vault::models::AccountKind;
         using RecordId = account_vault::models::RecordId;
         using PortableAccount = account_vault::services::PortableAccount;
         using ThemeDefinition = account_vault::models::ThemeDefinition;
@@ -77,6 +78,12 @@ namespace winrt::AccountVault::implementation
             Compact,
             CenterOnly,
             Wide
+        };
+
+        enum class WorkspaceSection
+        {
+            LauncherAccounts,
+            CredentialVault
         };
 
         static constexpr int BuiltInThemeCount{ 10 };
@@ -100,7 +107,11 @@ namespace winrt::AccountVault::implementation
         bool m_isLocked{ false };
         bool m_unlockInProgress{ false };
         bool m_backupOperationInProgress{ false };
+        bool m_updatingWorkspaceNavigation{ false };
+        bool m_updatingRecordFilter{ false };
         ShellLayout m_shellLayout{ ShellLayout::Unknown };
+        WorkspaceSection m_workspaceSection{
+            WorkspaceSection::LauncherAccounts };
         std::int32_t m_displayedWindowWidth{ -1 };
         std::int32_t m_displayedWindowHeight{ -1 };
         std::uint64_t m_lockGeneration{};
@@ -116,6 +127,9 @@ namespace winrt::AccountVault::implementation
             Account const& account,
             std::optional<std::uint32_t> index = std::nullopt);
         void refreshAccountCard(RecordId id);
+        void switchWorkspace(WorkspaceSection section);
+        void rebuildRecordFilter();
+        [[nodiscard]] std::vector<Account const*> visibleAccounts();
         void copyToClipboard(std::wstring const& value, std::wstring_view label);
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
@@ -148,6 +162,29 @@ namespace winrt::AccountVault::implementation
             std::wstring emailProviderWebsite,
             std::optional<std::wstring> emailPassword);
 
+        [[nodiscard]] std::optional<RecordId> addCredential(
+            std::wstring serviceName,
+            std::wstring category,
+            std::wstring username,
+            std::wstring emailAddress,
+            std::wstring password,
+            std::wstring website,
+            std::wstring recoveryEmail,
+            std::wstring recoveryEmailPassword,
+            std::wstring notes);
+
+        [[nodiscard]] bool updateCredential(
+            RecordId id,
+            std::wstring serviceName,
+            std::wstring category,
+            std::wstring username,
+            std::wstring emailAddress,
+            std::optional<std::wstring> password,
+            std::wstring website,
+            std::wstring recoveryEmail,
+            std::optional<std::wstring> recoveryEmailPassword,
+            std::wstring notes);
+
         [[nodiscard]] bool persistAccounts(std::wstring& error) const;
         void applyPreset(int selectedIndex);
         void applyTheme(ThemeDefinition const& theme);
@@ -164,7 +201,7 @@ namespace winrt::AccountVault::implementation
             std::uint8_t green,
             std::uint8_t blue);
 
-        [[nodiscard]] std::wstring selectedLauncher();
+        [[nodiscard]] std::wstring selectedFilter();
         [[nodiscard]] RecordId recordIdFrom(
             Microsoft::UI::Xaml::Controls::Button const& button) const;
 
@@ -184,7 +221,22 @@ namespace winrt::AccountVault::implementation
         winrt::fire_and_forget showImportBackup(bool requireSingleAccount);
         winrt::fire_and_forget showAddAccountDialog();
         winrt::fire_and_forget showAccountDetailsDialog(RecordId id);
+        winrt::fire_and_forget showAddCredentialDialog();
+        winrt::fire_and_forget showCredentialDetailsDialog(RecordId id);
         winrt::fire_and_forget showColorDialog();
+
+    public:
+        void WorkspaceNavigation_SelectionChanged(
+            Microsoft::UI::Xaml::Controls::NavigationView const& sender,
+            Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const& args);
+
+        void LauncherWorkspaceButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        void CredentialWorkspaceButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
     };
 }
 

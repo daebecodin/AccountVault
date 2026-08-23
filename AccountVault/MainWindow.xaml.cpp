@@ -8,6 +8,7 @@
 
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.Windows.System.Power.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -21,6 +22,7 @@
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
+using namespace Microsoft::UI::Xaml::Automation;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Input;
 using namespace Microsoft::Windows::System::Power;
@@ -275,8 +277,9 @@ namespace winrt::AccountVault::implementation
             }
         }
 
-        m_windowReady = true;
         applyPreset(startupThemeIndex);
+        switchWorkspace(WorkspaceSection::LauncherAccounts);
+        m_windowReady = true;
 
         // Storage and UI must begin from the same filtered account set before
         // any incremental create/edit/remove operation calculates an index.
@@ -391,20 +394,20 @@ namespace winrt::AccountVault::implementation
                 isUltrawide ? UltrawideStartupHeight : RegularStartupHeight };
 
             const std::int32_t availableWidth{
-                std::max<std::int32_t>(
+                (std::max)(
                     1,
                     workArea.Width - (2 * StartupEdgeMargin)) };
             const std::int32_t availableHeight{
-                std::max<std::int32_t>(
+                (std::max)(
                     1,
                     workArea.Height - (2 * StartupEdgeMargin)) };
 
             const std::int32_t width{
-                std::min<std::int32_t>(
+                (std::min)(
                     preferredWidth,
                     availableWidth) };
             const std::int32_t height{
-                std::min<std::int32_t>(
+                (std::min)(
                     preferredHeight,
                     availableHeight) };
 
@@ -575,7 +578,14 @@ namespace winrt::AccountVault::implementation
         IInspectable const&,
         RoutedEventArgs const&)
     {
-        showAddAccountDialog();
+        if (m_workspaceSection == WorkspaceSection::CredentialVault)
+        {
+            showAddCredentialDialog();
+        }
+        else
+        {
+            showAddAccountDialog();
+        }
     }
     void MainWindow::SearchBox_TextChanged(
         IInspectable const&,
@@ -586,11 +596,11 @@ namespace winrt::AccountVault::implementation
             refreshAccounts();
         }
     }
-    void MainWindow::LauncherFilter_SelectionChanged(
+    void MainWindow::RecordFilter_SelectionChanged(
         IInspectable const&,
         SelectionChangedEventArgs const&)
     {
-        if (m_windowReady)
+        if (m_windowReady && !m_updatingRecordFilter)
         {
             refreshAccounts();
         }
@@ -985,13 +995,210 @@ namespace winrt::AccountVault::implementation
         {
         }
     }
+    void MainWindow::WorkspaceNavigation_SelectionChanged(
+        NavigationView const&,
+        NavigationViewSelectionChangedEventArgs const& args)
+    {
+        if (!m_windowReady ||
+            m_updatingWorkspaceNavigation ||
+            args.IsSettingsSelected())
+        {
+            return;
+        }
+
+        const auto item{ args.SelectedItem().try_as<NavigationViewItem>() };
+        if (!item || !item.Tag())
+        {
+            return;
+        }
+
+        const hstring tag{ unbox_value<hstring>(item.Tag()) };
+        switchWorkspace(
+            tag == L"credential"
+            ? WorkspaceSection::CredentialVault
+            : WorkspaceSection::LauncherAccounts);
+
+        if (m_shellLayout != ShellLayout::Wide)
+        {
+            CompactNavigation().IsPaneOpen(false);
+        }
+    }
+
+    void MainWindow::LauncherWorkspaceButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        switchWorkspace(WorkspaceSection::LauncherAccounts);
+    }
+
+    void MainWindow::CredentialWorkspaceButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        switchWorkspace(WorkspaceSection::CredentialVault);
+    }
+
+    void MainWindow::switchWorkspace(WorkspaceSection section)
+    {
+        m_workspaceSection = section;
+        const bool credential{
+            section == WorkspaceSection::CredentialVault };
+
+        m_updatingWorkspaceNavigation = true;
+        LauncherWorkspaceButton().IsChecked(!credential);
+        CredentialWorkspaceButton().IsChecked(credential);
+        CompactNavigation().SelectedItem(
+            credential
+            ? CredentialNavigationItem()
+            : LauncherNavigationItem());
+        m_updatingWorkspaceNavigation = false;
+
+        HeaderTitle().Text(
+            credential ? L"Credential vault" : L"Launcher accounts");
+        HeaderSubtitle().Text(
+            credential
+            ? L"Store sign-ins for services, websites, school, work, and everyday accounts."
+            : L"Manage linked launcher and email credentials in one record.");
+
+        SearchBox().Text(L"");
+        SearchBox().PlaceholderText(
+            credential
+            ? L"Search service, category, username, email, website, or notes"
+            : L"Search launcher, username, email, or provider website");
+        AutomationProperties::SetName(
+            SearchBox(),
+            credential
+            ? L"Search credential vault"
+            : L"Search launcher accounts");
+        AutomationProperties::SetHelpText(
+            SearchBox(),
+            SearchBox().PlaceholderText());
+
+        CompactAddMenuItem().Text(
+            credential ? L"Add credential" : L"Add account");
+        CompactImportOneMenuItem().Text(
+            credential ? L"Import one record..." : L"Import one account...");
+        CompactImportAllMenuItem().Text(
+            credential ? L"Import vault..." : L"Import all accounts...");
+        CompactExportAllMenuItem().Text(
+            credential ? L"Export vault..." : L"Export all accounts...");
+        AccountActionsButton().Content(box_value(
+            credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS"));
+        AutomationProperties::SetName(
+            AccountActionsButton(),
+            credential ? L"Credential vault actions" : L"Account actions");
+        RightAddAccountButton().Content(box_value(
+            credential ? L"Add credential" : L"Add account"));
+        AutomationProperties::SetName(
+            RightAddAccountButton(),
+            credential ? L"Add credential" : L"Add account");
+        RightImportOneButton().Content(box_value(
+            credential ? L"Import one record..." : L"Import one account..."));
+        RightImportAllButton().Content(box_value(
+            credential ? L"Import vault..." : L"Import all accounts..."));
+        RightExportAllButton().Content(box_value(
+            credential ? L"Export vault..." : L"Export all accounts..."));
+        AutomationProperties::SetName(
+            RightImportOneButton(),
+            credential ? L"Import one vault record" : L"Import one account");
+        AutomationProperties::SetName(
+            RightImportAllButton(),
+            credential ? L"Import vault" : L"Import all accounts");
+        AutomationProperties::SetName(
+            RightExportAllButton(),
+            credential ? L"Export vault" : L"Export all accounts");
+        RightRailHeader().Text(
+            credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS");
+
+        EmptyStateTitle().Text(
+            credential ? L"No credentials found" : L"No accounts found");
+        EmptyStateSubtitle().Text(
+            credential
+            ? L"Add a credential or change your search."
+            : L"Add an account or change your search.");
+        AutomationProperties::SetName(
+            AccountsList(),
+            credential ? L"Stored credentials" : L"Accounts");
+        AutomationProperties::SetHelpText(
+            AccountsList(),
+            credential
+            ? L"General service and website credentials"
+            : L"Stored launcher and email accounts");
+
+        rebuildRecordFilter();
+        if (m_windowReady)
+        {
+            refreshAccounts();
+        }
+    }
+
+    void MainWindow::rebuildRecordFilter()
+    {
+        m_updatingRecordFilter = true;
+        const auto items{ RecordFilter().Items() };
+        items.Clear();
+
+        const auto appendItem = [&items](std::wstring_view text)
+            {
+                ComboBoxItem item;
+                item.Content(box_value(hstring{ text }));
+                items.Append(item);
+            };
+
+        if (m_workspaceSection == WorkspaceSection::LauncherAccounts)
+        {
+            AutomationProperties::SetName(RecordFilter(), L"Launcher filter");
+            appendItem(L"All launchers");
+            for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
+            {
+                appendItem(name);
+            }
+        }
+        else
+        {
+            AutomationProperties::SetName(RecordFilter(), L"Category filter");
+            appendItem(L"All categories");
+            std::vector<std::wstring> categories{
+                L"Finance",
+                L"School",
+                L"Work",
+                L"Shopping",
+                L"Social",
+                L"Entertainment",
+                L"Utilities",
+                L"Other"
+            };
+
+            for (auto const& saved : m_repository.credentialCategories())
+            {
+                if (std::ranges::find(categories, saved) == categories.end())
+                {
+                    categories.push_back(saved);
+                }
+            }
+            for (auto const& category : categories)
+            {
+                appendItem(category);
+            }
+        }
+
+        RecordFilter().SelectedIndex(0);
+        m_updatingRecordFilter = false;
+    }
+
+    std::vector<MainWindow::Account const*> MainWindow::visibleAccounts()
+    {
+        const std::wstring query{ SearchBox().Text().c_str() };
+        const std::wstring filter{ selectedFilter() };
+        return m_workspaceSection == WorkspaceSection::CredentialVault
+            ? m_repository.searchCredentials(query, filter)
+            : m_repository.search(query, filter);
+    }
+
     void MainWindow::refreshAccounts()
     {
         AccountsList().Items().Clear();
-
-        const std::wstring query{ SearchBox().Text().c_str() };
-        const std::wstring launcher{ selectedLauncher() };
-        const auto matches{ m_repository.search(query, launcher) };
+        const auto matches{ visibleAccounts() };
 
         for (Account const* account : matches)
         {
@@ -1002,20 +1209,31 @@ namespace winrt::AccountVault::implementation
             matches.empty() ? Visibility::Visible : Visibility::Collapsed);
 
         std::wstring status{ std::to_wstring(matches.size()) };
-        status += matches.size() == 1 ? L" account shown" : L" accounts shown";
+        if (m_workspaceSection == WorkspaceSection::CredentialVault)
+        {
+            status += matches.size() == 1
+                ? L" credential shown"
+                : L" credentials shown";
+        }
+        else
+        {
+            status += matches.size() == 1
+                ? L" account shown"
+                : L" accounts shown";
+        }
         status += L"  |  passwords protected locally with Windows DPAPI";
         StatusText().Text(hstring{ status });
     }
-    std::wstring MainWindow::selectedLauncher()
+    std::wstring MainWindow::selectedFilter()
     {
-        const int selectedIndex{ LauncherFilter().SelectedIndex() };
+        const int selectedIndex{ RecordFilter().SelectedIndex() };
 
         if (selectedIndex <= 0)
         {
             return {};
         }
 
-        const auto item = LauncherFilter()
+        const auto item = RecordFilter()
             .SelectedItem()
             .as<ComboBoxItem>();
         return unbox_value<hstring>(item.Content()).c_str();

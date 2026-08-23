@@ -52,6 +52,7 @@ namespace
     void secureWipe(
         account_vault::services::PortableAccount& account) noexcept
     {
+        account_vault::security::wipe(account.kind);
         account_vault::security::wipe(account.launcher);
         account_vault::security::wipe(account.launcherUsername);
         account_vault::security::wipe(account.launcherPassword);
@@ -59,6 +60,14 @@ namespace
         account_vault::security::wipe(account.emailProvider);
         account_vault::security::wipe(account.emailProviderWebsite);
         account_vault::security::wipe(account.emailPassword);
+        account_vault::security::wipe(account.serviceName);
+        account_vault::security::wipe(account.category);
+        account_vault::security::wipe(account.username);
+        account_vault::security::wipe(account.website);
+        account_vault::security::wipe(account.recoveryEmail);
+        account_vault::security::wipe(account.notes);
+        account_vault::security::wipe(account.password);
+        account_vault::security::wipe(account.recoveryEmailPassword);
     }
 
     void secureWipe(
@@ -123,47 +132,86 @@ namespace winrt::AccountVault::implementation
 
         const auto appendAccount = [this, &accounts, &error](
             Account const& account)
+        {
+            if (account.kind == AccountKind::Credential)
             {
-                auto launcherPassword{
-                    account.protectedLauncherPassword.empty()
-                        ? m_credentials.legacyLauncherPassword(account.recordId)
-                        : m_credentials.unprotectPassword(
-                            account.protectedLauncherPassword) };
-                auto emailPassword{
-                    account.protectedEmailPassword.empty()
-                        ? m_credentials.legacyEmailPassword(account.recordId)
-                        : m_credentials.unprotectPassword(
-                            account.protectedEmailPassword) };
-                auto wipeLauncherPassword{
-                    account_vault::security::wipeOnExit(launcherPassword) };
-                auto wipeEmailPassword{
-                    account_vault::security::wipeOnExit(emailPassword) };
-
-                if (!launcherPassword || !emailPassword)
+                auto password{ m_credentials.unprotectPassword(
+                    account.protectedPassword) };
+                std::optional<std::wstring> recoveryPassword{
+                    std::wstring{} };
+                if (!account.protectedRecoveryEmailPassword.empty())
                 {
-                    if (launcherPassword)
-                    {
-                        secureWipe(*launcherPassword);
-                    }
-                    if (emailPassword)
-                    {
-                        secureWipe(*emailPassword);
-                    }
-                    error = L"One or more account passwords could not be decrypted.";
+                    recoveryPassword = m_credentials.unprotectPassword(
+                        account.protectedRecoveryEmailPassword);
+                }
+                auto wipePassword{
+                    account_vault::security::wipeOnExit(password) };
+                auto wipeRecoveryPassword{
+                    account_vault::security::wipeOnExit(recoveryPassword) };
+
+                if (!password || !recoveryPassword)
+                {
+                    error = L"One or more credential passwords could not be decrypted.";
                     return false;
                 }
 
                 accounts.push_back(PortableAccount{
-                    .launcher = account.launcher,
-                    .launcherUsername = account.launcherUsername,
-                    .launcherPassword = std::move(*launcherPassword),
+                    .kind = L"credential",
                     .emailAddress = account.emailAddress,
-                    .emailProvider = account.emailProvider,
-                    .emailProviderWebsite = account.emailProviderWebsite,
-                    .emailPassword = std::move(*emailPassword),
-                    });
+                    .serviceName = account.serviceName,
+                    .category = account.category,
+                    .username = account.username,
+                    .website = account.website,
+                    .recoveryEmail = account.recoveryEmail,
+                    .notes = account.notes,
+                    .password = std::move(*password),
+                    .recoveryEmailPassword =
+                        std::move(*recoveryPassword),
+                });
                 return true;
-            };
+            }
+
+            auto launcherPassword{
+                account.protectedLauncherPassword.empty()
+                    ? m_credentials.legacyLauncherPassword(account.recordId)
+                    : m_credentials.unprotectPassword(
+                        account.protectedLauncherPassword) };
+            auto emailPassword{
+                account.protectedEmailPassword.empty()
+                    ? m_credentials.legacyEmailPassword(account.recordId)
+                    : m_credentials.unprotectPassword(
+                        account.protectedEmailPassword) };
+            auto wipeLauncherPassword{
+                account_vault::security::wipeOnExit(launcherPassword) };
+            auto wipeEmailPassword{
+                account_vault::security::wipeOnExit(emailPassword) };
+
+            if (!launcherPassword || !emailPassword)
+            {
+                if (launcherPassword)
+                {
+                    secureWipe(*launcherPassword);
+                }
+                if (emailPassword)
+                {
+                    secureWipe(*emailPassword);
+                }
+                error = L"One or more account passwords could not be decrypted.";
+                return false;
+            }
+
+            accounts.push_back(PortableAccount{
+                .kind = L"launcher",
+                .launcher = account.launcher,
+                .launcherUsername = account.launcherUsername,
+                .launcherPassword = std::move(*launcherPassword),
+                .emailAddress = account.emailAddress,
+                .emailProvider = account.emailProvider,
+                .emailProviderWebsite = account.emailProviderWebsite,
+                .emailPassword = std::move(*emailPassword),
+            });
+            return true;
+        };
 
         try
         {
@@ -185,7 +233,7 @@ namespace winrt::AccountVault::implementation
             {
                 if (m_repository.accounts().empty())
                 {
-                    error = L"There are no accounts to export.";
+                    error = L"There are no vault records to export.";
                     return false;
                 }
 
@@ -236,14 +284,14 @@ namespace winrt::AccountVault::implementation
             TextBlock explanation;
             explanation.Text(confirmPassword
                 ? L"Create a backup password with at least 12 characters. "
-                L"It cannot be recovered if forgotten."
+                  L"It cannot be recovered if forgotten."
                 : L"Enter the password used when this backup was exported.");
             explanation.TextWrapping(TextWrapping::Wrap);
             explanation.Foreground(
                 Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppMutedTextBrush"))
-                .as<Microsoft::UI::Xaml::Media::Brush>());
+                    .Resources()
+                    .Lookup(box_value(L"AppMutedTextBrush"))
+                    .as<Microsoft::UI::Xaml::Media::Brush>());
             content.Children().Append(explanation);
 
             password.Header(box_value(L"Backup password"));
@@ -436,9 +484,9 @@ namespace winrt::AccountVault::implementation
             std::vector<PortableAccount> portableAccounts;
             std::wstring preparationError;
             if (!buildPortableAccounts(
-                onlyRecord,
-                portableAccounts,
-                preparationError))
+                    onlyRecord,
+                    portableAccounts,
+                    preparationError))
             {
                 secureWipe(backupPassword);
                 StatusText().Text(hstring{ preparationError });
@@ -606,7 +654,7 @@ namespace winrt::AccountVault::implementation
                 readResult.accounts.size() != 1)
             {
                 importError =
-                    L"This backup does not contain exactly one account.";
+                    L"This backup does not contain exactly one record.";
             }
             else if (readResult.succeeded)
             {
@@ -614,6 +662,59 @@ namespace winrt::AccountVault::implementation
                 account_vault::services::CredentialService credentials;
                 for (auto& portable : readResult.accounts)
                 {
+                    if (portable.kind == L"credential")
+                    {
+                        if (portable.serviceName.empty() ||
+                            portable.category.empty() ||
+                            portable.emailAddress.empty() ||
+                            portable.password.empty())
+                        {
+                            importError =
+                                L"An imported credential is missing a required field.";
+                            protectedImports.clear();
+                            break;
+                        }
+                        const auto protectedPassword{
+                            credentials.protectPassword(portable.password) };
+                        std::wstring protectedRecoveryPassword;
+                        if (!portable.recoveryEmailPassword.empty())
+                        {
+                            const auto value{ credentials.protectPassword(
+                                portable.recoveryEmailPassword) };
+                            if (!value)
+                            {
+                                importError =
+                                    L"An imported recovery password could not be protected locally.";
+                                protectedImports.clear();
+                                break;
+                            }
+                            protectedRecoveryPassword = *value;
+                        }
+                        if (!protectedPassword)
+                        {
+                            importError =
+                                L"An imported password could not be protected locally.";
+                            protectedImports.clear();
+                            break;
+                        }
+
+                        protectedImports.push_back(Account{
+                            .recordId = 0,
+                            .kind = AccountKind::Credential,
+                            .emailAddress = std::move(portable.emailAddress),
+                            .serviceName = std::move(portable.serviceName),
+                            .category = std::move(portable.category),
+                            .username = std::move(portable.username),
+                            .website = std::move(portable.website),
+                            .recoveryEmail = std::move(portable.recoveryEmail),
+                            .notes = std::move(portable.notes),
+                            .protectedPassword = *protectedPassword,
+                            .protectedRecoveryEmailPassword =
+                                std::move(protectedRecoveryPassword),
+                        });
+                        continue;
+                    }
+
                     const auto launcherPassword{
                         credentials.protectPassword(
                             portable.launcherPassword) };
@@ -638,7 +739,7 @@ namespace winrt::AccountVault::implementation
                             std::move(portable.emailProviderWebsite),
                         .protectedLauncherPassword = *launcherPassword,
                         .protectedEmailPassword = *emailPassword,
-                        });
+                    });
                 }
             }
             secureWipe(readResult.accounts);
@@ -660,10 +761,10 @@ namespace winrt::AccountVault::implementation
             }
             if (protectedImports.empty() ||
                 protectedImports.size() >
-                MaximumAccountCount - m_repository.accounts().size())
+                    MaximumAccountCount - m_repository.accounts().size())
             {
                 StatusText().Text(
-                    L"Importing this backup would exceed the account limit");
+                    L"Importing this backup would exceed the vault record limit");
                 co_return;
             }
 
@@ -673,7 +774,7 @@ namespace winrt::AccountVault::implementation
                 (std::numeric_limits<RecordId>::max)() };
             if (nextId == 0 || nextId >= maximumId - 1 ||
                 protectedImports.size() >
-                static_cast<std::size_t>(maximumId - 1 - nextId))
+                    static_cast<std::size_t>(maximumId - 1 - nextId))
             {
                 StatusText().Text(L"The account record ID space is exhausted");
                 co_return;
@@ -705,12 +806,13 @@ namespace winrt::AccountVault::implementation
             // Disk is now authoritative. Synchronize the repository even if
             // the app locked while the background save was completing.
             m_repository.replaceAll(std::move(candidate), nextId);
+            rebuildRecordFilter();
             refreshAccounts();
             if (!m_isLocked)
             {
                 std::wstring status{ L"Imported " };
                 status += std::to_wstring(importedCount);
-                status += importedCount == 1 ? L" account" : L" accounts";
+                status += importedCount == 1 ? L" record" : L" records";
                 StatusText().Text(hstring{ status });
                 noteUserActivity();
             }

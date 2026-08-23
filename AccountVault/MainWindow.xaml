@@ -110,6 +110,76 @@
                 </Setter>
             </Style>
 
+            <Style x:Key="WorkspaceNavToggleStyle" TargetType="ToggleButton">
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="Padding" Value="10,8" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FontFamily" Value="Cascadia Mono" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Grid Background="Transparent">
+                                <Border
+                                    x:Name="SelectionFill"
+                                    Background="{StaticResource AppAccentBrush}"
+                                    CornerRadius="5"
+                                    Opacity="0" />
+                                <Border
+                                    x:Name="SelectionIndicator"
+                                    Width="3"
+                                    Margin="0,6,0,6"
+                                    HorizontalAlignment="Left"
+                                    Background="{StaticResource AppAccentBrush}"
+                                    CornerRadius="2"
+                                    Opacity="0" />
+                                <ContentPresenter
+                                    x:Name="NavContent"
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="SelectionFill.Opacity" Value="0.08" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="SelectionFill.Opacity" Value="0.16" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="NavContent.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CheckStates">
+                                        <VisualState x:Name="Unchecked" />
+                                        <VisualState x:Name="Checked">
+                                            <VisualState.Setters>
+                                                <Setter Target="SelectionFill.Opacity" Value="0.12" />
+                                                <Setter Target="SelectionIndicator.Opacity" Value="1" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Indeterminate" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Shared presentation for independent live status items. -->
             <Style x:Key="StatusMetricTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Cascadia Mono" />
@@ -154,10 +224,10 @@
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.Row)" Value="0" />
-                        <Setter Target="LauncherFilter.(Grid.Column)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.MinWidth" Value="145" />
+                        <Setter Target="RecordFilter.(Grid.Row)" Value="0" />
+                        <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
+                        <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="RecordFilter.MinWidth" Value="145" />
                         <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
                         <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
                         <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
@@ -213,10 +283,10 @@
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.Row)" Value="0" />
-                        <Setter Target="LauncherFilter.(Grid.Column)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.MinWidth" Value="145" />
+                        <Setter Target="RecordFilter.(Grid.Row)" Value="0" />
+                        <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
+                        <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="RecordFilter.MinWidth" Value="145" />
                         <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
                         <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
                         <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
@@ -272,10 +342,10 @@
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.Row)" Value="1" />
-                        <Setter Target="LauncherFilter.(Grid.Column)" Value="0" />
-                        <Setter Target="LauncherFilter.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="LauncherFilter.MinWidth" Value="0" />
+                        <Setter Target="RecordFilter.(Grid.Row)" Value="1" />
+                        <Setter Target="RecordFilter.(Grid.Column)" Value="0" />
+                        <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="RecordFilter.MinWidth" Value="0" />
                         <Setter Target="ThemePicker.(Grid.Row)" Value="2" />
                         <Setter Target="ThemePicker.(Grid.Column)" Value="0" />
                         <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
@@ -331,7 +401,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Container 1: future left-side navigation. -->
+            <!-- Container 1: wide-window workspace navigation. -->
             <Border
                 x:Name="LeftRail"
                 Padding="14,16"
@@ -341,28 +411,38 @@
                 CornerRadius="8"
                 Visibility="Collapsed"
                 AutomationProperties.Name="Navigation">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
+                <StackPanel Spacing="5">
                     <TextBlock
+                        Margin="10,0,0,10"
                         Text="NAVIGATION"
                         FontFamily="Cascadia Mono"
                         FontSize="11"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource AppAccentBrush}" />
 
-                    <TextBlock
-                        Grid.Row="1"
-                        Text="COMING SOON"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        FontFamily="Cascadia Mono"
-                        FontSize="11"
-                        Foreground="{StaticResource AppMutedTextBrush}" />
-                </Grid>
+                    <ToggleButton
+                        x:Name="LauncherWorkspaceButton"
+                        IsChecked="True"
+                        Style="{StaticResource WorkspaceNavToggleStyle}"
+                        AutomationProperties.Name="Launcher accounts workspace"
+                        Click="LauncherWorkspaceButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Home" />
+                            <TextBlock Text="Launcher accounts" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <ToggleButton
+                        x:Name="CredentialWorkspaceButton"
+                        Style="{StaticResource WorkspaceNavToggleStyle}"
+                        AutomationProperties.Name="Credential Vault workspace"
+                        Click="CredentialWorkspaceButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Contact" />
+                            <TextBlock Text="Credential vault" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ToggleButton>
+                </StackPanel>
             </Border>
 
             <!--
@@ -382,6 +462,7 @@
                 IsSettingsVisible="False"
                 AlwaysShowHeader="False"
                 Background="{StaticResource AppBackgroundBrush}"
+                SelectionChanged="WorkspaceNavigation_SelectionChanged"
                 AutomationProperties.Name="Navigation drawer">
                 <!--
                     WinUI defaults this internal content surface to 8,0,0,0
@@ -394,6 +475,26 @@
                         x:Key="NavigationViewContentBackground"
                         ResourceKey="AppBackgroundBrush" />
                 </NavigationView.Resources>
+
+                <NavigationView.MenuItems>
+                    <NavigationViewItem
+                        x:Name="LauncherNavigationItem"
+                        Content="Launcher accounts"
+                        Tag="launcher"
+                        IsSelected="True">
+                        <NavigationViewItem.Icon>
+                            <SymbolIcon Symbol="Home" />
+                        </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    <NavigationViewItem
+                        x:Name="CredentialNavigationItem"
+                        Content="Credential vault"
+                        Tag="credential">
+                        <NavigationViewItem.Icon>
+                            <SymbolIcon Symbol="Contact" />
+                        </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                </NavigationView.MenuItems>
 
                 <Border
                     x:Name="AccountWorkspace"
@@ -450,12 +551,12 @@
                             AutomationProperties.HelpText="Add, import, or export accounts">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem Text="Add account" Click="AddAccountButton_Click" />
+                                    <MenuFlyoutItem x:Name="CompactAddMenuItem" Text="Add account" Click="AddAccountButton_Click" />
                                     <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Import one account..." Click="ImportOneAccountButton_Click" />
-                                    <MenuFlyoutItem Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
+                                    <MenuFlyoutItem x:Name="CompactImportOneMenuItem" Text="Import one account..." Click="ImportOneAccountButton_Click" />
+                                    <MenuFlyoutItem x:Name="CompactImportAllMenuItem" Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
                                     <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
+                                    <MenuFlyoutItem x:Name="CompactExportAllMenuItem" Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
@@ -490,14 +591,14 @@
                             TextChanged="SearchBox_TextChanged" />
 
                         <ComboBox
-                            x:Name="LauncherFilter"
+                            x:Name="RecordFilter"
                             Grid.Column="1"
                             MinWidth="145"
                             AccessKey="L"
-                            AutomationProperties.Name="Launcher filter"
+                            AutomationProperties.Name="Record filter"
                             Style="{StaticResource ToolbarComboBoxStyle}"
                             SelectedIndex="0"
-                            SelectionChanged="LauncherFilter_SelectionChanged">
+                            SelectionChanged="RecordFilter_SelectionChanged">
                             <ComboBoxItem Content="All launchers" />
                             <ComboBoxItem Content="Steam" />
                             <ComboBoxItem Content="Riot" />
@@ -566,6 +667,7 @@
                             VerticalAlignment="Center"
                             Spacing="8">
                             <TextBlock
+                                x:Name="EmptyStateTitle"
                                 Text="No accounts found"
                                 FontSize="20"
                                 FontWeight="SemiBold"
@@ -574,6 +676,7 @@
                                 TextWrapping="Wrap"
                                 Foreground="{StaticResource AppTextBrush}" />
                             <TextBlock
+                                x:Name="EmptyStateSubtitle"
                                 Text="Add an account or change your search."
                                 TextAlignment="Center"
                                 TextWrapping="Wrap"
@@ -661,6 +764,7 @@
                 AutomationProperties.Name="Account actions">
                 <StackPanel Spacing="3">
                     <TextBlock
+                        x:Name="RightRailHeader"
                         Margin="10,0,0,10"
                         Text="ACCOUNT ACTIONS"
                         FontFamily="Cascadia Mono"
@@ -669,6 +773,7 @@
                         Foreground="{StaticResource AppAccentBrush}" />
 
                     <Button
+                        x:Name="RightAddAccountButton"
                         Content="Add account"
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="A"
@@ -676,6 +781,7 @@
                         Click="AddAccountButton_Click" />
 
                     <Button
+                        x:Name="RightImportOneButton"
                         Content="Import one account..."
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="O"
@@ -683,6 +789,7 @@
                         Click="ImportOneAccountButton_Click" />
 
                     <Button
+                        x:Name="RightImportAllButton"
                         Content="Import all accounts..."
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="I"
@@ -690,6 +797,7 @@
                         Click="ImportAllAccountsButton_Click" />
 
                     <Button
+                        x:Name="RightExportAllButton"
                         Content="Export all accounts..."
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="E"

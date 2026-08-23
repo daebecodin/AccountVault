@@ -4,9 +4,7 @@
 
 #include <algorithm>
 #include <cwctype>
-#include <limits>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,14 +27,6 @@ namespace account_vault::services
             std::wstring protectedLauncherPassword,
             std::wstring protectedEmailPassword)
         {
-            // UINT64_MAX is reserved as invalid, and nextRecordId itself must
-            // never become UINT64_MAX after a successful add.
-            if (m_nextId == 0 ||
-                m_nextId >= (std::numeric_limits<RecordId>::max)() - 1)
-            {
-                throw std::overflow_error{ "The account record ID space is exhausted." };
-            }
-
             const RecordId id{ m_nextId++ };
 
             m_accounts.push_back(Account{
@@ -50,7 +40,38 @@ namespace account_vault::services
                     std::move(protectedLauncherPassword),
                 .protectedEmailPassword =
                     std::move(protectedEmailPassword),
-                });
+            });
+
+            return id;
+        }
+
+        [[nodiscard]] RecordId addCredential(
+            std::wstring serviceName,
+            std::wstring category,
+            std::wstring username,
+            std::wstring emailAddress,
+            std::wstring website,
+            std::wstring recoveryEmail,
+            std::wstring notes,
+            std::wstring protectedPassword,
+            std::wstring protectedRecoveryEmailPassword)
+        {
+            const RecordId id{ m_nextId++ };
+
+            m_accounts.push_back(Account{
+                .recordId = id,
+                .kind = models::AccountKind::Credential,
+                .emailAddress = std::move(emailAddress),
+                .serviceName = std::move(serviceName),
+                .category = std::move(category),
+                .username = std::move(username),
+                .website = std::move(website),
+                .recoveryEmail = std::move(recoveryEmail),
+                .notes = std::move(notes),
+                .protectedPassword = std::move(protectedPassword),
+                .protectedRecoveryEmailPassword =
+                    std::move(protectedRecoveryEmailPassword),
+            });
 
             return id;
         }
@@ -86,7 +107,8 @@ namespace account_vault::services
                 id,
                 &Account::recordId);
 
-            if (account == m_accounts.end())
+            if (account == m_accounts.end() ||
+                account->kind != models::AccountKind::Launcher)
             {
                 return false;
             }
@@ -119,7 +141,8 @@ namespace account_vault::services
                 id,
                 &Account::recordId);
 
-            if (account == m_accounts.end())
+            if (account == m_accounts.end() ||
+                account->kind != models::AccountKind::Launcher)
             {
                 return false;
             }
@@ -128,6 +151,49 @@ namespace account_vault::services
                 std::move(protectedLauncherPassword);
             account->protectedEmailPassword =
                 std::move(protectedEmailPassword);
+            return true;
+        }
+
+        [[nodiscard]] bool updateCredential(
+            RecordId id,
+            std::wstring serviceName,
+            std::wstring category,
+            std::wstring username,
+            std::wstring emailAddress,
+            std::wstring website,
+            std::wstring recoveryEmail,
+            std::wstring notes,
+            std::optional<std::wstring> protectedPassword = std::nullopt,
+            std::optional<std::wstring> protectedRecoveryEmailPassword =
+                std::nullopt)
+        {
+            const auto account = std::ranges::find(
+                m_accounts,
+                id,
+                &Account::recordId);
+
+            if (account == m_accounts.end() ||
+                account->kind != models::AccountKind::Credential)
+            {
+                return false;
+            }
+
+            account->serviceName = std::move(serviceName);
+            account->category = std::move(category);
+            account->username = std::move(username);
+            account->emailAddress = std::move(emailAddress);
+            account->website = std::move(website);
+            account->recoveryEmail = std::move(recoveryEmail);
+            account->notes = std::move(notes);
+            if (protectedPassword)
+            {
+                account->protectedPassword = std::move(*protectedPassword);
+            }
+            if (protectedRecoveryEmailPassword)
+            {
+                account->protectedRecoveryEmailPassword =
+                    std::move(*protectedRecoveryEmailPassword);
+            }
             return true;
         }
 
@@ -169,6 +235,11 @@ namespace account_vault::services
 
             for (Account const& account : m_accounts)
             {
+                if (account.kind != models::AccountKind::Launcher)
+                {
+                    continue;
+                }
+
                 const bool launcherMatches =
                     launcher.empty() || account.launcher == launcher;
 
@@ -187,6 +258,67 @@ namespace account_vault::services
             }
 
             return matches;
+        }
+
+        [[nodiscard]] std::vector<Account const*> searchCredentials(
+            std::wstring_view query,
+            std::wstring_view category) const
+        {
+            const std::wstring loweredQuery{ toLower(query) };
+            std::vector<Account const*> matches;
+            matches.reserve(m_accounts.size());
+
+            for (Account const& account : m_accounts)
+            {
+                if (account.kind != models::AccountKind::Credential)
+                {
+                    continue;
+                }
+
+                const bool categoryMatches =
+                    category.empty() || account.category == category;
+                const bool queryMatches =
+                    loweredQuery.empty() ||
+                    containsIgnoreCase(account.serviceName, loweredQuery) ||
+                    containsIgnoreCase(account.category, loweredQuery) ||
+                    containsIgnoreCase(account.username, loweredQuery) ||
+                    containsIgnoreCase(account.emailAddress, loweredQuery) ||
+                    containsIgnoreCase(account.website, loweredQuery) ||
+                    containsIgnoreCase(account.recoveryEmail, loweredQuery) ||
+                    containsIgnoreCase(account.notes, loweredQuery);
+
+                if (categoryMatches && queryMatches)
+                {
+                    matches.push_back(&account);
+                }
+            }
+
+            return matches;
+        }
+
+        [[nodiscard]] std::vector<std::wstring> credentialCategories() const
+        {
+            std::vector<std::wstring> categories;
+            for (Account const& account : m_accounts)
+            {
+                if (account.kind == models::AccountKind::Credential &&
+                    !account.category.empty() &&
+                    std::ranges::find(categories, account.category) ==
+                        categories.end())
+                {
+                    categories.push_back(account.category);
+                }
+            }
+            std::ranges::sort(categories);
+            return categories;
+        }
+
+        [[nodiscard]] std::size_t size(models::AccountKind kind) const noexcept
+        {
+            return static_cast<std::size_t>(std::ranges::count(
+                m_accounts,
+                kind,
+                &Account::kind));
         }
 
         [[nodiscard]] std::size_t size() const noexcept
