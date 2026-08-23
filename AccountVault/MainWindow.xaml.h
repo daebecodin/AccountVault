@@ -6,8 +6,11 @@
 #include "Services/AccountStorageService.h"
 #include "Services/CredentialService.h"
 
+#include <winrt/Microsoft.UI.Dispatching.h>
+#include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -19,6 +22,7 @@ namespace winrt::AccountVault::implementation
     struct MainWindow : MainWindowT<MainWindow>
     {
         MainWindow();
+        ~MainWindow();
 
         void AddAccountButton_Click(
             Windows::Foundation::IInspectable const& sender,
@@ -44,6 +48,10 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        void UnlockButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
     private:
         using Account = account_vault::models::Account;
         using RecordId = account_vault::models::RecordId;
@@ -51,6 +59,7 @@ namespace winrt::AccountVault::implementation
         using ThemeDefinition = account_vault::models::ThemeDefinition;
 
         static constexpr int BuiltInThemeCount{ 10 };
+        static constexpr int AutoLockTimeoutSeconds{ 5 * 60 };
 
         account_vault::services::AccountRepository m_repository;
         account_vault::services::AccountStorageService m_accountStorage;
@@ -58,6 +67,15 @@ namespace winrt::AccountVault::implementation
         std::vector<ThemeDefinition> m_customThemes;
         bool m_windowReady{ false };
         bool m_storageReady{ true };
+        bool m_isLocked{ false };
+        bool m_unlockInProgress{ false };
+        std::uint64_t m_lockGeneration{};
+        std::uint32_t m_accountClipboardSequence{};
+        std::chrono::steady_clock::time_point m_autoLockDeadline{};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer m_autoLockTimer{ nullptr };
+        Microsoft::UI::Windowing::AppWindow m_appWindow{ nullptr };
+        winrt::event_token m_appWindowChangedToken{};
+        winrt::event_token m_suspendStatusChangedToken{};
 
         void refreshAccounts();
         void appendAccountCard(
@@ -68,6 +86,11 @@ namespace winrt::AccountVault::implementation
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
         void removeAccount(RecordId id);
+        void initializeAutoLock();
+        void noteUserActivity() noexcept;
+        void updateAutoLockStatus() noexcept;
+        void lockApplication(std::wstring_view reason) noexcept;
+        winrt::fire_and_forget unlockApplication();
 
         [[nodiscard]] std::optional<RecordId> addAccount(
             std::wstring launcher,

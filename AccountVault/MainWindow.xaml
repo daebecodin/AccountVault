@@ -146,14 +146,76 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="0,20,0,0">
+        <Grid Grid.Row="3" Margin="0,20,0,0" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
             <TextBlock
                 x:Name="StatusText"
                 Text="Passwords are encrypted locally with Windows DPAPI."
                 FontFamily="Cascadia Mono"
                 FontSize="12"
+                TextTrimming="CharacterEllipsis"
+                VerticalAlignment="Center"
                 Foreground="{StaticResource AppMutedTextBrush}" />
+
+            <TextBlock
+                x:Name="AutoLockStatusText"
+                Grid.Column="1"
+                MinWidth="132"
+                Text="AUTO-LOCK 05:00"
+                TextAlignment="Right"
+                FontFamily="Cascadia Mono"
+                FontSize="12"
+                FontWeight="SemiBold"
+                VerticalAlignment="Center"
+                Foreground="{StaticResource AppAccentBrush}" />
         </Grid>
+
+        <Border
+            x:Name="LockOverlay"
+            Grid.RowSpan="3"
+            Canvas.ZIndex="1000"
+            Padding="24"
+            Background="{StaticResource AppBackgroundBrush}"
+            Visibility="Collapsed">
+            <Border
+                MaxWidth="420"
+                Padding="30"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource AppSurfaceBrush}"
+                BorderBrush="{StaticResource AppAccentBrush}"
+                BorderThickness="1"
+                CornerRadius="12">
+                <StackPanel Spacing="14">
+                    <TextBlock
+                        Text="ACCOUNT ARMORY LOCKED"
+                        TextAlignment="Center"
+                        FontFamily="Cascadia Mono"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AppAccentBrush}" />
+                    <TextBlock
+                        Text="Your account information is hidden. Verify with Windows Hello to continue."
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                        Foreground="{StaticResource AppTextBrush}" />
+                    <Button
+                        x:Name="UnlockButton"
+                        Content="Unlock"
+                        MinWidth="150"
+                        Padding="18,10"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.Name="Unlock Account Armory"
+                        Background="{StaticResource AppAccentBrush}"
+                        Foreground="#0C0F0D"
+                        Click="UnlockButton_Click" />
+                </StackPanel>
+            </Border>
+        </Border>
         </Grid>
     </Grid>
 </Window>

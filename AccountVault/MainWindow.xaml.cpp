@@ -1,13 +1,18 @@
 #include "pch.h"
+// Account Armory automatic-lock compile fix v28.7.3.
 #include "MainWindow.xaml.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
 
 #include <winrt/Microsoft.UI.Input.h>
+#include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.Windows.System.Power.h>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Storage.h>
 
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -15,6 +20,8 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Input;
+using namespace Microsoft::Windows::System::Power;
+using namespace Windows::ApplicationModel::DataTransfer;
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 
@@ -247,6 +254,44 @@ namespace winrt::AccountVault::implementation
         {
             StatusText().Text(hstring{ storageStatus });
         }
+
+        initializeAutoLock();
+    }
+    MainWindow::~MainWindow()
+    {
+        try
+        {
+            if (m_autoLockTimer)
+            {
+                m_autoLockTimer.Stop();
+            }
+        }
+        catch (...)
+        {
+        }
+
+        try
+        {
+            if (m_appWindow && m_appWindowChangedToken)
+            {
+                m_appWindow.Changed(m_appWindowChangedToken);
+            }
+        }
+        catch (...)
+        {
+        }
+
+        try
+        {
+            if (m_suspendStatusChangedToken)
+            {
+                PowerManager::SystemSuspendStatusChanged(
+                    m_suspendStatusChangedToken);
+            }
+        }
+        catch (...)
+        {
+        }
     }
     void MainWindow::AddAccountButton_Click(
         IInspectable const&,
@@ -294,6 +339,364 @@ namespace winrt::AccountVault::implementation
         RoutedEventArgs const&)
     {
         showColorDialog();
+    }
+    void MainWindow::UnlockButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        unlockApplication();
+    }
+    void MainWindow::initializeAutoLock()
+    {
+        try
+        {
+            const auto weak{ get_weak() };
+            const auto dispatcher{ DispatcherQueue() };
+
+            m_autoLockTimer = dispatcher.CreateTimer();
+            m_autoLockTimer.Interval(std::chrono::seconds{ 1 });
+            m_autoLockTimer.IsRepeating(true);
+            m_autoLockTimer.Tick(
+                [weak](
+                    Microsoft::UI::Dispatching::DispatcherQueueTimer const&,
+                    IInspectable const&)
+                {
+                    if (const auto self{ weak.get() })
+                    {
+                        self->updateAutoLockStatus();
+                    }
+                });
+
+            const auto recordPointerActivity = [weak](
+                IInspectable const&,
+                PointerRoutedEventArgs const&)
+                {
+                    if (const auto self{ weak.get() })
+                    {
+                        self->noteUserActivity();
+                    }
+                };
+
+            RootGrid().AddHandler(
+                UIElement::PointerMovedEvent(),
+                box_value(PointerEventHandler{ recordPointerActivity }),
+                true);
+            RootGrid().AddHandler(
+                UIElement::PointerPressedEvent(),
+                box_value(PointerEventHandler{ recordPointerActivity }),
+                true);
+            RootGrid().AddHandler(
+                UIElement::PointerWheelChangedEvent(),
+                box_value(PointerEventHandler{ recordPointerActivity }),
+                true);
+
+            RootGrid().AddHandler(
+                UIElement::KeyDownEvent(),
+                box_value(KeyEventHandler{
+                    [weak](IInspectable const&, KeyRoutedEventArgs const&)
+                    {
+                        if (const auto self{ weak.get() })
+                        {
+                            self->noteUserActivity();
+                        }
+                    } }),
+                true);
+
+            m_appWindow = this->AppWindow();
+            m_appWindowChangedToken = m_appWindow.Changed(
+                [weak, dispatcher](
+                    Microsoft::UI::Windowing::AppWindow const&,
+                    Microsoft::UI::Windowing::AppWindowChangedEventArgs const& args)
+                {
+                    try
+                    {
+                        if (!args.DidPresenterChange())
+                        {
+                            return;
+                        }
+
+                        static_cast<void>(dispatcher.TryEnqueue([weak]()
+                            {
+                                try
+                                {
+                                    if (const auto self{ weak.get() })
+                                    {
+                                        const auto presenter{ self->m_appWindow
+                                            .Presenter()
+                                            .try_as<Microsoft::UI::Windowing::OverlappedPresenter>() };
+                                        if (presenter &&
+                                            presenter.State() ==
+                                            Microsoft::UI::Windowing::OverlappedPresenterState::Minimized)
+                                        {
+                                            self->lockApplication(
+                                                L"the window was minimized");
+                                        }
+                                    }
+                                }
+                                catch (...)
+                                {
+                                }
+                            }));
+                    }
+                    catch (...)
+                    {
+                    }
+                });
+
+            m_suspendStatusChangedToken =
+                PowerManager::SystemSuspendStatusChanged(
+                    [weak, dispatcher](
+                        IInspectable const&,
+                        IInspectable const&)
+                    {
+                        try
+                        {
+                            if (PowerManager::SystemSuspendStatus() !=
+                                SystemSuspendStatus::Entering)
+                            {
+                                return;
+                            }
+
+                            static_cast<void>(dispatcher.TryEnqueue([weak]()
+                                {
+                                    if (const auto self{ weak.get() })
+                                    {
+                                        self->lockApplication(
+                                            L"Windows entered suspend");
+                                    }
+                                }));
+                        }
+                        catch (...)
+                        {
+                        }
+                    });
+
+            m_autoLockDeadline = std::chrono::steady_clock::now() +
+                std::chrono::seconds{ AutoLockTimeoutSeconds };
+            m_autoLockTimer.Start();
+            updateAutoLockStatus();
+        }
+        catch (...)
+        {
+            try
+            {
+                AutoLockStatusText().Text(L"AUTO-LOCK ERROR");
+                StatusText().Text(
+                    L"Automatic locking could not be initialized");
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+    void MainWindow::noteUserActivity() noexcept
+    {
+        try
+        {
+            if (m_isLocked)
+            {
+                return;
+            }
+
+            // Only move the deadline here. The one-second timer owns text
+            // updates so high-frequency pointer movement stays inexpensive.
+            m_autoLockDeadline = std::chrono::steady_clock::now() +
+                std::chrono::seconds{ AutoLockTimeoutSeconds };
+        }
+        catch (...)
+        {
+        }
+    }
+    void MainWindow::updateAutoLockStatus() noexcept
+    {
+        try
+        {
+            if (m_isLocked)
+            {
+                AutoLockStatusText().Text(L"LOCKED");
+                return;
+            }
+
+            const auto now{ std::chrono::steady_clock::now() };
+            if (now >= m_autoLockDeadline)
+            {
+                lockApplication(L"five minutes of inactivity elapsed");
+                return;
+            }
+
+            const auto remainingMilliseconds{
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    m_autoLockDeadline - now).count() };
+            const auto totalSeconds{
+                static_cast<int>((remainingMilliseconds + 999) / 1000) };
+            const int minutes{ totalSeconds / 60 };
+            const int seconds{ totalSeconds % 60 };
+
+            std::wstring status{ L"AUTO-LOCK " };
+            status += std::to_wstring(minutes);
+            status += L":";
+            if (seconds < 10)
+            {
+                status += L"0";
+            }
+            status += std::to_wstring(seconds);
+            AutoLockStatusText().Text(hstring{ status });
+        }
+        catch (...)
+        {
+            try
+            {
+                AutoLockStatusText().Text(L"AUTO-LOCK ERROR");
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+    void MainWindow::lockApplication(std::wstring_view reason) noexcept
+    {
+        // Every lock request invalidates an unlock already awaiting Windows
+        // Hello, even when the overlay was already visible.
+        ++m_lockGeneration;
+        if (m_isLocked)
+        {
+            return;
+        }
+
+        m_isLocked = true;
+        m_unlockInProgress = false;
+
+        try
+        {
+            if (m_autoLockTimer)
+            {
+                m_autoLockTimer.Stop();
+            }
+        }
+        catch (...)
+        {
+        }
+
+        // Hiding every in-place dialog resumes its owning coroutine. Details
+        // cleanup then stops reveal timers and clears revealed plaintext.
+        try
+        {
+            const auto children{ RootGrid().Children() };
+            std::vector<ContentDialog> openDialogs;
+            for (std::uint32_t index{}; index < children.Size(); ++index)
+            {
+                if (const auto dialog{
+                        children.GetAt(index).try_as<ContentDialog>() })
+                {
+                    openDialogs.push_back(dialog);
+                }
+            }
+
+            // Hide from a snapshot because each dialog coroutine may remove
+            // itself from RootGrid when ShowAsync completes.
+            for (auto const& dialog : openDialogs)
+            {
+                try
+                {
+                    dialog.Hide();
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+
+        // Clear only the latest account value this app copied. A changed
+        // sequence means the user copied newer content, which is preserved.
+        try
+        {
+            if (m_accountClipboardSequence != 0 &&
+                ::GetClipboardSequenceNumber() == m_accountClipboardSequence)
+            {
+                Clipboard::Clear();
+            }
+            m_accountClipboardSequence = 0;
+        }
+        catch (...)
+        {
+            m_accountClipboardSequence = 0;
+        }
+
+        try
+        {
+            LockOverlay().Visibility(Visibility::Visible);
+            UnlockButton().IsEnabled(true);
+            UnlockButton().Content(box_value(L"Unlock"));
+            AutoLockStatusText().Text(L"LOCKED");
+
+            std::wstring status{ L"Account Armory locked: " };
+            status += reason;
+            StatusText().Text(hstring{ status });
+            UnlockButton().Focus(FocusState::Programmatic);
+        }
+        catch (...)
+        {
+        }
+    }
+    fire_and_forget MainWindow::unlockApplication()
+    {
+        Button unlockButton{ nullptr };
+
+        try
+        {
+            auto lifetime{ get_strong() };
+            if (!m_isLocked || m_unlockInProgress)
+            {
+                co_return;
+            }
+
+            m_unlockInProgress = true;
+            const std::uint64_t unlockGeneration{ m_lockGeneration };
+            unlockButton = UnlockButton();
+            unlockButton.IsEnabled(false);
+            unlockButton.Content(box_value(L"Verifying..."));
+
+            const bool verified{ co_await verifyUser(
+                L"Verify your identity to unlock Account Armory") };
+            if (verified &&
+                m_isLocked &&
+                m_lockGeneration == unlockGeneration)
+            {
+                m_isLocked = false;
+                LockOverlay().Visibility(Visibility::Collapsed);
+                m_autoLockDeadline = std::chrono::steady_clock::now() +
+                    std::chrono::seconds{ AutoLockTimeoutSeconds };
+                m_autoLockTimer.Start();
+                updateAutoLockStatus();
+                StatusText().Text(L"Account Armory unlocked");
+            }
+        }
+        catch (...)
+        {
+            try
+            {
+                StatusText().Text(L"Account Armory could not be unlocked");
+            }
+            catch (...)
+            {
+            }
+        }
+
+        m_unlockInProgress = false;
+        try
+        {
+            if (unlockButton)
+            {
+                unlockButton.IsEnabled(true);
+                unlockButton.Content(box_value(L"Unlock"));
+            }
+        }
+        catch (...)
+        {
+        }
     }
     void MainWindow::refreshAccounts()
     {

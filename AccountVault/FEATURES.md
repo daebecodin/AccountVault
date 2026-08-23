@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -22,6 +22,9 @@ Internal name: `AccountVault`
 - Every dialog deferral is completed.
 - No exception escapes `fire_and_forget`.
 - Clipboard auto-clear never deletes newer clipboard content.
+- Locking hides account UI and closes open dialogs.
+- A verification result cannot copy a password after the app locks.
+- Normal status messages never move or replace the auto-lock countdown.
 - Theme order stays synchronized across XAML, header, and C++.
 
 ## Feature overview
@@ -44,7 +47,7 @@ Internal name: `AccountVault`
 | `[x]` | Built-in themes | Ten selectable palettes | `Themes/ThemeService.cpp` |
 | `[x]` | Startup theme | Right-click to set/remove default | `MainWindow.xaml.cpp` |
 | `[~]` | Custom themes | Editor works; themes are session-only | `Dialogs/ThemeEditorDialog.cpp` |
-| `[ ]` | App auto-lock | Lock on inactivity/minimize/suspend | — |
+| `[x]` | App auto-lock | Five-minute idle timer; lock on minimize/suspend | `MainWindow.xaml.cpp` |
 | `[ ]` | Export/import | Portable password-encrypted backup | — |
 
 ## Account record
@@ -180,6 +183,28 @@ Rule: verification applies to one action; no session is cached.
 
 Limits: closing the app stops the timer; another app may read the value first.
 
+### Automatic app lock `[x]`
+
+- Live `AUTO-LOCK M:SS` countdown updates once per second.
+- Pointer, click, wheel, and keyboard input reset the five-minute deadline.
+- Minimizing the window locks immediately.
+- Windows system suspend requests an immediate lock.
+- The lock overlay hides account content but leaves the status row visible.
+- Open dialogs close when locking, clearing revealed values through cleanup.
+- Unlock requires Windows verification.
+- A new minimize/suspend lock request invalidates an unlock still awaiting
+  Windows verification.
+- Locking clears Account Armory's current copied account value only when it
+  has not been replaced by newer clipboard content.
+- A password-copy verification that finishes after locking exposes nothing.
+
+Status layout:
+
+```text
+[normal status message................] [AUTO-LOCK M:SS]
+ flexible left column                    fixed right column
+```
+
 ## Search and cards `[x]`
 
 Searches:
@@ -273,7 +298,7 @@ Working:
 - UI work resumes through the dispatcher.
 - Add/Edit deferrals are completed.
 - Saved data survives card-refresh failure.
-- All ten `fire_and_forget` bodies have an outer catch boundary.
+- All eleven `fire_and_forget` bodies have an outer catch boundary.
 - Copy/reveal buttons are re-enabled after coroutine failure.
 - Add/Edit handler setup failures still complete their deferrals.
 - Add/Details/Theme failures remove an attached orphan dialog.
@@ -312,7 +337,6 @@ type, and package changes.
 
 ### Security
 
-- [ ] Lock on minimize, suspend, and inactivity.
 - [ ] Clear plaintext strings where practical.
 - [ ] Review crash dumps and logs.
 - [ ] Encrypted export/import.
@@ -354,6 +378,15 @@ type, and package changes.
 - [ ] Manual Hide and dialog close clear revealed text.
 - [ ] Clipboard clears after 30 seconds.
 - [ ] New clipboard content is preserved.
+- [ ] Countdown stays fixed at the far right when normal status text changes.
+- [ ] Pointer/keyboard input resets the countdown to five minutes.
+- [ ] No input locks the app after five minutes.
+- [ ] Minimize locks immediately; restoring shows the lock overlay.
+- [ ] Sleep/resume returns to the lock overlay.
+- [ ] Canceling unlock keeps the app locked.
+- [ ] Successful Windows verification unlocks and resets the timer.
+- [ ] Minimizing during unlock verification keeps the app locked.
+- [ ] Locking closes open dialogs and hides revealed passwords.
 - [ ] JSON contains no plaintext password.
 
 ### Async failure recovery
@@ -387,6 +420,15 @@ Remaining issue:
 
 ### 2026-08-23
 
+- Added v28.7.3 C++ name-lookup fix: windowing types in the AppWindow
+  callback are fully qualified so they cannot collide with `MainWindow::AppWindow()`.
+- Added v28.7.2 build diagnosis: the project copy of `MainWindow.xaml`
+  contained only lines 96–220 of the complete file. Restoring the full XAML
+  document fixes the multiple-root markup error.
+- Added v28.7.1 XAML-root hotfix: `MainWindow.xaml` now begins directly with
+  its single `<Window>` root for stricter markup-compiler parsing.
+- Added v28.7 five-minute automatic app lock, immediate minimize/suspend lock,
+  Windows-verification unlock, and fixed-right live status countdown.
 - Added v28.6 fire-and-forget safety audit and recovery boundaries.
 - Added orphan-dialog cleanup, reveal-timer cleanup, and no-throw verification.
 - Added v28.5 live countdown labels beside revealed passwords.

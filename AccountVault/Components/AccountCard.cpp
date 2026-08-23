@@ -207,7 +207,7 @@ namespace winrt::AccountVault::implementation
                     const bool verified{ co_await verifyUser(
                         L"Verify your identity to copy the launcher password") };
                     button.IsEnabled(true);
-                    if (!verified)
+                    if (!verified || m_isLocked)
                     {
                         co_return;
                     }
@@ -262,7 +262,7 @@ namespace winrt::AccountVault::implementation
                     const bool verified{ co_await verifyUser(
                         L"Verify your identity to copy the email password") };
                     button.IsEnabled(true);
-                    if (!verified)
+                    if (!verified || m_isLocked)
                     {
                         co_return;
                     }
@@ -466,6 +466,7 @@ namespace winrt::AccountVault::implementation
         }
 
         const DWORD clipboardSequence{ ::GetClipboardSequenceNumber() };
+        m_accountClipboardSequence = clipboardSequence;
         clearClipboardAfterDelay(clipboardSequence, DispatcherQueue());
 
         std::wstring status{ label };
