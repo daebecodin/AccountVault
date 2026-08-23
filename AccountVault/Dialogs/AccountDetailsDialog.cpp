@@ -914,8 +914,7 @@ namespace winrt::AccountVault::implementation
                     }
                 });
 
-            Grid::SetRowSpan(dialog, 4);
-            RootGrid().Children().Append(dialog);
+            attachDialogToShell(dialog);
             dialogAttached = true;
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);

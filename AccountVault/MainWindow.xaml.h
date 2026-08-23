@@ -168,6 +168,9 @@ namespace winrt::AccountVault::implementation
         [[nodiscard]] RecordId recordIdFrom(
             Microsoft::UI::Xaml::Controls::Button const& button) const;
 
+        void attachDialogToShell(
+            Microsoft::UI::Xaml::Controls::ContentDialog const& dialog);
+
         [[nodiscard]] bool buildPortableAccounts(
             std::optional<RecordId> onlyRecord,
             std::vector<PortableAccount>& accounts,

@@ -301,8 +301,7 @@ namespace winrt::AccountVault::implementation
                     secureWipe(value);
                 });
 
-            Grid::SetRowSpan(dialog, 4);
-            RootGrid().Children().Append(dialog);
+            attachDialogToShell(dialog);
             appended = true;
 
             const ContentDialogResult result{

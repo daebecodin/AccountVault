@@ -552,6 +552,25 @@ namespace winrt::AccountVault::implementation
         }
     }
 
+    void MainWindow::attachDialogToShell(ContentDialog const& dialog)
+    {
+        const Grid root{ RootGrid() };
+
+        // In-place ContentDialogs participate in their parent's Grid layout.
+        // Span the live shell definition counts instead of preserving a magic
+        // row/column count from an earlier RootGrid shape.
+        Grid::SetRow(dialog, 0);
+        Grid::SetColumn(dialog, 0);
+        Grid::SetRowSpan(
+            dialog,
+            static_cast<std::int32_t>(root.RowDefinitions().Size()));
+        Grid::SetColumnSpan(
+            dialog,
+            static_cast<std::int32_t>(root.ColumnDefinitions().Size()));
+
+        root.Children().Append(dialog);
+    }
+
     void MainWindow::AddAccountButton_Click(
         IInspectable const&,
         RoutedEventArgs const&)
