@@ -4,6 +4,7 @@
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.UI.Text.h>
 
+#include <chrono>
 #include <string>
 
 using namespace winrt;
@@ -12,6 +13,45 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::ApplicationModel::DataTransfer;
 using namespace Windows::Foundation;
+
+namespace
+{
+    constexpr auto ClipboardClearDelay{ std::chrono::seconds{ 30 } };
+
+    winrt::fire_and_forget clearClipboardAfterDelay(
+        DWORD expectedSequence,
+        Microsoft::UI::Dispatching::DispatcherQueue dispatcher)
+    {
+        try
+        {
+            co_await winrt::resume_after(ClipboardClearDelay);
+
+            dispatcher.TryEnqueue([expectedSequence]()
+                {
+                    // A changed sequence means the user or another app copied
+                    // something newer. Never erase that newer clipboard value.
+                    if (expectedSequence != 0 &&
+                        ::GetClipboardSequenceNumber() == expectedSequence)
+                    {
+                        try
+                        {
+                            Clipboard::Clear();
+                        }
+                        catch (...)
+                        {
+                            // Clipboard access can be temporarily unavailable.
+                            // Auto-clear failure must never terminate the app.
+                        }
+                    }
+                });
+        }
+        catch (...)
+        {
+            // The timer is a best-effort security feature. A failure must not
+            // affect the copy action or the UI thread.
+        }
+    }
+}
 
 namespace winrt::AccountVault::implementation
 {
@@ -110,117 +150,143 @@ namespace winrt::AccountVault::implementation
         actions.ColumnDefinitions().Append(accountGroupColumn);
 
         const auto makeButton = [&](hstring const& label)
-        {
-            Button button;
-            button.Content(box_value(label));
-            button.Tag(box_value(account.recordId));
-            button.Height(34);
-            button.Padding(Thickness{ 10, 0, 10, 0 });
-            button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
-            button.HorizontalAlignment(HorizontalAlignment::Stretch);
-            button.HorizontalContentAlignment(HorizontalAlignment::Center);
-            return button;
-        };
+            {
+                Button button;
+                button.Content(box_value(label));
+                button.Tag(box_value(account.recordId));
+                button.Height(34);
+                button.Padding(Thickness{ 10, 0, 10, 0 });
+                button.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
+                button.HorizontalAlignment(HorizontalAlignment::Stretch);
+                button.HorizontalContentAlignment(HorizontalAlignment::Center);
+                return button;
+            };
 
         Button details{ makeButton(L"Details") };
         details.Click([this](IInspectable const& sender, RoutedEventArgs const&)
-        {
-            const auto button{ sender.as<Button>() };
-            showAccountDetailsDialog(recordIdFrom(button));
-        });
+            {
+                const auto button{ sender.as<Button>() };
+                showAccountDetailsDialog(recordIdFrom(button));
+            });
 
         Button copyUsername{ makeButton(L"Copy username") };
         copyUsername.Click([this](IInspectable const& sender, RoutedEventArgs const&)
-        {
-            const auto button{ sender.as<Button>() };
-            const Account* account{ m_repository.find(recordIdFrom(button)) };
-            if (account)
             {
-                copyToClipboard(account->launcherUsername, L"Launcher username");
-            }
-        });
+                const auto button{ sender.as<Button>() };
+                const Account* account{ m_repository.find(recordIdFrom(button)) };
+                if (account)
+                {
+                    copyToClipboard(account->launcherUsername, L"Launcher username");
+                }
+            });
 
         Button copyEmail{ makeButton(L"Copy email") };
         copyEmail.Click([this](IInspectable const& sender, RoutedEventArgs const&)
-        {
-            const auto button{ sender.as<Button>() };
-            const Account* account{ m_repository.find(recordIdFrom(button)) };
-            if (account)
             {
-                copyToClipboard(account->emailAddress, L"Email address");
-            }
-        });
+                const auto button{ sender.as<Button>() };
+                const Account* account{ m_repository.find(recordIdFrom(button)) };
+                if (account)
+                {
+                    copyToClipboard(account->emailAddress, L"Email address");
+                }
+            });
 
         Button copyLauncherPassword{ makeButton(L"Copy launcher PW") };
         copyLauncherPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
-        {
-            auto lifetime{ get_strong() };
-            const auto button{ sender.as<Button>() };
-            const RecordId id{ recordIdFrom(button) };
+            {
+                auto lifetime{ get_strong() };
+                try
+                {
+                    const auto button{ sender.as<Button>() };
+                    const RecordId id{ recordIdFrom(button) };
 
-            if (!(co_await verifyUser(
-                    L"Verify your identity to copy the launcher password")))
-            {
-                co_return;
-            }
+                    if (!(co_await verifyUser(
+                        L"Verify your identity to copy the launcher password")))
+                    {
+                        co_return;
+                    }
 
-            const Account* account{ m_repository.find(id) };
-            const auto password{ !account
-                ? std::nullopt
-                : account->protectedLauncherPassword.empty()
-                    ? m_credentials.legacyLauncherPassword(id)
-                    : m_credentials.unprotectPassword(
-                        account->protectedLauncherPassword) };
-            if (password)
-            {
-                copyToClipboard(*password, L"Launcher password");
-            }
-            else
-            {
-                StatusText().Text(L"Launcher password could not be retrieved");
-            }
-        });
+                    const Account* account{ m_repository.find(id) };
+                    const auto password{ !account
+                        ? std::nullopt
+                        : account->protectedLauncherPassword.empty()
+                            ? m_credentials.legacyLauncherPassword(id)
+                            : m_credentials.unprotectPassword(
+                                account->protectedLauncherPassword) };
+                    if (password)
+                    {
+                        copyToClipboard(*password, L"Launcher password");
+                    }
+                    else
+                    {
+                        StatusText().Text(L"Launcher password could not be retrieved");
+                    }
+                }
+                catch (...)
+                {
+                    try
+                    {
+                        StatusText().Text(L"Launcher password copy failed");
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            });
 
         Button copyEmailPassword{ makeButton(L"Copy email PW") };
         copyEmailPassword.Click([this](
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
-        {
-            auto lifetime{ get_strong() };
-            const auto button{ sender.as<Button>() };
-            const RecordId id{ recordIdFrom(button) };
+            {
+                auto lifetime{ get_strong() };
+                try
+                {
+                    const auto button{ sender.as<Button>() };
+                    const RecordId id{ recordIdFrom(button) };
 
-            if (!(co_await verifyUser(
-                    L"Verify your identity to copy the email password")))
-            {
-                co_return;
-            }
+                    if (!(co_await verifyUser(
+                        L"Verify your identity to copy the email password")))
+                    {
+                        co_return;
+                    }
 
-            const Account* account{ m_repository.find(id) };
-            const auto password{ !account
-                ? std::nullopt
-                : account->protectedEmailPassword.empty()
-                    ? m_credentials.legacyEmailPassword(id)
-                    : m_credentials.unprotectPassword(
-                        account->protectedEmailPassword) };
-            if (password)
-            {
-                copyToClipboard(*password, L"Email password");
-            }
-            else
-            {
-                StatusText().Text(L"Email password could not be retrieved");
-            }
-        });
+                    const Account* account{ m_repository.find(id) };
+                    const auto password{ !account
+                        ? std::nullopt
+                        : account->protectedEmailPassword.empty()
+                            ? m_credentials.legacyEmailPassword(id)
+                            : m_credentials.unprotectPassword(
+                                account->protectedEmailPassword) };
+                    if (password)
+                    {
+                        copyToClipboard(*password, L"Email password");
+                    }
+                    else
+                    {
+                        StatusText().Text(L"Email password could not be retrieved");
+                    }
+                }
+                catch (...)
+                {
+                    try
+                    {
+                        StatusText().Text(L"Email password copy failed");
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            });
 
         Button remove{ makeButton(L"Remove") };
         remove.Click([this](IInspectable const& sender, RoutedEventArgs const&)
-        {
-            const auto button{ sender.as<Button>() };
-            removeAccount(recordIdFrom(button));
-        });
+            {
+                const auto button{ sender.as<Button>() };
+                removeAccount(recordIdFrom(button));
+            });
 
         Grid copyActions;
         copyActions.ColumnSpacing(8);
@@ -268,14 +334,14 @@ namespace winrt::AccountVault::implementation
         accountActions.Children().Append(remove);
 
         const auto makeGroupLabel = [mutedTextBrush](hstring const& label)
-        {
-            TextBlock text;
-            text.Text(label);
-            text.FontSize(11);
-            text.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
-            text.Foreground(mutedTextBrush);
-            return text;
-        };
+            {
+                TextBlock text;
+                text.Text(label);
+                text.FontSize(11);
+                text.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+                text.Foreground(mutedTextBrush);
+                return text;
+            };
 
         StackPanel copyGroupContent;
         copyGroupContent.Spacing(8);
@@ -333,8 +399,28 @@ namespace winrt::AccountVault::implementation
         for (std::uint32_t index = 0; index < items.Size(); ++index)
         {
             const auto element{ items.GetAt(index).try_as<FrameworkElement>() };
-            if (element && element.Tag() &&
-                unbox_value<RecordId>(element.Tag()) == id)
+            if (!element)
+            {
+                continue;
+            }
+
+            const auto tag{ element.Tag() };
+            if (!tag)
+            {
+                continue;
+            }
+
+            bool isTarget{ false };
+            try
+            {
+                isTarget = unbox_value<RecordId>(tag) == id;
+            }
+            catch (...)
+            {
+                // Ignore unrelated or malformed list entries.
+            }
+
+            if (isTarget)
             {
                 items.RemoveAt(index);
                 break;
@@ -346,12 +432,22 @@ namespace winrt::AccountVault::implementation
         const auto matches{ m_repository.search(query, launcher) };
 
         for (std::uint32_t index = 0;
-             index < static_cast<std::uint32_t>(matches.size());
-             ++index)
+            index < static_cast<std::uint32_t>(matches.size());
+            ++index)
         {
             if (matches[index]->recordId == id)
             {
-                appendAccountCard(*matches[index], index);
+                // The repository is the source of truth, but the visible list
+                // can temporarily lag behind it during startup or filtering.
+                // InsertAt requires an index inside the current UI collection.
+                if (index >= items.Size())
+                {
+                    appendAccountCard(*matches[index]);
+                }
+                else
+                {
+                    appendAccountCard(*matches[index], index);
+                }
                 break;
             }
         }
@@ -365,9 +461,22 @@ namespace winrt::AccountVault::implementation
     {
         DataPackage package;
         package.SetText(hstring{ value });
-        Clipboard::SetContent(package);
+
+        ClipboardContentOptions options;
+        options.IsAllowedInHistory(false);
+        options.IsRoamable(false);
+
+        if (!Clipboard::SetContentWithOptions(package, options))
+        {
+            StatusText().Text(L"The clipboard is busy; try copying again");
+            return;
+        }
+
+        const DWORD clipboardSequence{ ::GetClipboardSequenceNumber() };
+        clearClipboardAfterDelay(clipboardSequence, DispatcherQueue());
+
         std::wstring status{ label };
-        status += L" copied to the clipboard";
+        status += L" copied; clipboard auto-clears in 30 seconds";
         StatusText().Text(hstring{ status });
     }
     void MainWindow::removeAccount(RecordId id)
@@ -401,8 +510,27 @@ namespace winrt::AccountVault::implementation
             return;
         }
 
-        refreshAccountCard(id);
-        StatusText().Text(L"Account and credentials removed");
+        try
+        {
+            refreshAccountCard(id);
+            StatusText().Text(L"Account and credentials removed");
+        }
+        catch (...)
+        {
+            // Persistence already succeeded. Recover the view with a full
+            // rebuild instead of allowing an incremental UI failure to escape
+            // through the XAML event handler.
+            try
+            {
+                refreshAccounts();
+                StatusText().Text(L"Account and credentials removed");
+            }
+            catch (...)
+            {
+                // The window may be closing. The committed repository and
+                // storage state remain valid even if the view cannot refresh.
+            }
+        }
     }
     MainWindow::RecordId MainWindow::recordIdFrom(
         Button const& button) const

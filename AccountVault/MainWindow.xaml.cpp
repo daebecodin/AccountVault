@@ -229,6 +229,7 @@ namespace winrt::AccountVault::implementation
 
         m_windowReady = true;
         applyPreset(startupThemeIndex);
+        refreshAccounts();
 
         if (!loadResult.succeeded)
         {
