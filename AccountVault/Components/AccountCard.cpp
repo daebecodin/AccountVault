@@ -196,30 +196,53 @@ namespace winrt::AccountVault::implementation
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
             {
-                auto lifetime{ get_strong() };
-                const auto button{ sender.as<Button>() };
-                const RecordId id{ recordIdFrom(button) };
+                Button button{ nullptr };
+                try
+                {
+                    auto lifetime{ get_strong() };
+                    button = sender.as<Button>();
+                    button.IsEnabled(false);
+                    const RecordId id{ recordIdFrom(button) };
 
-                if (!(co_await verifyUser(
-                    L"Verify your identity to copy the launcher password")))
-                {
-                    co_return;
-                }
+                    const bool verified{ co_await verifyUser(
+                        L"Verify your identity to copy the launcher password") };
+                    button.IsEnabled(true);
+                    if (!verified)
+                    {
+                        co_return;
+                    }
 
-                const Account* account{ m_repository.find(id) };
-                const auto password{ !account
-                    ? std::nullopt
-                    : account->protectedLauncherPassword.empty()
-                        ? m_credentials.legacyLauncherPassword(id)
-                        : m_credentials.unprotectPassword(
-                            account->protectedLauncherPassword) };
-                if (password)
-                {
-                    copyToClipboard(*password, L"Launcher password");
+                    const Account* account{ m_repository.find(id) };
+                    const auto password{ !account
+                        ? std::nullopt
+                        : account->protectedLauncherPassword.empty()
+                            ? m_credentials.legacyLauncherPassword(id)
+                            : m_credentials.unprotectPassword(
+                                account->protectedLauncherPassword) };
+                    if (password)
+                    {
+                        copyToClipboard(*password, L"Launcher password");
+                    }
+                    else
+                    {
+                        StatusText().Text(
+                            L"Launcher password could not be retrieved");
+                    }
                 }
-                else
+                catch (...)
                 {
-                    StatusText().Text(L"Launcher password could not be retrieved");
+                    try
+                    {
+                        if (button)
+                        {
+                            button.IsEnabled(true);
+                        }
+                        StatusText().Text(
+                            L"Launcher password copy could not be completed");
+                    }
+                    catch (...)
+                    {
+                    }
                 }
             });
 
@@ -228,30 +251,53 @@ namespace winrt::AccountVault::implementation
             IInspectable const& sender,
             RoutedEventArgs const&) -> fire_and_forget
             {
-                auto lifetime{ get_strong() };
-                const auto button{ sender.as<Button>() };
-                const RecordId id{ recordIdFrom(button) };
+                Button button{ nullptr };
+                try
+                {
+                    auto lifetime{ get_strong() };
+                    button = sender.as<Button>();
+                    button.IsEnabled(false);
+                    const RecordId id{ recordIdFrom(button) };
 
-                if (!(co_await verifyUser(
-                    L"Verify your identity to copy the email password")))
-                {
-                    co_return;
-                }
+                    const bool verified{ co_await verifyUser(
+                        L"Verify your identity to copy the email password") };
+                    button.IsEnabled(true);
+                    if (!verified)
+                    {
+                        co_return;
+                    }
 
-                const Account* account{ m_repository.find(id) };
-                const auto password{ !account
-                    ? std::nullopt
-                    : account->protectedEmailPassword.empty()
-                        ? m_credentials.legacyEmailPassword(id)
-                        : m_credentials.unprotectPassword(
-                            account->protectedEmailPassword) };
-                if (password)
-                {
-                    copyToClipboard(*password, L"Email password");
+                    const Account* account{ m_repository.find(id) };
+                    const auto password{ !account
+                        ? std::nullopt
+                        : account->protectedEmailPassword.empty()
+                            ? m_credentials.legacyEmailPassword(id)
+                            : m_credentials.unprotectPassword(
+                                account->protectedEmailPassword) };
+                    if (password)
+                    {
+                        copyToClipboard(*password, L"Email password");
+                    }
+                    else
+                    {
+                        StatusText().Text(
+                            L"Email password could not be retrieved");
+                    }
                 }
-                else
+                catch (...)
                 {
-                    StatusText().Text(L"Email password could not be retrieved");
+                    try
+                    {
+                        if (button)
+                        {
+                            button.IsEnabled(true);
+                        }
+                        StatusText().Text(
+                            L"Email password copy could not be completed");
+                    }
+                    catch (...)
+                    {
+                    }
                 }
             });
 

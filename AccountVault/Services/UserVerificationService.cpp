@@ -13,10 +13,9 @@ namespace winrt::AccountVault::implementation
 {
     IAsyncOperation<bool> MainWindow::verifyUser(hstring const& message)
     {
-        auto lifetime{ get_strong() };
-
         try
         {
+            auto lifetime{ get_strong() };
             const auto availability{
                 co_await UserConsentVerifier::CheckAvailabilityAsync() };
             if (availability != UserConsentVerifierAvailability::Available)
@@ -61,10 +60,16 @@ namespace winrt::AccountVault::implementation
                 StatusText().Text(L"Windows could not verify this user");
             }
         }
-        catch (hresult_error const&)
+        catch (...)
         {
-            StatusText().Text(
-                L"Windows Hello verification is unavailable on this system");
+            try
+            {
+                StatusText().Text(
+                    L"Windows Hello verification is unavailable on this system");
+            }
+            catch (...)
+            {
+            }
         }
 
         co_return false;

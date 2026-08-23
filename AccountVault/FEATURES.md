@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -35,6 +35,7 @@ Internal name: `AccountVault`
 | `[x]` | JSON storage | Temp-file write then file replacement | `Services/AccountStorageService.cpp` |
 | `[x]` | DPAPI | Protects passwords before JSON storage | `Services/CredentialService.cpp` |
 | `[x]` | Windows verification | Required per password copy/reveal | `Services/UserVerificationService.cpp` |
+| `[x]` | Coroutine safety | No exception escapes `fire_and_forget` | Dialog/card source files |
 | `[x]` | Reveal timeout | Shows a live countdown; hides at zero | `Dialogs/AccountDetailsDialog.cpp` |
 | `[x]` | Clipboard clear | Clears after 30 seconds if unchanged | `Components/AccountCard.cpp` |
 | `[x]` | Search/filter | Case-insensitive search + launcher filter | `Services/AccountRepository.h` |
@@ -272,12 +273,18 @@ Working:
 - UI work resumes through the dispatcher.
 - Add/Edit deferrals are completed.
 - Saved data survives card-refresh failure.
+- All ten `fire_and_forget` bodies have an outer catch boundary.
+- Copy/reveal buttons are re-enabled after coroutine failure.
+- Add/Edit handler setup failures still complete their deferrals.
+- Add/Details/Theme failures remove an attached orphan dialog.
+- Details failures stop reveal timers and mark the dialog closed.
+- Verification converts unexpected failures to `false`.
 
 Missing:
 
-- [ ] Catch every `fire_and_forget` exception.
 - [ ] Choose one repository threading policy.
 - [ ] Add useful diagnostics to recovery catches.
+- [ ] Audit synchronous WinUI event callbacks separately.
 
 Threading choice still required:
 
@@ -299,9 +306,9 @@ type, and package changes.
 
 ### High priority
 
-- [ ] Catch all `fire_and_forget` exceptions.
 - [ ] Decide repository threading policy.
 - [ ] Add storage/rollback tests.
+- [ ] Audit synchronous WinUI event callbacks.
 
 ### Security
 
@@ -349,6 +356,14 @@ type, and package changes.
 - [ ] New clipboard content is preserved.
 - [ ] JSON contains no plaintext password.
 
+### Async failure recovery
+
+- [ ] Failed password copy re-enables its button and does not crash.
+- [ ] Failed reveal clears the text, stops its timer, and re-enables its button.
+- [ ] Add/Edit setup failure leaves no incomplete dialog deferral.
+- [ ] Add/Details/Theme failure leaves no orphan dialog in `RootGrid`.
+- [ ] Verification failure returns `false` and exposes no password.
+
 ### Themes
 
 - [ ] Default survives restart.
@@ -372,6 +387,8 @@ Remaining issue:
 
 ### 2026-08-23
 
+- Added v28.6 fire-and-forget safety audit and recovery boundaries.
+- Added orphan-dialog cleanup, reveal-timer cleanup, and no-throw verification.
 - Added v28.5 live countdown labels beside revealed passwords.
 - Added v28.4 password reveal timeout and dialog-close cleanup.
 - Added exception boundaries around both password reveal handlers.

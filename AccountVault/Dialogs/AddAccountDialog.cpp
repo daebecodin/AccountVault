@@ -35,12 +35,14 @@ namespace winrt::AccountVault::implementation
 {
     fire_and_forget MainWindow::showAddAccountDialog()
     {
-        auto lifetime{ get_strong() };
         std::optional<RecordId> addedId;
+        ContentDialog dialog{ nullptr };
+        bool dialogAttached{ false };
 
         try
         {
-            ContentDialog dialog;
+            auto lifetime{ get_strong() };
+            dialog = ContentDialog{};
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(L"Add account"));
             dialog.PrimaryButtonText(L"Add");
@@ -205,124 +207,144 @@ namespace winrt::AccountVault::implementation
                     ContentDialogButtonClickEventArgs const& args)
                 -> fire_and_forget
                 {
-                    auto lifetime{ get_strong() };
-                    const auto clickArgs{ args };
-                    const auto activeDialog{ sender };
-                    const auto validationText{ validation };
-                    const auto dispatcher{ DispatcherQueue() };
-                    const auto deferral{ clickArgs.GetDeferral() };
-                    std::optional<RecordId> backgroundResult;
+                    ContentDialogButtonClickDeferral deferral{ nullptr };
 
                     try
                     {
-                        if (launcher.SelectedIndex() < 0 ||
-                            launcherUsername.Text().empty() ||
-                            launcherPassword.Password().empty() ||
-                            emailProvider.SelectedIndex() < 0 ||
-                            emailAddress.Text().empty() ||
-                            emailPassword.Password().empty())
+                        auto lifetime{ get_strong() };
+                        const auto clickArgs{ args };
+                        const auto activeDialog{ sender };
+                        const auto validationText{ validation };
+                        const auto dispatcher{ DispatcherQueue() };
+                        deferral = clickArgs.GetDeferral();
+                        std::optional<RecordId> backgroundResult;
+
+                        try
                         {
-                            clickArgs.Cancel(true);
-                            validationText.Visibility(Visibility::Visible);
+                            if (launcher.SelectedIndex() < 0 ||
+                                launcherUsername.Text().empty() ||
+                                launcherPassword.Password().empty() ||
+                                emailProvider.SelectedIndex() < 0 ||
+                                emailAddress.Text().empty() ||
+                                emailPassword.Password().empty())
+                            {
+                                clickArgs.Cancel(true);
+                                validationText.Visibility(Visibility::Visible);
+                                completeDeferral(deferral);
+                                co_return;
+                            }
+
+                            const auto launcherItem =
+                                launcher.SelectedItem().as<ComboBoxItem>();
+                            const hstring launcherName =
+                                unbox_value<hstring>(launcherItem.Content());
+
+                            const auto providerItem =
+                                emailProvider.SelectedItem().as<ComboBoxItem>();
+                            const hstring providerName =
+                                unbox_value<hstring>(providerItem.Content());
+                            const hstring providerWebsite =
+                                unbox_value<hstring>(providerItem.Tag());
+
+                            const std::wstring launcherValue{ launcherName.c_str() };
+                            const std::wstring launcherUsernameValue{
+                                launcherUsername.Text().c_str() };
+                            const std::wstring launcherPasswordValue{
+                                launcherPassword.Password().c_str() };
+                            const std::wstring emailAddressValue{
+                                emailAddress.Text().c_str() };
+                            const std::wstring providerNameValue{ providerName.c_str() };
+                            const std::wstring providerWebsiteValue{
+                                providerWebsite.c_str() };
+                            const std::wstring emailPasswordValue{
+                                emailPassword.Password().c_str() };
+
+                            activeDialog.IsPrimaryButtonEnabled(false);
+                            activeDialog.PrimaryButtonText(L"Saving...");
+
+                            co_await resume_background();
+                            backgroundResult = addAccount(
+                                launcherValue,
+                                launcherUsernameValue,
+                                launcherPasswordValue,
+                                emailAddressValue,
+                                providerNameValue,
+                                providerWebsiteValue,
+                                emailPasswordValue);
+                        }
+                        catch (...)
+                        {
+                            backgroundResult = std::nullopt;
+                        }
+
+                        bool foregroundReady{ true };
+                        try
+                        {
+                            co_await wil::resume_foreground(dispatcher);
+                        }
+                        catch (...)
+                        {
+                            foregroundReady = false;
+                        }
+
+                        if (!foregroundReady)
+                        {
                             completeDeferral(deferral);
                             co_return;
                         }
 
-                        const auto launcherItem =
-                            launcher.SelectedItem().as<ComboBoxItem>();
-                        const hstring launcherName =
-                            unbox_value<hstring>(launcherItem.Content());
+                        try
+                        {
+                            activeDialog.IsPrimaryButtonEnabled(true);
+                            activeDialog.PrimaryButtonText(L"Add");
 
-                        const auto providerItem =
-                            emailProvider.SelectedItem().as<ComboBoxItem>();
-                        const hstring providerName =
-                            unbox_value<hstring>(providerItem.Content());
-                        const hstring providerWebsite =
-                            unbox_value<hstring>(providerItem.Tag());
+                            if (!backgroundResult)
+                            {
+                                clickArgs.Cancel(true);
+                                validationText.Text(
+                                    L"The account could not be saved securely. Please try again.");
+                                validationText.Visibility(Visibility::Visible);
+                            }
+                            else
+                            {
+                                addedId = backgroundResult;
+                            }
+                        }
+                        catch (...)
+                        {
+                            try
+                            {
+                                clickArgs.Cancel(true);
+                                validationText.Text(
+                                    L"The account could not be saved securely. Please try again.");
+                                validationText.Visibility(Visibility::Visible);
+                            }
+                            catch (...)
+                            {
+                            }
+                        }
 
-                        const std::wstring launcherValue{ launcherName.c_str() };
-                        const std::wstring launcherUsernameValue{
-                            launcherUsername.Text().c_str() };
-                        const std::wstring launcherPasswordValue{
-                            launcherPassword.Password().c_str() };
-                        const std::wstring emailAddressValue{
-                            emailAddress.Text().c_str() };
-                        const std::wstring providerNameValue{ providerName.c_str() };
-                        const std::wstring providerWebsiteValue{
-                            providerWebsite.c_str() };
-                        const std::wstring emailPasswordValue{
-                            emailPassword.Password().c_str() };
-
-                        activeDialog.IsPrimaryButtonEnabled(false);
-                        activeDialog.PrimaryButtonText(L"Saving...");
-
-                        co_await resume_background();
-                        backgroundResult = addAccount(
-                            launcherValue,
-                            launcherUsernameValue,
-                            launcherPasswordValue,
-                            emailAddressValue,
-                            providerNameValue,
-                            providerWebsiteValue,
-                            emailPasswordValue);
-                    }
-                    catch (...)
-                    {
-                        backgroundResult = std::nullopt;
-                    }
-
-                    bool foregroundReady{ true };
-                    try
-                    {
-                        co_await wil::resume_foreground(dispatcher);
-                    }
-                    catch (...)
-                    {
-                        foregroundReady = false;
-                    }
-
-                    if (!foregroundReady)
-                    {
                         completeDeferral(deferral);
-                        co_return;
-                    }
-
-                    try
-                    {
-                        activeDialog.IsPrimaryButtonEnabled(true);
-                        activeDialog.PrimaryButtonText(L"Add");
-
-                        if (!backgroundResult)
-                        {
-                            clickArgs.Cancel(true);
-                            validationText.Text(
-                                L"The account could not be saved securely. Please try again.");
-                            validationText.Visibility(Visibility::Visible);
-                        }
-                        else
-                        {
-                            addedId = backgroundResult;
-                        }
                     }
                     catch (...)
                     {
                         try
                         {
-                            clickArgs.Cancel(true);
-                            validationText.Text(
+                            args.Cancel(true);
+                            validation.Text(
                                 L"The account could not be saved securely. Please try again.");
-                            validationText.Visibility(Visibility::Visible);
+                            validation.Visibility(Visibility::Visible);
                         }
                         catch (...)
                         {
                         }
+                        completeDeferral(deferral);
                     }
-
-                    completeDeferral(deferral);
                 });
 
             Grid::SetRowSpan(dialog, 4);
             RootGrid().Children().Append(dialog);
+            dialogAttached = true;
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
 
@@ -332,6 +354,7 @@ namespace winrt::AccountVault::implementation
             {
                 rootChildren.RemoveAt(dialogIndex);
             }
+            dialogAttached = false;
 
             if (addedId)
             {
@@ -341,6 +364,22 @@ namespace winrt::AccountVault::implementation
         }
         catch (...)
         {
+            try
+            {
+                if (dialogAttached && dialog)
+                {
+                    auto rootChildren{ RootGrid().Children() };
+                    std::uint32_t dialogIndex{};
+                    if (rootChildren.IndexOf(dialog, dialogIndex))
+                    {
+                        rootChildren.RemoveAt(dialogIndex);
+                    }
+                }
+            }
+            catch (...)
+            {
+            }
+
             try
             {
                 if (addedId)
