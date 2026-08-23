@@ -230,6 +230,7 @@
     the Windows App SDK Nuget package has not yet been restored.
   -->
   <ItemGroup>
+    <None Include="FEATURES.md" />
     <None Include="packages.config" />
     <None Include="Assets\AppIconSource.png">
       <DeploymentContent>false</DeploymentContent>

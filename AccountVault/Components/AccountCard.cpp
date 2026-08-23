@@ -197,42 +197,29 @@ namespace winrt::AccountVault::implementation
             RoutedEventArgs const&) -> fire_and_forget
             {
                 auto lifetime{ get_strong() };
-                try
+                const auto button{ sender.as<Button>() };
+                const RecordId id{ recordIdFrom(button) };
+
+                if (!(co_await verifyUser(
+                    L"Verify your identity to copy the launcher password")))
                 {
-                    const auto button{ sender.as<Button>() };
-                    const RecordId id{ recordIdFrom(button) };
-
-                    if (!(co_await verifyUser(
-                        L"Verify your identity to copy the launcher password")))
-                    {
-                        co_return;
-                    }
-
-                    const Account* account{ m_repository.find(id) };
-                    const auto password{ !account
-                        ? std::nullopt
-                        : account->protectedLauncherPassword.empty()
-                            ? m_credentials.legacyLauncherPassword(id)
-                            : m_credentials.unprotectPassword(
-                                account->protectedLauncherPassword) };
-                    if (password)
-                    {
-                        copyToClipboard(*password, L"Launcher password");
-                    }
-                    else
-                    {
-                        StatusText().Text(L"Launcher password could not be retrieved");
-                    }
+                    co_return;
                 }
-                catch (...)
+
+                const Account* account{ m_repository.find(id) };
+                const auto password{ !account
+                    ? std::nullopt
+                    : account->protectedLauncherPassword.empty()
+                        ? m_credentials.legacyLauncherPassword(id)
+                        : m_credentials.unprotectPassword(
+                            account->protectedLauncherPassword) };
+                if (password)
                 {
-                    try
-                    {
-                        StatusText().Text(L"Launcher password copy failed");
-                    }
-                    catch (...)
-                    {
-                    }
+                    copyToClipboard(*password, L"Launcher password");
+                }
+                else
+                {
+                    StatusText().Text(L"Launcher password could not be retrieved");
                 }
             });
 
@@ -242,42 +229,29 @@ namespace winrt::AccountVault::implementation
             RoutedEventArgs const&) -> fire_and_forget
             {
                 auto lifetime{ get_strong() };
-                try
+                const auto button{ sender.as<Button>() };
+                const RecordId id{ recordIdFrom(button) };
+
+                if (!(co_await verifyUser(
+                    L"Verify your identity to copy the email password")))
                 {
-                    const auto button{ sender.as<Button>() };
-                    const RecordId id{ recordIdFrom(button) };
-
-                    if (!(co_await verifyUser(
-                        L"Verify your identity to copy the email password")))
-                    {
-                        co_return;
-                    }
-
-                    const Account* account{ m_repository.find(id) };
-                    const auto password{ !account
-                        ? std::nullopt
-                        : account->protectedEmailPassword.empty()
-                            ? m_credentials.legacyEmailPassword(id)
-                            : m_credentials.unprotectPassword(
-                                account->protectedEmailPassword) };
-                    if (password)
-                    {
-                        copyToClipboard(*password, L"Email password");
-                    }
-                    else
-                    {
-                        StatusText().Text(L"Email password could not be retrieved");
-                    }
+                    co_return;
                 }
-                catch (...)
+
+                const Account* account{ m_repository.find(id) };
+                const auto password{ !account
+                    ? std::nullopt
+                    : account->protectedEmailPassword.empty()
+                        ? m_credentials.legacyEmailPassword(id)
+                        : m_credentials.unprotectPassword(
+                            account->protectedEmailPassword) };
+                if (password)
                 {
-                    try
-                    {
-                        StatusText().Text(L"Email password copy failed");
-                    }
-                    catch (...)
-                    {
-                    }
+                    copyToClipboard(*password, L"Email password");
+                }
+                else
+                {
+                    StatusText().Text(L"Email password could not be retrieved");
                 }
             });
 
@@ -386,13 +360,12 @@ namespace winrt::AccountVault::implementation
         auto items{ AccountsList().Items() };
         if (index && *index < items.Size())
         {
-            // An edit replaces the existing visual in one collection operation.
-            // Keeping the same slot prevents a remove/insert layout flicker.
-            items.SetAt(*index, card);
+            items.InsertAt(*index, card);
         }
         else
         {
-            // Newly created accounts have no existing visible slot.
+            // Append is correct both for a new last item and as a safe fallback
+            // if the visible list was temporarily out of sync with the model.
             items.Append(card);
         }
     }
@@ -400,34 +373,13 @@ namespace winrt::AccountVault::implementation
     {
         auto items{ AccountsList().Items() };
 
-        std::optional<std::uint32_t> visibleIndex;
         for (std::uint32_t index = 0; index < items.Size(); ++index)
         {
             const auto element{ items.GetAt(index).try_as<FrameworkElement>() };
-            if (!element)
+            if (element && element.Tag() &&
+                unbox_value<RecordId>(element.Tag()) == id)
             {
-                continue;
-            }
-
-            const auto tag{ element.Tag() };
-            if (!tag)
-            {
-                continue;
-            }
-
-            bool isTarget{ false };
-            try
-            {
-                isTarget = unbox_value<RecordId>(tag) == id;
-            }
-            catch (...)
-            {
-                // Ignore unrelated or malformed list entries.
-            }
-
-            if (isTarget)
-            {
-                visibleIndex = index;
+                items.RemoveAt(index);
                 break;
             }
         }
@@ -436,34 +388,15 @@ namespace winrt::AccountVault::implementation
         const std::wstring launcher{ selectedLauncher() };
         const auto matches{ m_repository.search(query, launcher) };
 
-        Account const* matchingAccount{ nullptr };
         for (std::uint32_t index = 0;
             index < static_cast<std::uint32_t>(matches.size());
             ++index)
         {
             if (matches[index]->recordId == id)
             {
-                matchingAccount = matches[index];
+                appendAccountCard(*matches[index], index);
                 break;
             }
-        }
-
-        if (matchingAccount && visibleIndex)
-        {
-            // The edited account still belongs in the filtered view. Replace
-            // its card atomically without making the account disappear first.
-            appendAccountCard(*matchingAccount, *visibleIndex);
-        }
-        else if (matchingAccount)
-        {
-            // A newly created account has no card to replace.
-            appendAccountCard(*matchingAccount);
-        }
-        else if (visibleIndex)
-        {
-            // Removing an account, or editing it so it no longer matches the
-            // active filter, legitimately removes it from the visible view.
-            items.RemoveAt(*visibleIndex);
         }
 
         EmptyState().Visibility(
@@ -495,54 +428,61 @@ namespace winrt::AccountVault::implementation
     }
     void MainWindow::removeAccount(RecordId id)
     {
-        if (!m_storageReady)
-        {
-            StatusText().Text(
-                L"Account storage is unavailable; no data was changed");
-            return;
-        }
-
-        if (!m_repository.find(id))
-        {
-            StatusText().Text(L"That account no longer exists");
-            return;
-        }
-
-        const auto oldAccounts{ m_repository.accounts() };
-        const RecordId oldNextId{ m_repository.nextId() };
-        if (!m_repository.remove(id))
-        {
-            StatusText().Text(L"The account could not be removed");
-            return;
-        }
-
-        std::wstring error;
-        if (!persistAccounts(error))
-        {
-            m_repository.replaceAll(oldAccounts, oldNextId);
-            StatusText().Text(L"The account removal could not be saved");
-            return;
-        }
+        bool removalPersisted{ false };
 
         try
         {
+            if (!m_storageReady)
+            {
+                StatusText().Text(
+                    L"Account storage is unavailable; no data was changed");
+                return;
+            }
+
+            if (!m_repository.find(id))
+            {
+                StatusText().Text(L"That account no longer exists");
+                return;
+            }
+
+            const auto oldAccounts{ m_repository.accounts() };
+            const RecordId oldNextId{ m_repository.nextId() };
+            if (!m_repository.remove(id))
+            {
+                StatusText().Text(L"The account could not be removed");
+                return;
+            }
+
+            std::wstring error;
+            if (!persistAccounts(error))
+            {
+                m_repository.replaceAll(oldAccounts, oldNextId);
+                StatusText().Text(L"The account removal could not be saved");
+                return;
+            }
+
+            removalPersisted = true;
             refreshAccountCard(id);
             StatusText().Text(L"Account and credentials removed");
         }
         catch (...)
         {
-            // Persistence already succeeded. Recover the view with a full
-            // rebuild instead of allowing an incremental UI failure to escape
-            // through the XAML event handler.
             try
             {
-                refreshAccounts();
-                StatusText().Text(L"Account and credentials removed");
+                if (removalPersisted)
+                {
+                    refreshAccounts();
+                    StatusText().Text(
+                        L"Account removed; the account view was refreshed");
+                }
+                else
+                {
+                    StatusText().Text(
+                        L"The account could not be removed safely");
+                }
             }
             catch (...)
             {
-                // The window may be closing. The committed repository and
-                // storage state remain valid even if the view cannot refresh.
             }
         }
     }

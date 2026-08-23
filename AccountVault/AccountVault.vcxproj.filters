@@ -220,5 +220,10 @@
     <Content Include="Assets\AccountArmory.ico">
       <Filter>Assets</Filter>
     </Content>
+    <None Include="FEATURES.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
 </Project>

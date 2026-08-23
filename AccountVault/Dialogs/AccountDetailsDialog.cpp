@@ -14,39 +14,42 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Foundation;
 
+namespace
+{
+    template <typename T>
+    void completeDeferral(T const& deferral) noexcept
+    {
+        try
+        {
+            if (deferral)
+            {
+                deferral.Complete();
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 namespace winrt::AccountVault::implementation
 {
     fire_and_forget MainWindow::showAccountDetailsDialog(RecordId id)
     {
         auto lifetime{ get_strong() };
-
-        const Account* account{ m_repository.find(id) };
-        if (!account)
-        {
-            StatusText().Text(L"That account no longer exists");
-            co_return;
-        }
-
-        ContentDialog dialog;
-        const auto removeDialogNoThrow = [this, &dialog]() noexcept
-            {
-                try
-                {
-                    auto rootChildren{ RootGrid().Children() };
-                    std::uint32_t dialogIndex{};
-                    if (rootChildren.IndexOf(dialog, dialogIndex))
-                    {
-                        rootChildren.RemoveAt(dialogIndex);
-                    }
-                }
-                catch (...)
-                {
-                    // The window may already be closing.
-                }
-            };
+        bool editing{ false };
+        bool saved{ false };
 
         try
         {
+            const Account* account{ m_repository.find(id) };
+            if (!account)
+            {
+                StatusText().Text(L"That account no longer exists");
+                co_return;
+            }
+
+            ContentDialog dialog;
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(L"Account details"));
             dialog.PrimaryButtonText(L"Edit");
@@ -276,109 +279,81 @@ namespace winrt::AccountVault::implementation
                 [&, this](IInspectable const&, RoutedEventArgs const&)
                 -> fire_and_forget
                 {
-                    try
+                    if (revealedLauncherPassword.Visibility() ==
+                        Visibility::Visible)
                     {
-                        if (revealedLauncherPassword.Visibility() ==
-                            Visibility::Visible)
-                        {
-                            revealedLauncherPassword.Text(L"");
-                            revealedLauncherPassword.Visibility(Visibility::Collapsed);
-                            revealLauncherPassword.Content(
-                                box_value(L"Reveal launcher password"));
-                            co_return;
-                        }
-
-                        if (!(co_await verifyUser(
-                            L"Verify your identity to reveal the launcher password")))
-                        {
-                            co_return;
-                        }
-
-                        const Account* current{ m_repository.find(id) };
-                        const auto password{ !current
-                            ? std::nullopt
-                            : current->protectedLauncherPassword.empty()
-                                ? m_credentials.legacyLauncherPassword(id)
-                                : m_credentials.unprotectPassword(
-                                    current->protectedLauncherPassword) };
-
-                        if (!password)
-                        {
-                            validation.Text(
-                                L"The launcher password could not be decrypted.");
-                            validation.Visibility(Visibility::Visible);
-                            co_return;
-                        }
-
-                        revealedLauncherPassword.Text(hstring{ *password });
-                        revealedLauncherPassword.Visibility(Visibility::Visible);
-                        revealLauncherPassword.Content(box_value(L"Hide password"));
+                        revealedLauncherPassword.Text(L"");
+                        revealedLauncherPassword.Visibility(Visibility::Collapsed);
+                        revealLauncherPassword.Content(
+                            box_value(L"Reveal launcher password"));
+                        co_return;
                     }
-                    catch (...)
+
+                    if (!(co_await verifyUser(
+                        L"Verify your identity to reveal the launcher password")))
                     {
-                        try
-                        {
-                            validation.Text(L"The launcher password could not be shown.");
-                            validation.Visibility(Visibility::Visible);
-                        }
-                        catch (...)
-                        {
-                        }
+                        co_return;
                     }
+
+                    const Account* current{ m_repository.find(id) };
+                    const auto password{ !current
+                        ? std::nullopt
+                        : current->protectedLauncherPassword.empty()
+                            ? m_credentials.legacyLauncherPassword(id)
+                            : m_credentials.unprotectPassword(
+                                current->protectedLauncherPassword) };
+
+                    if (!password)
+                    {
+                        validation.Text(
+                            L"The launcher password could not be decrypted.");
+                        validation.Visibility(Visibility::Visible);
+                        co_return;
+                    }
+
+                    revealedLauncherPassword.Text(hstring{ *password });
+                    revealedLauncherPassword.Visibility(Visibility::Visible);
+                    revealLauncherPassword.Content(box_value(L"Hide password"));
                 });
 
             revealEmailPassword.Click(
                 [&, this](IInspectable const&, RoutedEventArgs const&)
                 -> fire_and_forget
                 {
-                    try
+                    if (revealedEmailPassword.Visibility() == Visibility::Visible)
                     {
-                        if (revealedEmailPassword.Visibility() == Visibility::Visible)
-                        {
-                            revealedEmailPassword.Text(L"");
-                            revealedEmailPassword.Visibility(Visibility::Collapsed);
-                            revealEmailPassword.Content(
-                                box_value(L"Reveal email password"));
-                            co_return;
-                        }
-
-                        if (!(co_await verifyUser(
-                            L"Verify your identity to reveal the email password")))
-                        {
-                            co_return;
-                        }
-
-                        const Account* current{ m_repository.find(id) };
-                        const auto password{ !current
-                            ? std::nullopt
-                            : current->protectedEmailPassword.empty()
-                                ? m_credentials.legacyEmailPassword(id)
-                                : m_credentials.unprotectPassword(
-                                    current->protectedEmailPassword) };
-
-                        if (!password)
-                        {
-                            validation.Text(
-                                L"The email password could not be decrypted.");
-                            validation.Visibility(Visibility::Visible);
-                            co_return;
-                        }
-
-                        revealedEmailPassword.Text(hstring{ *password });
-                        revealedEmailPassword.Visibility(Visibility::Visible);
-                        revealEmailPassword.Content(box_value(L"Hide password"));
+                        revealedEmailPassword.Text(L"");
+                        revealedEmailPassword.Visibility(Visibility::Collapsed);
+                        revealEmailPassword.Content(
+                            box_value(L"Reveal email password"));
+                        co_return;
                     }
-                    catch (...)
+
+                    if (!(co_await verifyUser(
+                        L"Verify your identity to reveal the email password")))
                     {
-                        try
-                        {
-                            validation.Text(L"The email password could not be shown.");
-                            validation.Visibility(Visibility::Visible);
-                        }
-                        catch (...)
-                        {
-                        }
+                        co_return;
                     }
+
+                    const Account* current{ m_repository.find(id) };
+                    const auto password{ !current
+                        ? std::nullopt
+                        : current->protectedEmailPassword.empty()
+                            ? m_credentials.legacyEmailPassword(id)
+                            : m_credentials.unprotectPassword(
+                                current->protectedEmailPassword) };
+
+                    if (!password)
+                    {
+                        validation.Text(
+                            L"The email password could not be decrypted.");
+                        validation.Visibility(Visibility::Visible);
+                        co_return;
+                    }
+
+                    revealedEmailPassword.Text(hstring{ *password });
+                    revealedEmailPassword.Visibility(Visibility::Visible);
+                    revealEmailPassword.Content(box_value(L"Hide password"));
                 });
 
             launcherFields.Children().Append(launcherHeading);
@@ -417,22 +392,25 @@ namespace winrt::AccountVault::implementation
             detailsScroller.Content(fields);
             dialog.Content(detailsScroller);
 
-            bool editing{ false };
-            bool saved{ false };
-
             dialog.PrimaryButtonClick(
                 [&, this](
                     ContentDialog const& sender,
                     ContentDialogButtonClickEventArgs const& args)
                 -> fire_and_forget
                 {
-                    ContentDialogButtonClickDeferral pendingDeferral{ nullptr };
+                    auto lifetime{ get_strong() };
+                    const auto clickArgs{ args };
+                    const auto activeDialog{ sender };
+                    const auto validationText{ validation };
+                    const auto dispatcher{ DispatcherQueue() };
+                    const auto deferral{ clickArgs.GetDeferral() };
+                    bool backgroundResult{ false };
 
                     try
                     {
                         if (!editing)
                         {
-                            args.Cancel(true);
+                            clickArgs.Cancel(true);
                             editing = true;
                             launcher.IsEnabled(true);
                             launcherUsername.IsReadOnly(false);
@@ -450,8 +428,9 @@ namespace winrt::AccountVault::implementation
                             emailRevealPanel.Visibility(Visibility::Collapsed);
                             emailPassword.Visibility(Visibility::Visible);
                             emailPassword.IsEnabled(true);
-                            sender.PrimaryButtonText(L"Save changes");
+                            activeDialog.PrimaryButtonText(L"Save changes");
                             launcherUsername.Focus(FocusState::Programmatic);
+                            completeDeferral(deferral);
                             co_return;
                         }
 
@@ -460,9 +439,11 @@ namespace winrt::AccountVault::implementation
                             emailProvider.SelectedIndex() < 0 ||
                             emailAddress.Text().empty())
                         {
-                            args.Cancel(true);
-                            validation.Text(L"All launcher and email fields are required.");
-                            validation.Visibility(Visibility::Visible);
+                            clickArgs.Cancel(true);
+                            validationText.Text(
+                                L"All launcher and email fields are required.");
+                            validationText.Visibility(Visibility::Visible);
+                            completeDeferral(deferral);
                             co_return;
                         }
 
@@ -499,62 +480,71 @@ namespace winrt::AccountVault::implementation
                         const std::wstring providerWebsiteValue{
                             providerWebsite.c_str() };
 
-                        const auto clickArgs{ args };
-                        const auto activeDialog{ sender };
-                        const auto validationText{ validation };
-                        const auto dispatcher{ DispatcherQueue() };
-                        pendingDeferral = clickArgs.GetDeferral();
-
                         activeDialog.IsPrimaryButtonEnabled(false);
                         activeDialog.PrimaryButtonText(L"Saving...");
 
-                        bool backgroundResult{ false };
-                        try
-                        {
-                            co_await resume_background();
-                            backgroundResult = updateAccount(
-                                id,
-                                launcherValue,
-                                launcherUsernameValue,
-                                std::move(newLauncherPassword),
-                                emailAddressValue,
-                                providerNameValue,
-                                providerWebsiteValue,
-                                std::move(newEmailPassword));
-                        }
-                        catch (...)
-                        {
-                            backgroundResult = false;
-                        }
+                        co_await resume_background();
+                        backgroundResult = updateAccount(
+                            id,
+                            launcherValue,
+                            launcherUsernameValue,
+                            std::move(newLauncherPassword),
+                            emailAddressValue,
+                            providerNameValue,
+                            providerWebsiteValue,
+                            std::move(newEmailPassword));
+                    }
+                    catch (...)
+                    {
+                        backgroundResult = false;
+                    }
 
+                    bool foregroundReady{ true };
+                    try
+                    {
                         co_await wil::resume_foreground(dispatcher);
-                        saved = backgroundResult;
+                    }
+                    catch (...)
+                    {
+                        foregroundReady = false;
+                    }
+
+                    if (!foregroundReady)
+                    {
+                        completeDeferral(deferral);
+                        co_return;
+                    }
+
+                    try
+                    {
                         activeDialog.IsPrimaryButtonEnabled(true);
                         activeDialog.PrimaryButtonText(L"Save changes");
 
-                        if (!saved)
+                        if (!backgroundResult)
                         {
                             clickArgs.Cancel(true);
                             validationText.Text(L"The account could not be updated.");
                             validationText.Visibility(Visibility::Visible);
                         }
-
-                        pendingDeferral.Complete();
-                        pendingDeferral = nullptr;
+                        else
+                        {
+                            saved = true;
+                        }
                     }
                     catch (...)
                     {
-                        if (pendingDeferral)
+                        try
                         {
-                            try
-                            {
-                                pendingDeferral.Complete();
-                            }
-                            catch (...)
-                            {
-                            }
+                            clickArgs.Cancel(true);
+                            validationText.Text(L"The account could not be updated.");
+                            validationText.Visibility(Visibility::Visible);
+                        }
+                        catch (...)
+                        {
                         }
                     }
+
+                    completeDeferral(deferral);
                 });
 
             Grid::SetRowSpan(dialog, 4);
@@ -565,7 +555,12 @@ namespace winrt::AccountVault::implementation
             revealedLauncherPassword.Text(L"");
             revealedEmailPassword.Text(L"");
 
-            removeDialogNoThrow();
+            auto rootChildren{ RootGrid().Children() };
+            std::uint32_t dialogIndex{};
+            if (rootChildren.IndexOf(dialog, dialogIndex))
+            {
+                rootChildren.RemoveAt(dialogIndex);
+            }
 
             if (saved)
             {
@@ -573,39 +568,21 @@ namespace winrt::AccountVault::implementation
                 StatusText().Text(L"Account details saved securely");
             }
         }
-        catch (hresult_error const& error)
-        {
-            removeDialogNoThrow();
-            try
-            {
-                refreshAccounts();
-            }
-            catch (...)
-            {
-            }
-            try
-            {
-                std::wstring status{ L"The details dialog encountered a UI error: " };
-                status += error.message().c_str();
-                StatusText().Text(hstring{ status });
-            }
-            catch (...)
-            {
-            }
-        }
         catch (...)
         {
-            removeDialogNoThrow();
             try
             {
-                refreshAccounts();
-            }
-            catch (...)
-            {
-            }
-            try
-            {
-                StatusText().Text(L"The account details could not be completed");
+                if (saved)
+                {
+                    refreshAccounts();
+                    StatusText().Text(
+                        L"Account updated; the account view was refreshed");
+                }
+                else
+                {
+                    StatusText().Text(
+                        L"The Account Details dialog encountered a UI error");
+                }
             }
             catch (...)
             {

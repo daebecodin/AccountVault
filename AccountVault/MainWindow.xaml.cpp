@@ -229,7 +229,13 @@ namespace winrt::AccountVault::implementation
 
         m_windowReady = true;
         applyPreset(startupThemeIndex);
-        refreshAccounts();
+
+        // Storage and UI must begin from the same filtered account set before
+        // any incremental create/edit/remove operation calculates an index.
+        if (loadResult.succeeded)
+        {
+            refreshAccounts();
+        }
 
         if (!loadResult.succeeded)
         {

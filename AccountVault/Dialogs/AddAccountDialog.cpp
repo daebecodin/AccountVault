@@ -13,32 +13,34 @@ using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Foundation;
 
+namespace
+{
+    template <typename T>
+    void completeDeferral(T const& deferral) noexcept
+    {
+        try
+        {
+            if (deferral)
+            {
+                deferral.Complete();
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 namespace winrt::AccountVault::implementation
 {
     fire_and_forget MainWindow::showAddAccountDialog()
     {
         auto lifetime{ get_strong() };
-
-        ContentDialog dialog;
-        const auto removeDialogNoThrow = [this, &dialog]() noexcept
-            {
-                try
-                {
-                    auto rootChildren{ RootGrid().Children() };
-                    std::uint32_t dialogIndex{};
-                    if (rootChildren.IndexOf(dialog, dialogIndex))
-                    {
-                        rootChildren.RemoveAt(dialogIndex);
-                    }
-                }
-                catch (...)
-                {
-                    // The window may already be closing.
-                }
-            };
+        std::optional<RecordId> addedId;
 
         try
         {
+            ContentDialog dialog;
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(L"Add account"));
             dialog.PrimaryButtonText(L"Add");
@@ -197,15 +199,19 @@ namespace winrt::AccountVault::implementation
             addAccountScroller.Content(fields);
             dialog.Content(addAccountScroller);
 
-            std::optional<RecordId> addedId;
-
             dialog.PrimaryButtonClick(
                 [&, this](
                     ContentDialog const& sender,
                     ContentDialogButtonClickEventArgs const& args)
                 -> fire_and_forget
                 {
-                    ContentDialogButtonClickDeferral pendingDeferral{ nullptr };
+                    auto lifetime{ get_strong() };
+                    const auto clickArgs{ args };
+                    const auto activeDialog{ sender };
+                    const auto validationText{ validation };
+                    const auto dispatcher{ DispatcherQueue() };
+                    const auto deferral{ clickArgs.GetDeferral() };
+                    std::optional<RecordId> backgroundResult;
 
                     try
                     {
@@ -216,8 +222,9 @@ namespace winrt::AccountVault::implementation
                             emailAddress.Text().empty() ||
                             emailPassword.Password().empty())
                         {
-                            args.Cancel(true);
-                            validation.Visibility(Visibility::Visible);
+                            clickArgs.Cancel(true);
+                            validationText.Visibility(Visibility::Visible);
+                            completeDeferral(deferral);
                             co_return;
                         }
 
@@ -246,62 +253,72 @@ namespace winrt::AccountVault::implementation
                         const std::wstring emailPasswordValue{
                             emailPassword.Password().c_str() };
 
-                        const auto clickArgs{ args };
-                        const auto activeDialog{ sender };
-                        const auto validationText{ validation };
-                        const auto dispatcher{ DispatcherQueue() };
-                        pendingDeferral = clickArgs.GetDeferral();
-
                         activeDialog.IsPrimaryButtonEnabled(false);
                         activeDialog.PrimaryButtonText(L"Saving...");
 
-                        std::optional<RecordId> backgroundResult;
-                        try
-                        {
-                            co_await resume_background();
-                            backgroundResult = addAccount(
-                                launcherValue,
-                                launcherUsernameValue,
-                                launcherPasswordValue,
-                                emailAddressValue,
-                                providerNameValue,
-                                providerWebsiteValue,
-                                emailPasswordValue);
-                        }
-                        catch (...)
-                        {
-                            backgroundResult = std::nullopt;
-                        }
+                        co_await resume_background();
+                        backgroundResult = addAccount(
+                            launcherValue,
+                            launcherUsernameValue,
+                            launcherPasswordValue,
+                            emailAddressValue,
+                            providerNameValue,
+                            providerWebsiteValue,
+                            emailPasswordValue);
+                    }
+                    catch (...)
+                    {
+                        backgroundResult = std::nullopt;
+                    }
 
+                    bool foregroundReady{ true };
+                    try
+                    {
                         co_await wil::resume_foreground(dispatcher);
-                        addedId = backgroundResult;
+                    }
+                    catch (...)
+                    {
+                        foregroundReady = false;
+                    }
+
+                    if (!foregroundReady)
+                    {
+                        completeDeferral(deferral);
+                        co_return;
+                    }
+
+                    try
+                    {
                         activeDialog.IsPrimaryButtonEnabled(true);
                         activeDialog.PrimaryButtonText(L"Add");
 
-                        if (!addedId)
+                        if (!backgroundResult)
                         {
                             clickArgs.Cancel(true);
                             validationText.Text(
                                 L"The account could not be saved securely. Please try again.");
                             validationText.Visibility(Visibility::Visible);
                         }
-
-                        pendingDeferral.Complete();
-                        pendingDeferral = nullptr;
+                        else
+                        {
+                            addedId = backgroundResult;
+                        }
                     }
                     catch (...)
                     {
-                        if (pendingDeferral)
+                        try
                         {
-                            try
-                            {
-                                pendingDeferral.Complete();
-                            }
-                            catch (...)
-                            {
-                            }
+                            clickArgs.Cancel(true);
+                            validationText.Text(
+                                L"The account could not be saved securely. Please try again.");
+                            validationText.Visibility(Visibility::Visible);
+                        }
+                        catch (...)
+                        {
                         }
                     }
+
+                    completeDeferral(deferral);
                 });
 
             Grid::SetRowSpan(dialog, 4);
@@ -309,7 +326,12 @@ namespace winrt::AccountVault::implementation
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
 
-            removeDialogNoThrow();
+            auto rootChildren{ RootGrid().Children() };
+            std::uint32_t dialogIndex{};
+            if (rootChildren.IndexOf(dialog, dialogIndex))
+            {
+                rootChildren.RemoveAt(dialogIndex);
+            }
 
             if (addedId)
             {
@@ -317,39 +339,21 @@ namespace winrt::AccountVault::implementation
                 StatusText().Text(L"Account saved securely");
             }
         }
-        catch (hresult_error const& error)
-        {
-            removeDialogNoThrow();
-            try
-            {
-                refreshAccounts();
-            }
-            catch (...)
-            {
-            }
-            try
-            {
-                std::wstring status{ L"The account dialog encountered a UI error: " };
-                status += error.message().c_str();
-                StatusText().Text(hstring{ status });
-            }
-            catch (...)
-            {
-            }
-        }
         catch (...)
         {
-            removeDialogNoThrow();
             try
             {
-                refreshAccounts();
-            }
-            catch (...)
-            {
-            }
-            try
-            {
-                StatusText().Text(L"The account dialog could not be completed");
+                if (addedId)
+                {
+                    refreshAccounts();
+                    StatusText().Text(
+                        L"Account saved; the account view was refreshed");
+                }
+                else
+                {
+                    StatusText().Text(
+                        L"The Add Account dialog encountered a UI error");
+                }
             }
             catch (...)
             {
