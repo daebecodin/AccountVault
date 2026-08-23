@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <cwctype>
+#include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,6 +29,14 @@ namespace account_vault::services
             std::wstring protectedLauncherPassword,
             std::wstring protectedEmailPassword)
         {
+            // UINT64_MAX is reserved as invalid, and nextRecordId itself must
+            // never become UINT64_MAX after a successful add.
+            if (m_nextId == 0 ||
+                m_nextId >= (std::numeric_limits<RecordId>::max)() - 1)
+            {
+                throw std::overflow_error{ "The account record ID space is exhausted." };
+            }
+
             const RecordId id{ m_nextId++ };
 
             m_accounts.push_back(Account{
@@ -40,7 +50,7 @@ namespace account_vault::services
                     std::move(protectedLauncherPassword),
                 .protectedEmailPassword =
                     std::move(protectedEmailPassword),
-            });
+                });
 
             return id;
         }

@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -18,6 +18,9 @@ Internal name: `AccountVault`
 - JSON never contains plaintext passwords.
 - Password copy/reveal requires Windows verification.
 - Failed saves restore the old repository state.
+- Invalid repository state is rejected before any storage file is changed.
+- Corrupt JSON is preserved under a recovery filename before it is disabled.
+- An unsupported future schema is never renamed or overwritten.
 - XAML controls are changed only on the UI thread.
 - Every dialog deferral is completed.
 - No exception escapes `fire_and_forget`.
@@ -36,6 +39,8 @@ Internal name: `AccountVault`
 | `[x]` | Edit account | Blank password keeps old password | `Dialogs/AccountDetailsDialog.cpp` |
 | `[~]` | Remove account | Saves removal; no confirmation/undo | `Components/AccountCard.cpp` |
 | `[x]` | JSON storage | Temp-file write then file replacement | `Services/AccountStorageService.cpp` |
+| `[x]` | Storage recovery | Quarantine corrupt JSON; recover valid temp saves | `Services/AccountStorageService.cpp` |
+| `[x]` | Storage tests | Debug-only deterministic 14-case suite | `Services/AccountStorageService.cpp` |
 | `[x]` | DPAPI | Protects passwords before JSON storage | `Services/CredentialService.cpp` |
 | `[x]` | Windows verification | Required per password copy/reveal | `Services/UserVerificationService.cpp` |
 | `[x]` | Coroutine safety | No exception escapes `fire_and_forget` | Dialog/card source files |
@@ -118,7 +123,17 @@ Missing:
 Save:
 
 ```text
-Write temporary file -> flush/check -> replace final file
+Validate state -> write temp -> flush stream -> flush file -> replace final
+```
+
+Recovery:
+
+```text
+Valid final + stale temp -> keep final, delete temp
+Missing final + valid temp -> promote temp
+Corrupt final + valid temp -> quarantine final, promote temp
+Corrupt final only -> quarantine, disable writes, restart into empty vault
+Unsupported schema -> leave file untouched, disable writes
 ```
 
 Load rejects:
@@ -132,8 +147,31 @@ Load rejects:
 Limits:
 
 - Rewrites the complete JSON file per save.
-- No corrupted-file backup or repair.
+- Maximum JSON size: 16 MiB.
+- Maximum account count: 100,000.
 - No portable backup yet.
+
+### Developer storage tests `[x]`
+
+Debug builds can run 14 deterministic tests in isolated `%TEMP%` folders.
+
+```text
+Visual Studio project properties
+-> Debugging
+-> Environment
+-> ACCOUNT_ARMORY_RUN_STORAGE_TESTS=1
+```
+
+Run **Debug x64** and open **View -> Output -> Debug**. A copy is written to:
+
+```text
+%TEMP%\AccountArmoryStorageTests\latest-report.txt
+```
+
+Covered: create/edit/remove persistence, password preservation, schema 1
+migration signal, corrupt JSON, future schema, duplicate/zero/next IDs, stale
+temp recovery, corrupt-final recovery, failed replacement rollback, invalid
+save-state rejection, and ID exhaustion.
 
 ## Password security
 
@@ -332,7 +370,6 @@ type, and package changes.
 ### High priority
 
 - [ ] Decide repository threading policy.
-- [ ] Add storage/rollback tests.
 - [ ] Audit synchronous WinUI event callbacks.
 
 ### Security
@@ -343,9 +380,7 @@ type, and package changes.
 
 ### Reliability/UI
 
-- [ ] Corrupted-file recovery.
 - [ ] Remove confirmation/Undo.
-- [ ] Prevent ID overflow.
 - [ ] Trim/validate input and maximum lengths.
 - [ ] Persist custom themes.
 - [ ] Accessibility and keyboard review.
@@ -361,12 +396,13 @@ type, and package changes.
 
 ### Accounts/storage
 
-- [ ] Create survives restart.
-- [ ] Metadata edit keeps both passwords.
+- [x] Create survives reload. (automated)
+- [x] Metadata edit keeps both passwords. (automated)
 - [ ] Changing one password keeps the other.
-- [ ] Remove survives restart.
-- [ ] Invalid JSON disables writes.
-- [ ] Failed create/edit/remove restores correct state.
+- [x] Remove survives reload. (automated)
+- [x] Invalid JSON is quarantined and disables writes for that run. (automated)
+- [x] Failed file replacement preserves the previous final file. (automated)
+- [ ] Failed create/edit/remove restores correct UI state. (manual)
 
 ### Security
 
@@ -420,6 +456,10 @@ Remaining issue:
 
 ### 2026-08-23
 
+- Added v29 storage reliability: state validation, durable temp-file flush,
+  interrupted-save recovery, corrupt-file quarantine, future-schema
+  preservation, ID overflow prevention, complete create rollback, and a
+  debug-only 14-case storage test suite.
 - Added v28.7.3 C++ name-lookup fix: windowing types in the AppWindow
   callback are fully qualified so they cannot collide with `MainWindow::AppWindow()`.
 - Added v28.7.2 build diagnosis: the project copy of `MainWindow.xaml`

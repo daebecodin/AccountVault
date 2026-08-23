@@ -45,6 +45,11 @@ namespace winrt::AccountVault::implementation
             return std::nullopt;
         }
 
+        // A failed create must restore both the account list and nextRecordId.
+        // Removing only the new record would leave a permanent ID gap.
+        const auto oldAccounts{ m_repository.accounts() };
+        const RecordId oldNextId{ m_repository.nextId() };
+
         const RecordId id{ m_repository.add(
             std::move(launcher),
             std::move(launcherUsername),
@@ -57,7 +62,7 @@ namespace winrt::AccountVault::implementation
         std::wstring error;
         if (!persistAccounts(error))
         {
-            static_cast<void>(m_repository.remove(id));
+            m_repository.replaceAll(oldAccounts, oldNextId);
             return std::nullopt;
         }
 
@@ -109,14 +114,14 @@ namespace winrt::AccountVault::implementation
         }
 
         if (!m_repository.update(
-                id,
-                std::move(launcher),
-                std::move(launcherUsername),
-                std::move(emailAddress),
-                std::move(emailProvider),
-                std::move(emailProviderWebsite),
-                std::move(protectedLauncherPassword),
-                std::move(protectedEmailPassword)))
+            id,
+            std::move(launcher),
+            std::move(launcherUsername),
+            std::move(emailAddress),
+            std::move(emailProvider),
+            std::move(emailProviderWebsite),
+            std::move(protectedLauncherPassword),
+            std::move(protectedEmailPassword)))
         {
             return false;
         }
