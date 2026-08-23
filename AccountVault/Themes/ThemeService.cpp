@@ -148,7 +148,6 @@ namespace winrt::AccountVault::implementation
         }
 
         applyTheme(theme);
-        refreshAccounts();
     }
     void MainWindow::applyTheme(ThemeDefinition const& theme)
     {

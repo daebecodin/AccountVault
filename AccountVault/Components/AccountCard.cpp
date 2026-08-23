@@ -15,18 +15,29 @@ using namespace Windows::Foundation;
 
 namespace winrt::AccountVault::implementation
 {
-    void MainWindow::appendAccountCard(Account const& account)
+    void MainWindow::appendAccountCard(
+        Account const& account,
+        std::optional<std::uint32_t> index)
     {
+        const auto resources{ Application::Current().Resources() };
+        const auto surfaceBrush{
+            resources.Lookup(box_value(L"AppSurfaceBrush")).as<Brush>() };
+        const auto surfaceAltBrush{
+            resources.Lookup(box_value(L"AppSurfaceAltBrush")).as<Brush>() };
+        const auto accentBrush{
+            resources.Lookup(box_value(L"AppAccentBrush")).as<Brush>() };
+        const auto textBrush{
+            resources.Lookup(box_value(L"AppTextBrush")).as<Brush>() };
+        const auto mutedTextBrush{
+            resources.Lookup(box_value(L"AppMutedTextBrush")).as<Brush>() };
+
         Grid card;
+        card.Tag(box_value(account.recordId));
         card.MinHeight(94);
         card.Padding(Thickness{ 18, 14, 18, 14 });
         card.Margin(Thickness{ 0, 0, 0, 12 });
         card.ColumnSpacing(22);
-        card.Background(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppSurfaceBrush"))
-                .as<Brush>());
+        card.Background(surfaceBrush);
 
         card.ColumnDefinitions().Append(ColumnDefinition{});
         card.ColumnDefinitions().Append(ColumnDefinition{});
@@ -46,21 +57,13 @@ namespace winrt::AccountVault::implementation
         launcherBadge.CornerRadius(CornerRadius{ 6, 6, 6, 6 });
         launcherBadge.HorizontalAlignment(HorizontalAlignment::Left);
         launcherBadge.VerticalAlignment(VerticalAlignment::Center);
-        launcherBadge.Background(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppSurfaceAltBrush"))
-                .as<Brush>());
+        launcherBadge.Background(surfaceAltBrush);
 
         TextBlock launcherText;
         launcherText.Text(account.launcher);
         launcherText.FontFamily(FontFamily{ L"Cascadia Mono" });
         launcherText.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
-        launcherText.Foreground(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppAccentBrush"))
-                .as<Brush>());
+        launcherText.Foreground(accentBrush);
         launcherBadge.Child(launcherText);
 
         StackPanel idPanel;
@@ -69,19 +72,11 @@ namespace winrt::AccountVault::implementation
         TextBlock idLabel;
         idLabel.Text(L"IN-GAME NAME");
         idLabel.FontSize(11);
-        idLabel.Foreground(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppMutedTextBrush"))
-                .as<Brush>());
+        idLabel.Foreground(mutedTextBrush);
         TextBlock idValue;
         idValue.Text(account.launcherUsername);
         idValue.FontSize(15);
-        idValue.Foreground(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppTextBrush"))
-                .as<Brush>());
+        idValue.Foreground(textBrush);
         idPanel.Children().Append(idLabel);
         idPanel.Children().Append(idValue);
 
@@ -91,19 +86,11 @@ namespace winrt::AccountVault::implementation
         TextBlock emailLabel;
         emailLabel.Text(L"EMAIL");
         emailLabel.FontSize(11);
-        emailLabel.Foreground(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppMutedTextBrush"))
-                .as<Brush>());
+        emailLabel.Foreground(mutedTextBrush);
         TextBlock emailValue;
         emailValue.Text(account.emailAddress);
         emailValue.FontSize(15);
-        emailValue.Foreground(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppTextBrush"))
-                .as<Brush>());
+        emailValue.Foreground(textBrush);
         emailPanel.Children().Append(emailLabel);
         emailPanel.Children().Append(emailValue);
 
@@ -168,10 +155,21 @@ namespace winrt::AccountVault::implementation
         copyLauncherPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
         {
             const auto button{ sender.as<Button>() };
-            const Account* account{ m_repository.find(recordIdFrom(button)) };
-            if (account)
+            const Account* account{
+                m_repository.find(recordIdFrom(button)) };
+            const auto password{ !account
+                ? std::nullopt
+                : account->protectedLauncherPassword.empty()
+                    ? m_credentials.legacyLauncherPassword(account->recordId)
+                    : m_credentials.unprotectPassword(
+                        account->protectedLauncherPassword) };
+            if (password)
             {
-                copyToClipboard(account->launcherPassword, L"Launcher password");
+                copyToClipboard(*password, L"Launcher password");
+            }
+            else
+            {
+                StatusText().Text(L"Launcher password could not be retrieved");
             }
         });
 
@@ -179,10 +177,21 @@ namespace winrt::AccountVault::implementation
         copyEmailPassword.Click([this](IInspectable const& sender, RoutedEventArgs const&)
         {
             const auto button{ sender.as<Button>() };
-            const Account* account{ m_repository.find(recordIdFrom(button)) };
-            if (account)
+            const Account* account{
+                m_repository.find(recordIdFrom(button)) };
+            const auto password{ !account
+                ? std::nullopt
+                : account->protectedEmailPassword.empty()
+                    ? m_credentials.legacyEmailPassword(account->recordId)
+                    : m_credentials.unprotectPassword(
+                        account->protectedEmailPassword) };
+            if (password)
             {
-                copyToClipboard(account->emailPassword, L"Email password");
+                copyToClipboard(*password, L"Email password");
+            }
+            else
+            {
+                StatusText().Text(L"Email password could not be retrieved");
             }
         });
 
@@ -238,17 +247,13 @@ namespace winrt::AccountVault::implementation
         accountActions.Children().Append(details);
         accountActions.Children().Append(remove);
 
-        const auto makeGroupLabel = [](hstring const& label)
+        const auto makeGroupLabel = [mutedTextBrush](hstring const& label)
         {
             TextBlock text;
             text.Text(label);
             text.FontSize(11);
             text.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
-            text.Foreground(
-                Application::Current()
-                    .Resources()
-                    .Lookup(box_value(L"AppMutedTextBrush"))
-                    .as<Brush>());
+            text.Foreground(mutedTextBrush);
             return text;
         };
 
@@ -261,11 +266,7 @@ namespace winrt::AccountVault::implementation
         Border copyGroup;
         copyGroup.Padding(Thickness{ 10, 9, 10, 10 });
         copyGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
-        copyGroup.Background(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppSurfaceAltBrush"))
-                .as<Brush>());
+        copyGroup.Background(surfaceAltBrush);
         copyGroup.Child(copyGroupContent);
 
         StackPanel accountGroupContent;
@@ -277,11 +278,7 @@ namespace winrt::AccountVault::implementation
         Border accountGroup;
         accountGroup.Padding(Thickness{ 10, 9, 10, 10 });
         accountGroup.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
-        accountGroup.Background(
-            Application::Current()
-                .Resources()
-                .Lookup(box_value(L"AppSurfaceAltBrush"))
-                .as<Brush>());
+        accountGroup.Background(surfaceAltBrush);
         accountGroup.Child(accountGroupContent);
 
         Grid::SetColumn(copyGroup, 0);
@@ -300,7 +297,47 @@ namespace winrt::AccountVault::implementation
         card.Children().Append(emailPanel);
         card.Children().Append(actions);
 
-        AccountsList().Items().Append(card);
+        if (index)
+        {
+            AccountsList().Items().InsertAt(*index, card);
+        }
+        else
+        {
+            AccountsList().Items().Append(card);
+        }
+    }
+    void MainWindow::refreshAccountCard(RecordId id)
+    {
+        auto items{ AccountsList().Items() };
+
+        for (std::uint32_t index = 0; index < items.Size(); ++index)
+        {
+            const auto element{ items.GetAt(index).try_as<FrameworkElement>() };
+            if (element && element.Tag() &&
+                unbox_value<RecordId>(element.Tag()) == id)
+            {
+                items.RemoveAt(index);
+                break;
+            }
+        }
+
+        const std::wstring query{ SearchBox().Text().c_str() };
+        const std::wstring launcher{ selectedLauncher() };
+        const auto matches{ m_repository.search(query, launcher) };
+
+        for (std::uint32_t index = 0;
+             index < static_cast<std::uint32_t>(matches.size());
+             ++index)
+        {
+            if (matches[index]->recordId == id)
+            {
+                appendAccountCard(*matches[index], index);
+                break;
+            }
+        }
+
+        EmptyState().Visibility(
+            items.Size() == 0 ? Visibility::Visible : Visibility::Collapsed);
     }
     void MainWindow::copyToClipboard(
         std::wstring const& value,
@@ -315,11 +352,37 @@ namespace winrt::AccountVault::implementation
     }
     void MainWindow::removeAccount(RecordId id)
     {
-        if (m_repository.remove(id))
+        if (!m_storageReady)
         {
-            refreshAccounts();
-            StatusText().Text(L"Account removed from memory");
+            StatusText().Text(
+                L"Account storage is unavailable; no data was changed");
+            return;
         }
+
+        if (!m_repository.find(id))
+        {
+            StatusText().Text(L"That account no longer exists");
+            return;
+        }
+
+        const auto oldAccounts{ m_repository.accounts() };
+        const RecordId oldNextId{ m_repository.nextId() };
+        if (!m_repository.remove(id))
+        {
+            StatusText().Text(L"The account could not be removed");
+            return;
+        }
+
+        std::wstring error;
+        if (!persistAccounts(error))
+        {
+            m_repository.replaceAll(oldAccounts, oldNextId);
+            StatusText().Text(L"The account removal could not be saved");
+            return;
+        }
+
+        refreshAccountCard(id);
+        StatusText().Text(L"Account and credentials removed");
     }
     MainWindow::RecordId MainWindow::recordIdFrom(
         Button const& button) const

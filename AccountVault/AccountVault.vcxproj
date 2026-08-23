@@ -134,6 +134,8 @@
     <ClInclude Include="Models\Account.h" />
     <ClInclude Include="Models\ThemeDefinition.h" />
     <ClInclude Include="Services\AccountRepository.h" />
+    <ClInclude Include="Services\AccountStorageService.h" />
+    <ClInclude Include="Services\CredentialService.h" />
     <ClInclude Include="Services\EmailProviderCatalog.h" />
   </ItemGroup>
   <ItemGroup>
@@ -154,6 +156,9 @@
     <ClCompile Include="Dialogs\AddAccountDialog.cpp" />
     <ClCompile Include="Dialogs\AccountDetailsDialog.cpp" />
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp" />
+    <ClCompile Include="Services\AccountPersistence.cpp" />
+    <ClCompile Include="Services\AccountStorageService.cpp" />
+    <ClCompile Include="Services\CredentialService.cpp" />
     <ClCompile Include="Themes\ThemeService.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ResourceCompile Include="AccountArmory.rc" />
@@ -166,6 +171,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt">
+      <DeploymentContent>false</DeploymentContent>
+    </Text>
+    <Text Include="STORAGE-README.txt">
       <DeploymentContent>false</DeploymentContent>
     </Text>
   </ItemGroup>

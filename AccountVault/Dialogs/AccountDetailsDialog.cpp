@@ -4,7 +4,9 @@
 
 #include <winrt/Windows.UI.Text.h>
 
+#include <optional>
 #include <string>
+#include <utility>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -102,10 +104,10 @@ namespace winrt::AccountVault::implementation
         launcherUsername.Text(account->launcherUsername);
         launcherUsername.IsReadOnly(true);
 
-        TextBox launcherPassword;
-        launcherPassword.Header(box_value(L"Launcher password"));
-        launcherPassword.Text(account->launcherPassword);
-        launcherPassword.IsReadOnly(true);
+        PasswordBox launcherPassword;
+        launcherPassword.Header(box_value(L"New launcher password (optional)"));
+        launcherPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
+        launcherPassword.IsEnabled(false);
 
         TextBlock linkedEmail;
         std::wstring linkedEmailText{ L"Linked email: " };
@@ -208,10 +210,10 @@ namespace winrt::AccountVault::implementation
                 linkedEmail.Text(hstring{ mirrorText });
             });
 
-        TextBox emailPassword;
-        emailPassword.Header(box_value(L"Email password"));
-        emailPassword.Text(account->emailPassword);
-        emailPassword.IsReadOnly(true);
+        PasswordBox emailPassword;
+        emailPassword.Header(box_value(L"New email password (optional)"));
+        emailPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
+        emailPassword.IsEnabled(false);
 
         TextBlock validation;
         validation.Visibility(Visibility::Collapsed);
@@ -257,7 +259,10 @@ namespace winrt::AccountVault::implementation
         bool saved{ false };
 
         dialog.PrimaryButtonClick(
-            [&, this](ContentDialog const& sender, ContentDialogButtonClickEventArgs const& args)
+            [&, this](
+                ContentDialog const& sender,
+                ContentDialogButtonClickEventArgs const& args)
+                -> fire_and_forget
             {
                 if (!editing)
                 {
@@ -265,28 +270,26 @@ namespace winrt::AccountVault::implementation
                     editing = true;
                     launcher.IsEnabled(true);
                     launcherUsername.IsReadOnly(false);
-                    launcherPassword.IsReadOnly(false);
+                    launcherPassword.IsEnabled(true);
                     providerLinkPanel.Visibility(Visibility::Collapsed);
                     emailProvider.Visibility(Visibility::Visible);
                     emailProvider.IsEnabled(true);
                     emailAddress.IsReadOnly(false);
-                    emailPassword.IsReadOnly(false);
+                    emailPassword.IsEnabled(true);
                     sender.PrimaryButtonText(L"Save changes");
                     launcherUsername.Focus(FocusState::Programmatic);
-                    return;
+                    co_return;
                 }
 
                 if (launcher.SelectedIndex() < 0 ||
                     launcherUsername.Text().empty() ||
-                    launcherPassword.Text().empty() ||
                     emailProvider.SelectedIndex() < 0 ||
-                    emailAddress.Text().empty() ||
-                    emailPassword.Text().empty())
+                    emailAddress.Text().empty())
                 {
                     args.Cancel(true);
                     validation.Text(L"All launcher and email fields are required.");
                     validation.Visibility(Visibility::Visible);
-                    return;
+                    co_return;
                 }
 
                 const auto launcherItem = launcher.SelectedItem().as<ComboBoxItem>();
@@ -300,22 +303,69 @@ namespace winrt::AccountVault::implementation
                 const hstring providerWebsite =
                     unbox_value<hstring>(providerItem.Tag());
 
-                saved = m_repository.update(
-                    id,
-                    launcherName.c_str(),
-                    launcherUsername.Text().c_str(),
-                    launcherPassword.Text().c_str(),
-                    emailAddress.Text().c_str(),
-                    providerName.c_str(),
-                    providerWebsite.c_str(),
-                    emailPassword.Text().c_str());
+                std::optional<std::wstring> newLauncherPassword;
+                if (!launcherPassword.Password().empty())
+                {
+                    newLauncherPassword.emplace(
+                        launcherPassword.Password().c_str());
+                }
+
+                std::optional<std::wstring> newEmailPassword;
+                if (!emailPassword.Password().empty())
+                {
+                    newEmailPassword.emplace(emailPassword.Password().c_str());
+                }
+
+                const std::wstring launcherValue{ launcherName.c_str() };
+                const std::wstring launcherUsernameValue{
+                    launcherUsername.Text().c_str() };
+                const std::wstring emailAddressValue{
+                    emailAddress.Text().c_str() };
+                const std::wstring providerNameValue{ providerName.c_str() };
+                const std::wstring providerWebsiteValue{
+                    providerWebsite.c_str() };
+
+                const auto clickArgs{ args };
+                const auto activeDialog{ sender };
+                const auto validationText{ validation };
+                const auto dispatcher{ DispatcherQueue() };
+                const auto deferral{ clickArgs.GetDeferral() };
+
+                activeDialog.IsPrimaryButtonEnabled(false);
+                activeDialog.PrimaryButtonText(L"Saving...");
+
+                bool backgroundResult{ false };
+                try
+                {
+                    co_await resume_background();
+                    backgroundResult = updateAccount(
+                        id,
+                        launcherValue,
+                        launcherUsernameValue,
+                        std::move(newLauncherPassword),
+                        emailAddressValue,
+                        providerNameValue,
+                        providerWebsiteValue,
+                        std::move(newEmailPassword));
+                }
+                catch (...)
+                {
+                    backgroundResult = false;
+                }
+
+                co_await wil::resume_foreground(dispatcher);
+                saved = backgroundResult;
+                activeDialog.IsPrimaryButtonEnabled(true);
+                activeDialog.PrimaryButtonText(L"Save changes");
 
                 if (!saved)
                 {
-                    args.Cancel(true);
-                    validation.Text(L"The account could not be updated.");
-                    validation.Visibility(Visibility::Visible);
+                    clickArgs.Cancel(true);
+                    validationText.Text(L"The account could not be updated.");
+                    validationText.Visibility(Visibility::Visible);
                 }
+
+                deferral.Complete();
             });
 
         Grid::SetRowSpan(dialog, 4);
@@ -332,8 +382,8 @@ namespace winrt::AccountVault::implementation
 
         if (saved)
         {
-            refreshAccounts();
-            StatusText().Text(L"Account details updated");
+            refreshAccountCard(id);
+            StatusText().Text(L"Account details saved securely");
         }
     }
 }

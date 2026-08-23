@@ -24,6 +24,15 @@
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="Services\AccountPersistence.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
+    <ClCompile Include="Services\AccountStorageService.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
+    <ClCompile Include="Services\CredentialService.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
     <ClCompile Include="Themes\ThemeService.cpp">
       <Filter>Themes</Filter>
     </ClCompile>
@@ -40,6 +49,12 @@
       <Filter>Models</Filter>
     </ClInclude>
     <ClInclude Include="Services\AccountRepository.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\AccountStorageService.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\CredentialService.h">
       <Filter>Services</Filter>
     </ClInclude>
     <ClInclude Include="Services\EmailProviderCatalog.h">
@@ -186,6 +201,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
+    <Text Include="STORAGE-README.txt" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="app.manifest" />

@@ -3,10 +3,13 @@
 #include "MainWindow.g.h"
 #include "Models/ThemeDefinition.h"
 #include "Services/AccountRepository.h"
+#include "Services/AccountStorageService.h"
+#include "Services/CredentialService.h"
 
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -50,13 +53,40 @@ namespace winrt::AccountVault::implementation
         static constexpr int BuiltInThemeCount{ 10 };
 
         account_vault::services::AccountRepository m_repository;
+        account_vault::services::AccountStorageService m_accountStorage;
+        account_vault::services::CredentialService m_credentials;
         std::vector<ThemeDefinition> m_customThemes;
         bool m_windowReady{ false };
+        bool m_storageReady{ true };
 
         void refreshAccounts();
-        void appendAccountCard(Account const& account);
+        void appendAccountCard(
+            Account const& account,
+            std::optional<std::uint32_t> index = std::nullopt);
+        void refreshAccountCard(RecordId id);
         void copyToClipboard(std::wstring const& value, std::wstring_view label);
         void removeAccount(RecordId id);
+
+        [[nodiscard]] std::optional<RecordId> addAccount(
+            std::wstring launcher,
+            std::wstring launcherUsername,
+            std::wstring launcherPassword,
+            std::wstring emailAddress,
+            std::wstring emailProvider,
+            std::wstring emailProviderWebsite,
+            std::wstring emailPassword);
+
+        [[nodiscard]] bool updateAccount(
+            RecordId id,
+            std::wstring launcher,
+            std::wstring launcherUsername,
+            std::optional<std::wstring> launcherPassword,
+            std::wstring emailAddress,
+            std::wstring emailProvider,
+            std::wstring emailProviderWebsite,
+            std::optional<std::wstring> emailPassword);
+
+        [[nodiscard]] bool persistAccounts(std::wstring& error) const;
         void applyPreset(int selectedIndex);
         void applyTheme(ThemeDefinition const& theme);
 

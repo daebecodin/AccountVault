@@ -149,7 +149,7 @@
         <Grid Grid.Row="3" Margin="0,20,0,0">
             <TextBlock
                 x:Name="StatusText"
-                Text="Milestone 1: accounts are stored in memory only."
+                Text="Passwords are encrypted locally with Windows DPAPI."
                 FontFamily="Cascadia Mono"
                 FontSize="12"
                 Foreground="{StaticResource AppMutedTextBrush}" />

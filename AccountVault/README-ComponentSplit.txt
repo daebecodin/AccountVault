@@ -53,7 +53,9 @@ AccountArmory.rc and resource.h
   Native multi-resolution icon resource compiled into the executable.
 
 Components\AccountCard.cpp
-  Account-card construction, card actions, clipboard operations, and removal.
+  Account-card construction, clipboard operations, removal, and two labeled
+  action groups: a 2x2 Copy Credentials grid plus Details/Remove under
+  Account Actions.
 
 Dialogs\AddAccountDialog.cpp
   Horizontal Add Account dialog, field validation, and repository insertion.
@@ -74,7 +76,16 @@ Models\ThemeDefinition.h
   Theme palette data model shared by theme-related components.
 
 Services\AccountRepository.h
-  In-memory account storage, search, update, and removal.
+  In-memory metadata storage, search, update, and removal.
+
+Services\AccountStorageService.h/.cpp
+  Versioned JSON metadata loading and atomic local-data writes.
+
+Services\CredentialService.h/.cpp
+  Launcher and email passwords protected locally with Windows DPAPI.
+
+Services\AccountPersistence.cpp
+  Coordinates repository, metadata-file, and credential operations.
 
 Services\EmailProviderCatalog.h
   Shared provider names and destinations used by Add and Details dialogs.

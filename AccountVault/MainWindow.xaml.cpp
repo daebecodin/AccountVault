@@ -9,6 +9,7 @@
 #include <winrt/Windows.Storage.h>
 
 #include <string>
+#include <vector>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -156,35 +157,89 @@ namespace winrt::AccountVault::implementation
 
         ThemePicker().SelectedIndex(startupThemeIndex);
 
-        // Temporary data makes the first UI run immediately useful.
-        // Delete these calls when you are ready to begin with an empty vault.
-        static_cast<void>(m_repository.add(
-            L"Steam",
-            L"night_shift",
-            L"demo-launcher-password",
-            L"night@example.com",
-            L"Gmail",
-            L"https://mail.google.com/",
-            L"demo-email-password"));
-        static_cast<void>(m_repository.add(
-            L"Riot",
-            L"pixelpilot#NA1",
-            L"demo-launcher-password",
-            L"pilot@example.com",
-            L"Outlook",
-            L"https://outlook.live.com/mail/",
-            L"demo-email-password"));
-        static_cast<void>(m_repository.add(
-            L"Epic",
-            L"orbit_runner",
-            L"demo-launcher-password",
-            L"orbit@example.com",
-            L"Yahoo",
-            L"https://mail.yahoo.com/",
-            L"demo-email-password"));
+        const auto loadResult{ m_accountStorage.load() };
+        std::wstring storageStatus;
+        m_storageReady = loadResult.succeeded;
+        if (loadResult.succeeded)
+        {
+            m_repository.replaceAll(
+                loadResult.accounts,
+                loadResult.nextRecordId);
+
+            if (loadResult.credentialMigrationRequired)
+            {
+                bool migrationSucceeded{ true };
+                std::vector<RecordId> migratedIds;
+                migratedIds.reserve(loadResult.accounts.size());
+
+                for (Account const& account : loadResult.accounts)
+                {
+                    const auto launcherPassword{
+                        m_credentials.legacyLauncherPassword(account.recordId) };
+                    const auto emailPassword{
+                        m_credentials.legacyEmailPassword(account.recordId) };
+
+                    if (!launcherPassword || !emailPassword)
+                    {
+                        migrationSucceeded = false;
+                        break;
+                    }
+
+                    const auto protectedLauncherPassword{
+                        m_credentials.protectPassword(*launcherPassword) };
+                    const auto protectedEmailPassword{
+                        m_credentials.protectPassword(*emailPassword) };
+
+                    if (!protectedLauncherPassword ||
+                        !protectedEmailPassword ||
+                        !m_repository.updateProtectedPasswords(
+                            account.recordId,
+                            *protectedLauncherPassword,
+                            *protectedEmailPassword))
+                    {
+                        migrationSucceeded = false;
+                        break;
+                    }
+
+                    migratedIds.push_back(account.recordId);
+                }
+
+                std::wstring migrationError;
+                if (migrationSucceeded && persistAccounts(migrationError))
+                {
+                    for (RecordId id : migratedIds)
+                    {
+                        static_cast<void>(
+                            m_credentials.removeLegacyAccountSecrets(id));
+                    }
+                    storageStatus =
+                        L"Credentials migrated to fast DPAPI-protected storage";
+                }
+                else
+                {
+                    m_repository.replaceAll(
+                        loadResult.accounts,
+                        loadResult.nextRecordId);
+                    m_storageReady = false;
+                    storageStatus =
+                        L"Credential migration could not be completed; storage changes are disabled";
+                }
+            }
+        }
 
         m_windowReady = true;
         applyPreset(startupThemeIndex);
+
+        if (!loadResult.succeeded)
+        {
+            std::wstring status{ L"Account data could not be loaded: " };
+            status += loadResult.error;
+            StatusText().Text(hstring{ status });
+        }
+        else if (!storageStatus.empty())
+        {
+            StatusText().Text(hstring{ storageStatus });
+        }
     }
     void MainWindow::AddAccountButton_Click(
         IInspectable const&,
@@ -251,7 +306,7 @@ namespace winrt::AccountVault::implementation
 
         std::wstring status{ std::to_wstring(matches.size()) };
         status += matches.size() == 1 ? L" account shown" : L" accounts shown";
-        status += L"  |  in-memory demo";
+        status += L"  |  passwords protected locally with Windows DPAPI";
         StatusText().Text(hstring{ status });
     }
     std::wstring MainWindow::selectedLauncher()

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cwctype>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,11 +21,11 @@ namespace account_vault::services
         [[nodiscard]] RecordId add(
             std::wstring launcher,
             std::wstring launcherUsername,
-            std::wstring launcherPassword,
             std::wstring emailAddress,
             std::wstring emailProvider,
             std::wstring emailProviderWebsite,
-            std::wstring emailPassword)
+            std::wstring protectedLauncherPassword,
+            std::wstring protectedEmailPassword)
         {
             const RecordId id{ m_nextId++ };
 
@@ -32,11 +33,13 @@ namespace account_vault::services
                 .recordId = id,
                 .launcher = std::move(launcher),
                 .launcherUsername = std::move(launcherUsername),
-                .launcherPassword = std::move(launcherPassword),
                 .emailAddress = std::move(emailAddress),
                 .emailProvider = std::move(emailProvider),
                 .emailProviderWebsite = std::move(emailProviderWebsite),
-                .emailPassword = std::move(emailPassword),
+                .protectedLauncherPassword =
+                    std::move(protectedLauncherPassword),
+                .protectedEmailPassword =
+                    std::move(protectedEmailPassword),
             });
 
             return id;
@@ -62,11 +65,11 @@ namespace account_vault::services
             RecordId id,
             std::wstring launcher,
             std::wstring launcherUsername,
-            std::wstring launcherPassword,
             std::wstring emailAddress,
             std::wstring emailProvider,
             std::wstring emailProviderWebsite,
-            std::wstring emailPassword)
+            std::optional<std::wstring> protectedLauncherPassword = std::nullopt,
+            std::optional<std::wstring> protectedEmailPassword = std::nullopt)
         {
             const auto account = std::ranges::find(
                 m_accounts,
@@ -80,12 +83,60 @@ namespace account_vault::services
 
             account->launcher = std::move(launcher);
             account->launcherUsername = std::move(launcherUsername);
-            account->launcherPassword = std::move(launcherPassword);
             account->emailAddress = std::move(emailAddress);
             account->emailProvider = std::move(emailProvider);
             account->emailProviderWebsite = std::move(emailProviderWebsite);
-            account->emailPassword = std::move(emailPassword);
+            if (protectedLauncherPassword)
+            {
+                account->protectedLauncherPassword =
+                    std::move(*protectedLauncherPassword);
+            }
+            if (protectedEmailPassword)
+            {
+                account->protectedEmailPassword =
+                    std::move(*protectedEmailPassword);
+            }
             return true;
+        }
+
+        [[nodiscard]] bool updateProtectedPasswords(
+            RecordId id,
+            std::wstring protectedLauncherPassword,
+            std::wstring protectedEmailPassword)
+        {
+            const auto account = std::ranges::find(
+                m_accounts,
+                id,
+                &Account::recordId);
+
+            if (account == m_accounts.end())
+            {
+                return false;
+            }
+
+            account->protectedLauncherPassword =
+                std::move(protectedLauncherPassword);
+            account->protectedEmailPassword =
+                std::move(protectedEmailPassword);
+            return true;
+        }
+
+        void replaceAll(
+            std::vector<Account> accounts,
+            RecordId nextId)
+        {
+            m_accounts = std::move(accounts);
+            m_nextId = nextId;
+        }
+
+        [[nodiscard]] std::vector<Account> const& accounts() const noexcept
+        {
+            return m_accounts;
+        }
+
+        [[nodiscard]] RecordId nextId() const noexcept
+        {
+            return m_nextId;
         }
 
         [[nodiscard]] Account const* find(RecordId id) const noexcept

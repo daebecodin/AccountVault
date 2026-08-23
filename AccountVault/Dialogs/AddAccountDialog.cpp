@@ -4,6 +4,7 @@
 
 #include <winrt/Windows.UI.Text.h>
 
+#include <optional>
 #include <string>
 
 using namespace winrt;
@@ -177,10 +178,13 @@ namespace winrt::AccountVault::implementation
         addAccountScroller.Content(fields);
         dialog.Content(addAccountScroller);
 
-        bool added{ false };
+        std::optional<RecordId> addedId;
 
         dialog.PrimaryButtonClick(
-            [&, this](ContentDialog const&, ContentDialogButtonClickEventArgs const& args)
+            [&, this](
+                ContentDialog const& sender,
+                ContentDialogButtonClickEventArgs const& args)
+                -> fire_and_forget
             {
                 if (launcher.SelectedIndex() < 0 ||
                     launcherUsername.Text().empty() ||
@@ -191,7 +195,7 @@ namespace winrt::AccountVault::implementation
                 {
                     args.Cancel(true);
                     validation.Visibility(Visibility::Visible);
-                    return;
+                    co_return;
                 }
 
                 const auto launcherItem =
@@ -206,15 +210,60 @@ namespace winrt::AccountVault::implementation
                 const hstring providerWebsite =
                     unbox_value<hstring>(providerItem.Tag());
 
-                static_cast<void>(m_repository.add(
-                    launcherName.c_str(),
-                    launcherUsername.Text().c_str(),
-                    launcherPassword.Password().c_str(),
-                    emailAddress.Text().c_str(),
-                    providerName.c_str(),
-                    providerWebsite.c_str(),
-                    emailPassword.Password().c_str()));
-                added = true;
+                const std::wstring launcherValue{ launcherName.c_str() };
+                const std::wstring launcherUsernameValue{
+                    launcherUsername.Text().c_str() };
+                const std::wstring launcherPasswordValue{
+                    launcherPassword.Password().c_str() };
+                const std::wstring emailAddressValue{
+                    emailAddress.Text().c_str() };
+                const std::wstring providerNameValue{ providerName.c_str() };
+                const std::wstring providerWebsiteValue{
+                    providerWebsite.c_str() };
+                const std::wstring emailPasswordValue{
+                    emailPassword.Password().c_str() };
+
+                const auto clickArgs{ args };
+                const auto activeDialog{ sender };
+                const auto validationText{ validation };
+                const auto dispatcher{ DispatcherQueue() };
+                const auto deferral{ clickArgs.GetDeferral() };
+
+                activeDialog.IsPrimaryButtonEnabled(false);
+                activeDialog.PrimaryButtonText(L"Saving...");
+
+                std::optional<RecordId> backgroundResult;
+                try
+                {
+                    co_await resume_background();
+                    backgroundResult = addAccount(
+                        launcherValue,
+                        launcherUsernameValue,
+                        launcherPasswordValue,
+                        emailAddressValue,
+                        providerNameValue,
+                        providerWebsiteValue,
+                        emailPasswordValue);
+                }
+                catch (...)
+                {
+                    backgroundResult = std::nullopt;
+                }
+
+                co_await wil::resume_foreground(dispatcher);
+                addedId = backgroundResult;
+                activeDialog.IsPrimaryButtonEnabled(true);
+                activeDialog.PrimaryButtonText(L"Add");
+
+                if (!addedId)
+                {
+                    clickArgs.Cancel(true);
+                    validationText.Text(
+                        L"The account could not be saved securely. Please try again.");
+                    validationText.Visibility(Visibility::Visible);
+                }
+
+                deferral.Complete();
             });
 
         Grid::SetRowSpan(dialog, 4);
@@ -229,10 +278,10 @@ namespace winrt::AccountVault::implementation
             rootChildren.RemoveAt(dialogIndex);
         }
 
-        if (added)
+        if (addedId)
         {
-            refreshAccounts();
-            StatusText().Text(L"Account added to memory");
+            refreshAccountCard(*addedId);
+            StatusText().Text(L"Account saved securely");
         }
     }
 }
