@@ -67,6 +67,8 @@ namespace winrt::AccountVault::implementation
             resources.Lookup(box_value(L"AppSurfaceBrush")).as<Brush>() };
         const auto surfaceAltBrush{
             resources.Lookup(box_value(L"AppSurfaceAltBrush")).as<Brush>() };
+        const auto borderBrush{
+            resources.Lookup(box_value(L"AppBorderBrush")).as<Brush>() };
         const auto accentBrush{
             resources.Lookup(box_value(L"AppAccentBrush")).as<Brush>() };
         const auto textBrush{
@@ -78,9 +80,18 @@ namespace winrt::AccountVault::implementation
         card.Tag(box_value(account.recordId));
         card.MinHeight(94);
         card.Padding(Thickness{ 18, 14, 18, 14 });
-        card.Margin(Thickness{ 0, 0, 0, 12 });
         card.ColumnSpacing(22);
-        card.Background(surfaceBrush);
+
+        // Grid has no CornerRadius. The Border owns the visual surface while
+        // the Grid continues to own the responsive card layout and events.
+        Border cardSurface;
+        cardSurface.Tag(box_value(account.recordId));
+        cardSurface.Margin(Thickness{ 0, 0, 0, 12 });
+        cardSurface.Background(surfaceBrush);
+        cardSurface.BorderBrush(borderBrush);
+        cardSurface.BorderThickness(Thickness{ 1, 1, 1, 1 });
+        cardSurface.CornerRadius(CornerRadius{ 8, 8, 8, 8 });
+        cardSurface.Child(card);
 
         card.ColumnDefinitions().Append(ColumnDefinition{});
         card.ColumnDefinitions().Append(ColumnDefinition{});
@@ -499,13 +510,13 @@ namespace winrt::AccountVault::implementation
         auto items{ AccountsList().Items() };
         if (index && *index < items.Size())
         {
-            items.InsertAt(*index, card);
+            items.InsertAt(*index, cardSurface);
         }
         else
         {
             // Append is correct both for a new last item and as a safe fallback
             // if the visible list was temporarily out of sync with the model.
-            items.Append(card);
+            items.Append(cardSurface);
         }
     }
     void MainWindow::refreshAccountCard(RecordId id)

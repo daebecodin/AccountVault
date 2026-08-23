@@ -400,9 +400,13 @@ namespace winrt::AccountVault::implementation
                     workArea.Height - (2 * StartupEdgeMargin)) };
 
             const std::int32_t width{
-                std::min<std::int32_t>(preferredWidth, availableWidth) };
+                std::min<std::int32_t>(
+                    preferredWidth,
+                    availableWidth) };
             const std::int32_t height{
-                std::min<std::int32_t>(preferredHeight, availableHeight) };
+                std::min<std::int32_t>(
+                    preferredHeight,
+                    availableHeight) };
 
             const std::int32_t x{
                 workArea.X + ((workArea.Width - width) / 2) };

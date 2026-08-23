@@ -381,29 +381,28 @@
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="False"
                 AlwaysShowHeader="False"
+                Background="{StaticResource AppBackgroundBrush}"
                 AutomationProperties.Name="Navigation drawer">
-                <NavigationView.PaneHeader>
-                    <TextBlock
-                        Margin="8,0,0,0"
-                        Text="NAVIGATION"
-                        FontFamily="Cascadia Mono"
-                        FontSize="11"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource AppAccentBrush}" />
-                </NavigationView.PaneHeader>
-
-                <NavigationView.PaneFooter>
-                    <TextBlock
-                        Margin="8,0,0,12"
-                        Text="COMING SOON"
-                        FontFamily="Cascadia Mono"
-                        FontSize="11"
-                        Foreground="{StaticResource AppMutedTextBrush}" />
-                </NavigationView.PaneFooter>
+                <!--
+                    WinUI defaults this internal content surface to 8,0,0,0
+                    for left navigation. Override the template resource locally
+                    so the visible outer workspace has four matching corners.
+                -->
+                <NavigationView.Resources>
+                    <CornerRadius x:Key="NavigationViewContentGridCornerRadius">10,10,10,10</CornerRadius>
+                    <StaticResource
+                        x:Key="NavigationViewContentBackground"
+                        ResourceKey="AppBackgroundBrush" />
+                </NavigationView.Resources>
 
                 <Border
                     x:Name="AccountWorkspace"
-                    Background="Transparent"
+                    Margin="12"
+                    Padding="18"
+                    Background="{StaticResource AppBackgroundBrush}"
+                    BorderBrush="{StaticResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10,10,10,10"
                     AutomationProperties.Name="Account workspace">
                 <Grid>
                     <Grid.RowDefinitions>
