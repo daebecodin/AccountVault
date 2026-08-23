@@ -1,6 +1,7 @@
 #include "pch.h"
 // Account Armory automatic-lock compile fix v28.7.3.
 #include "MainWindow.xaml.h"
+#include "Security/SensitiveData.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -181,10 +182,15 @@ namespace winrt::AccountVault::implementation
 
                 for (Account const& account : loadResult.accounts)
                 {
-                    const auto launcherPassword{
+                    auto launcherPassword{
                         m_credentials.legacyLauncherPassword(account.recordId) };
-                    const auto emailPassword{
+                    auto emailPassword{
                         m_credentials.legacyEmailPassword(account.recordId) };
+                    auto wipeLauncherPassword{
+                        account_vault::security::wipeOnExit(
+                            launcherPassword) };
+                    auto wipeEmailPassword{
+                        account_vault::security::wipeOnExit(emailPassword) };
 
                     if (!launcherPassword || !emailPassword)
                     {
@@ -196,6 +202,8 @@ namespace winrt::AccountVault::implementation
                         m_credentials.protectPassword(*launcherPassword) };
                     const auto protectedEmailPassword{
                         m_credentials.protectPassword(*emailPassword) };
+                    account_vault::security::wipe(launcherPassword);
+                    account_vault::security::wipe(emailPassword);
 
                     if (!protectedLauncherPassword ||
                         !protectedEmailPassword ||
@@ -268,6 +276,23 @@ namespace winrt::AccountVault::implementation
         }
         catch (...)
         {
+        }
+
+        // The delay coroutine cannot run after process exit. Apply the same
+        // sequence guard used by auto-lock so newer user clipboard content is
+        // never erased.
+        try
+        {
+            if (m_accountClipboardSequence != 0 &&
+                ::GetClipboardSequenceNumber() == m_accountClipboardSequence)
+            {
+                Clipboard::Clear();
+            }
+            m_accountClipboardSequence = 0;
+        }
+        catch (...)
+        {
+            m_accountClipboardSequence = 0;
         }
 
         try

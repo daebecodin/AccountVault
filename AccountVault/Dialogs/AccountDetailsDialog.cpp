@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
+#include "../Security/SensitiveData.h"
 #include "../Services/EmailProviderCatalog.h"
 
 #include <winrt/Microsoft.UI.Dispatching.h>
@@ -525,12 +526,14 @@ namespace winrt::AccountVault::implementation
                         }
 
                         const Account* current{ m_repository.find(id) };
-                        const auto password{ !current
+                        auto password{ !current
                             ? std::nullopt
                             : current->protectedLauncherPassword.empty()
                                 ? m_credentials.legacyLauncherPassword(id)
                                 : m_credentials.unprotectPassword(
                                     current->protectedLauncherPassword) };
+                        auto wipePassword{
+                            account_vault::security::wipeOnExit(password) };
 
                         if (!password)
                         {
@@ -542,6 +545,7 @@ namespace winrt::AccountVault::implementation
 
                         validationText.Visibility(Visibility::Collapsed);
                         revealedPassword.Text(hstring{ *password });
+                        account_vault::security::wipe(password);
                         revealedPassword.Visibility(Visibility::Visible);
                         revealButton.Content(box_value(L"Hide password"));
                         *launcherSecondsRemaining = PasswordRevealSeconds;
@@ -623,12 +627,14 @@ namespace winrt::AccountVault::implementation
                         }
 
                         const Account* current{ m_repository.find(id) };
-                        const auto password{ !current
+                        auto password{ !current
                             ? std::nullopt
                             : current->protectedEmailPassword.empty()
                                 ? m_credentials.legacyEmailPassword(id)
                                 : m_credentials.unprotectPassword(
                                     current->protectedEmailPassword) };
+                        auto wipePassword{
+                            account_vault::security::wipeOnExit(password) };
 
                         if (!password)
                         {
@@ -640,6 +646,7 @@ namespace winrt::AccountVault::implementation
 
                         validationText.Visibility(Visibility::Collapsed);
                         revealedPassword.Text(hstring{ *password });
+                        account_vault::security::wipe(password);
                         revealedPassword.Visibility(Visibility::Visible);
                         revealButton.Content(box_value(L"Hide password"));
                         *emailSecondsRemaining = PasswordRevealSeconds;
@@ -800,12 +807,20 @@ namespace winrt::AccountVault::implementation
                                 newLauncherPassword.emplace(
                                     launcherPassword.Password().c_str());
                             }
+                            auto wipeLauncherPassword{
+                                account_vault::security::wipeOnExit(
+                                    newLauncherPassword) };
 
                             std::optional<std::wstring> newEmailPassword;
                             if (!emailPassword.Password().empty())
                             {
                                 newEmailPassword.emplace(emailPassword.Password().c_str());
                             }
+                            auto wipeEmailPassword{
+                                account_vault::security::wipeOnExit(newEmailPassword) };
+
+                            launcherPassword.Password(L"");
+                            emailPassword.Password(L"");
 
                             const std::wstring launcherValue{ launcherName.c_str() };
                             const std::wstring launcherUsernameValue{
@@ -829,6 +844,8 @@ namespace winrt::AccountVault::implementation
                                 providerNameValue,
                                 providerWebsiteValue,
                                 std::move(newEmailPassword));
+                            account_vault::security::wipe(newLauncherPassword);
+                            account_vault::security::wipe(newEmailPassword);
                         }
                         catch (...)
                         {
@@ -916,6 +933,8 @@ namespace winrt::AccountVault::implementation
                 revealEmailPassword,
                 emailRevealCountdown,
                 L"Reveal email password");
+            launcherPassword.Password(L"");
+            emailPassword.Password(L"");
 
             auto rootChildren{ RootGrid().Children() };
             std::uint32_t dialogIndex{};

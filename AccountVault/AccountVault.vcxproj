@@ -133,6 +133,7 @@
     </ClInclude>
     <ClInclude Include="Models\Account.h" />
     <ClInclude Include="Models\ThemeDefinition.h" />
+    <ClInclude Include="Security\SensitiveData.h" />
     <ClInclude Include="Services\AccountRepository.h" />
     <ClInclude Include="Services\AccountStorageService.h" />
     <ClInclude Include="Services\CredentialService.h" />

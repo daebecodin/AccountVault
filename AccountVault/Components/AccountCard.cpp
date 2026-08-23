@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
+#include "../Security/SensitiveData.h"
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.UI.Text.h>
@@ -228,15 +229,18 @@ namespace winrt::AccountVault::implementation
                     }
 
                     const Account* account{ m_repository.find(id) };
-                    const auto password{ !account
+                    auto password{ !account
                         ? std::nullopt
                         : account->protectedLauncherPassword.empty()
                             ? m_credentials.legacyLauncherPassword(id)
                             : m_credentials.unprotectPassword(
                                 account->protectedLauncherPassword) };
+                    auto wipePassword{
+                        account_vault::security::wipeOnExit(password) };
                     if (password)
                     {
                         copyToClipboard(*password, L"Launcher password");
+                        account_vault::security::wipe(password);
                     }
                     else
                     {
@@ -284,15 +288,18 @@ namespace winrt::AccountVault::implementation
                     }
 
                     const Account* account{ m_repository.find(id) };
-                    const auto password{ !account
+                    auto password{ !account
                         ? std::nullopt
                         : account->protectedEmailPassword.empty()
                             ? m_credentials.legacyEmailPassword(id)
                             : m_credentials.unprotectPassword(
                                 account->protectedEmailPassword) };
+                    auto wipePassword{
+                        account_vault::security::wipeOnExit(password) };
                     if (password)
                     {
                         copyToClipboard(*password, L"Email password");
+                        account_vault::security::wipe(password);
                     }
                     else
                     {

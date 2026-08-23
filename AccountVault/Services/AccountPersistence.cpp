@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
+#include "../Security/SensitiveData.h"
 
 #include <optional>
 #include <string>
@@ -31,6 +32,11 @@ namespace winrt::AccountVault::implementation
         std::wstring emailProviderWebsite,
         std::wstring emailPassword)
     {
+        auto wipeLauncherPassword{
+            account_vault::security::wipeOnExit(launcherPassword) };
+        auto wipeEmailPassword{
+            account_vault::security::wipeOnExit(emailPassword) };
+
         if (!m_storageReady)
         {
             return std::nullopt;
@@ -79,6 +85,11 @@ namespace winrt::AccountVault::implementation
         std::wstring emailProviderWebsite,
         std::optional<std::wstring> emailPassword)
     {
+        auto wipeLauncherPassword{
+            account_vault::security::wipeOnExit(launcherPassword) };
+        auto wipeEmailPassword{
+            account_vault::security::wipeOnExit(emailPassword) };
+
         if (!m_storageReady)
         {
             return false;

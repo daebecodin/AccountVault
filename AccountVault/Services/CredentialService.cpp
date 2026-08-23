@@ -34,22 +34,22 @@ namespace
     {
         DWORD characterCount{};
         if (!CryptBinaryToStringW(
-                bytes,
-                byteCount,
-                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-                nullptr,
-                &characterCount))
+            bytes,
+            byteCount,
+            CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
+            nullptr,
+            &characterCount))
         {
             return std::nullopt;
         }
 
         std::wstring encoded(characterCount, L'\0');
         if (!CryptBinaryToStringW(
-                bytes,
-                byteCount,
-                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-                encoded.data(),
-                &characterCount))
+            bytes,
+            byteCount,
+            CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
+            encoded.data(),
+            &characterCount))
         {
             return std::nullopt;
         }
@@ -72,26 +72,26 @@ namespace
 
         DWORD byteCount{};
         if (!CryptStringToBinaryW(
-                encoded.c_str(),
-                static_cast<DWORD>(encoded.size()),
-                CRYPT_STRING_BASE64,
-                nullptr,
-                &byteCount,
-                nullptr,
-                nullptr))
+            encoded.c_str(),
+            static_cast<DWORD>(encoded.size()),
+            CRYPT_STRING_BASE64,
+            nullptr,
+            &byteCount,
+            nullptr,
+            nullptr))
         {
             return std::nullopt;
         }
 
         std::vector<BYTE> bytes(byteCount);
         if (!CryptStringToBinaryW(
-                encoded.c_str(),
-                static_cast<DWORD>(encoded.size()),
-                CRYPT_STRING_BASE64,
-                bytes.data(),
-                &byteCount,
-                nullptr,
-                nullptr))
+            encoded.c_str(),
+            static_cast<DWORD>(encoded.size()),
+            CRYPT_STRING_BASE64,
+            bytes.data(),
+            &byteCount,
+            nullptr,
+            nullptr))
         {
             return std::nullopt;
         }
@@ -128,10 +128,19 @@ namespace
         try
         {
             credential->RetrievePassword();
-            return std::wstring{ credential->Password().c_str() };
+            std::wstring password{ credential->Password().c_str() };
+            credential->Password(L"");
+            return password;
         }
         catch (...)
         {
+            try
+            {
+                credential->Password(L"");
+            }
+            catch (...)
+            {
+            }
             return std::nullopt;
         }
     }
@@ -177,13 +186,13 @@ namespace account_vault::services
         DATA_BLOB protectedData{};
 
         if (!CryptProtectData(
-                &plaintext,
-                L"Account Armory password",
-                nullptr,
-                nullptr,
-                nullptr,
-                CRYPTPROTECT_UI_FORBIDDEN,
-                &protectedData))
+            &plaintext,
+            L"Account Armory password",
+            nullptr,
+            nullptr,
+            nullptr,
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &protectedData))
         {
             return std::nullopt;
         }
@@ -219,13 +228,13 @@ namespace account_vault::services
         DATA_BLOB plaintext{};
 
         if (!CryptUnprotectData(
-                &protectedData,
-                nullptr,
-                nullptr,
-                nullptr,
-                nullptr,
-                CRYPTPROTECT_UI_FORBIDDEN,
-                &plaintext))
+            &protectedData,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &plaintext))
         {
             return std::nullopt;
         }

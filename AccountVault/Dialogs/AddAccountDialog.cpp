@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
+#include "../Security/SensitiveData.h"
 #include "../Services/EmailProviderCatalog.h"
 
 #include <winrt/Windows.UI.Text.h>
@@ -249,15 +250,27 @@ namespace winrt::AccountVault::implementation
                             const std::wstring launcherValue{ launcherName.c_str() };
                             const std::wstring launcherUsernameValue{
                                 launcherUsername.Text().c_str() };
-                            const std::wstring launcherPasswordValue{
+                            std::wstring launcherPasswordValue{
                                 launcherPassword.Password().c_str() };
+                            auto wipeLauncherPassword{
+                                account_vault::security::wipeOnExit(
+                                    launcherPasswordValue) };
                             const std::wstring emailAddressValue{
                                 emailAddress.Text().c_str() };
                             const std::wstring providerNameValue{ providerName.c_str() };
                             const std::wstring providerWebsiteValue{
                                 providerWebsite.c_str() };
-                            const std::wstring emailPasswordValue{
+                            std::wstring emailPasswordValue{
                                 emailPassword.Password().c_str() };
+                            auto wipeEmailPassword{
+                                account_vault::security::wipeOnExit(
+                                    emailPasswordValue) };
+
+                            // PasswordBox stores its own immutable WinRT string. Clear
+                            // it before leaving the UI thread; the guarded C++ copies
+                            // are now the only plaintext values owned by this handler.
+                            launcherPassword.Password(L"");
+                            emailPassword.Password(L"");
 
                             activeDialog.IsPrimaryButtonEnabled(false);
                             activeDialog.PrimaryButtonText(L"Saving...");
@@ -271,6 +284,8 @@ namespace winrt::AccountVault::implementation
                                 providerNameValue,
                                 providerWebsiteValue,
                                 emailPasswordValue);
+                            account_vault::security::wipe(launcherPasswordValue);
+                            account_vault::security::wipe(emailPasswordValue);
                         }
                         catch (...)
                         {
@@ -347,6 +362,9 @@ namespace winrt::AccountVault::implementation
             dialogAttached = true;
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
+
+            launcherPassword.Password(L"");
+            emailPassword.Password(L"");
 
             auto rootChildren{ RootGrid().Children() };
             std::uint32_t dialogIndex{};
