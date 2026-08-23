@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -35,6 +35,7 @@ Internal name: `AccountVault`
 | `[x]` | JSON storage | Temp-file write then file replacement | `Services/AccountStorageService.cpp` |
 | `[x]` | DPAPI | Protects passwords before JSON storage | `Services/CredentialService.cpp` |
 | `[x]` | Windows verification | Required per password copy/reveal | `Services/UserVerificationService.cpp` |
+| `[x]` | Reveal timeout | Shows a live countdown; hides at zero | `Dialogs/AccountDetailsDialog.cpp` |
 | `[x]` | Clipboard clear | Clears after 30 seconds if unchanged | `Components/AccountCard.cpp` |
 | `[x]` | Search/filter | Case-insensitive search + launcher filter | `Services/AccountRepository.h` |
 | `[x]` | Incremental cards | CRUD refreshes only the affected card | `Components/AccountCard.cpp` |
@@ -156,6 +157,17 @@ Required for:
 - Reveal email password
 
 Rule: verification applies to one action; no session is cached.
+
+### Password reveal timeout `[x]`
+
+- Each revealed password has its own 30-second countdown timer.
+- A local `Hides in 30s` countdown updates once per second.
+- Launcher and email countdowns run independently.
+- Manual Hide stops the timer and clears the text immediately.
+- Entering edit mode stops both timers and clears both revealed values.
+- Closing the dialog stops both timers and clears both revealed values.
+- A verification result cannot reveal text after the dialog has closed.
+- Reveal handlers catch errors so exceptions do not escape their coroutines.
 
 ### Clipboard `[x]`
 
@@ -288,7 +300,6 @@ type, and package changes.
 ### High priority
 
 - [ ] Catch all `fire_and_forget` exceptions.
-- [ ] Add password reveal timeout.
 - [ ] Decide repository threading policy.
 - [ ] Add storage/rollback tests.
 
@@ -330,6 +341,10 @@ type, and package changes.
 
 - [ ] Password copy/reveal requires verification.
 - [ ] Canceling verification exposes nothing.
+- [ ] Revealed launcher password hides after 30 seconds.
+- [ ] Revealed email password hides after 30 seconds.
+- [ ] Both countdown labels update once per second.
+- [ ] Manual Hide and dialog close clear revealed text.
 - [ ] Clipboard clears after 30 seconds.
 - [ ] New clipboard content is preserved.
 - [ ] JSON contains no plaintext password.
@@ -357,6 +372,9 @@ Remaining issue:
 
 ### 2026-08-23
 
+- Added v28.5 live countdown labels beside revealed passwords.
+- Added v28.4 password reveal timeout and dialog-close cleanup.
+- Added exception boundaries around both password reveal handlers.
 - Replaced the long invariant report with this editable feature tracker.
 - Baseline includes DPAPI, Windows verification, incremental card updates,
   clipboard auto-clear, startup themes, and CRUD stability patches.

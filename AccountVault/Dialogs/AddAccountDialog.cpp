@@ -2,12 +2,17 @@
 #include "../MainWindow.xaml.h"
 #include "../Services/EmailProviderCatalog.h"
 
+#include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Windows.UI.Text.h>
 
+#include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace winrt;
+using namespace Microsoft::UI::Dispatching;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
@@ -15,6 +20,9 @@ using namespace Windows::Foundation;
 
 namespace
 {
+    constexpr int PasswordRevealSeconds{ 30 };
+    constexpr auto CountdownTickInterval{ std::chrono::seconds{ 1 } };
+
     template <typename T>
     void completeDeferral(T const& deferral) noexcept
     {
@@ -29,23 +37,66 @@ namespace
         {
         }
     }
+
+    void hideRevealedPassword(
+        TextBox const& passwordText,
+        Button const& revealButton,
+        TextBlock const& countdownText,
+        wchar_t const* revealLabel) noexcept
+    {
+        try
+        {
+            passwordText.Text(L"");
+            passwordText.Visibility(Visibility::Collapsed);
+            revealButton.Content(box_value(revealLabel));
+            countdownText.Text(L"");
+            countdownText.Visibility(Visibility::Collapsed);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void showRevealCountdown(
+        TextBlock const& countdownText,
+        int secondsRemaining) noexcept
+    {
+        try
+        {
+            std::wstring text{ L"Hides in " };
+            text += std::to_wstring(secondsRemaining);
+            text += L"s";
+            countdownText.Text(hstring{ text });
+            countdownText.Visibility(Visibility::Visible);
+        }
+        catch (...)
+        {
+        }
+    }
 }
 
 namespace winrt::AccountVault::implementation
 {
-    fire_and_forget MainWindow::showAddAccountDialog()
+    fire_and_forget MainWindow::showAccountDetailsDialog(RecordId id)
     {
         auto lifetime{ get_strong() };
-        std::optional<RecordId> addedId;
+        bool editing{ false };
+        bool saved{ false };
 
         try
         {
+            const Account* account{ m_repository.find(id) };
+            if (!account)
+            {
+                StatusText().Text(L"That account no longer exists");
+                co_return;
+            }
+
             ContentDialog dialog;
             dialog.XamlRoot(Content().XamlRoot());
-            dialog.Title(box_value(L"Add account"));
-            dialog.PrimaryButtonText(L"Add");
-            dialog.CloseButtonText(L"Cancel");
-            dialog.DefaultButton(ContentDialogButton::Primary);
+            dialog.Title(box_value(L"Account details"));
+            dialog.PrimaryButtonText(L"Edit");
+            dialog.CloseButtonText(L"Close");
             dialog.MaxWidth(900);
             dialog.HorizontalAlignment(HorizontalAlignment::Center);
             dialog.VerticalAlignment(VerticalAlignment::Center);
@@ -88,7 +139,7 @@ namespace winrt::AccountVault::implementation
 
             ComboBox launcher;
             launcher.Header(box_value(L"Launcher"));
-            launcher.PlaceholderText(L"Choose a launcher");
+            launcher.IsEnabled(false);
             for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
             {
                 ComboBoxItem item;
@@ -96,16 +147,59 @@ namespace winrt::AccountVault::implementation
                 launcher.Items().Append(item);
             }
 
+            if (account->launcher == L"Steam")
+            {
+                launcher.SelectedIndex(0);
+            }
+            else if (account->launcher == L"Riot")
+            {
+                launcher.SelectedIndex(1);
+            }
+            else if (account->launcher == L"Epic")
+            {
+                launcher.SelectedIndex(2);
+            }
+            else
+            {
+                launcher.SelectedIndex(3);
+            }
+
             TextBox launcherUsername;
             launcherUsername.Header(box_value(L"Launcher username / account ID"));
-            launcherUsername.PlaceholderText(L"Username, ID, or Riot ID");
+            launcherUsername.Text(account->launcherUsername);
+            launcherUsername.IsReadOnly(true);
 
             PasswordBox launcherPassword;
-            launcherPassword.Header(box_value(L"Launcher password"));
-            launcherPassword.PlaceholderText(L"Launcher password");
+            launcherPassword.Header(box_value(L"New launcher password (optional)"));
+            launcherPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
+            launcherPassword.IsEnabled(false);
+            launcherPassword.Visibility(Visibility::Collapsed);
+
+            StackPanel launcherRevealPanel;
+            launcherRevealPanel.Spacing(8);
+
+            Button revealLauncherPassword;
+            revealLauncherPassword.Content(box_value(L"Reveal launcher password"));
+            revealLauncherPassword.HorizontalAlignment(HorizontalAlignment::Left);
+
+            TextBox revealedLauncherPassword;
+            revealedLauncherPassword.Header(box_value(L"Launcher password"));
+            revealedLauncherPassword.IsReadOnly(true);
+            revealedLauncherPassword.Visibility(Visibility::Collapsed);
+
+            TextBlock launcherRevealCountdown;
+            launcherRevealCountdown.FontSize(11);
+            launcherRevealCountdown.Opacity(0.8);
+            launcherRevealCountdown.Visibility(Visibility::Collapsed);
+
+            launcherRevealPanel.Children().Append(revealLauncherPassword);
+            launcherRevealPanel.Children().Append(revealedLauncherPassword);
+            launcherRevealPanel.Children().Append(launcherRevealCountdown);
 
             TextBlock linkedEmail;
-            linkedEmail.Text(L"Linked email: ");
+            std::wstring linkedEmailText{ L"Linked email: " };
+            linkedEmailText += account->emailAddress;
+            linkedEmail.Text(hstring{ linkedEmailText });
             linkedEmail.Foreground(
                 Application::Current()
                 .Resources()
@@ -134,7 +228,8 @@ namespace winrt::AccountVault::implementation
 
             ComboBox emailProvider;
             emailProvider.Header(box_value(L"Email provider"));
-            emailProvider.PlaceholderText(L"Choose an email provider");
+            emailProvider.IsEnabled(false);
+            emailProvider.Visibility(Visibility::Collapsed);
             for (auto const& provider : account_vault::services::EmailProviders)
             {
                 ComboBoxItem item;
@@ -143,9 +238,56 @@ namespace winrt::AccountVault::implementation
                 emailProvider.Items().Append(item);
             }
 
+            const int providerIndex =
+                account_vault::services::findEmailProviderIndex(
+                    account->emailProvider,
+                    account->emailProviderWebsite);
+
+            std::wstring providerDisplayName{ account->emailProvider };
+            if (providerIndex >= 0)
+            {
+                emailProvider.SelectedIndex(providerIndex);
+                if (providerDisplayName.empty())
+                {
+                    providerDisplayName =
+                        account_vault::services::EmailProviders[providerIndex].name;
+                }
+            }
+            else
+            {
+                providerDisplayName = providerDisplayName.empty()
+                    ? account->emailProviderWebsite
+                    : providerDisplayName;
+
+                ComboBoxItem currentProvider;
+                currentProvider.Content(box_value(hstring{ providerDisplayName }));
+                currentProvider.Tag(
+                    box_value(hstring{ account->emailProviderWebsite }));
+                emailProvider.Items().Append(currentProvider);
+                emailProvider.SelectedIndex(
+                    static_cast<int>(emailProvider.Items().Size()) - 1);
+            }
+
+            StackPanel providerLinkPanel;
+            providerLinkPanel.Spacing(4);
+
+            TextBlock providerLinkLabel;
+            providerLinkLabel.Text(L"Provider website");
+
+            HyperlinkButton providerLink;
+            providerLink.Content(box_value(hstring{ providerDisplayName }));
+            providerLink.NavigateUri(
+                Uri{ hstring{ account->emailProviderWebsite } });
+            providerLink.Padding(Thickness{ 0 });
+            providerLink.HorizontalAlignment(HorizontalAlignment::Left);
+
+            providerLinkPanel.Children().Append(providerLinkLabel);
+            providerLinkPanel.Children().Append(providerLink);
+
             TextBox emailAddress;
             emailAddress.Header(box_value(L"Email address (shared with launcher)"));
-            emailAddress.PlaceholderText(L"name@example.com");
+            emailAddress.Text(account->emailAddress);
+            emailAddress.IsReadOnly(true);
             emailAddress.TextChanged(
                 [&linkedEmail](IInspectable const& sender, TextChangedEventArgs const&)
                 {
@@ -156,25 +298,377 @@ namespace winrt::AccountVault::implementation
                 });
 
             PasswordBox emailPassword;
-            emailPassword.Header(box_value(L"Email password"));
-            emailPassword.PlaceholderText(L"Email password");
+            emailPassword.Header(box_value(L"New email password (optional)"));
+            emailPassword.PlaceholderText(L"Stored securely; leave blank to keep it");
+            emailPassword.IsEnabled(false);
+            emailPassword.Visibility(Visibility::Collapsed);
+
+            StackPanel emailRevealPanel;
+            emailRevealPanel.Spacing(8);
+
+            Button revealEmailPassword;
+            revealEmailPassword.Content(box_value(L"Reveal email password"));
+            revealEmailPassword.HorizontalAlignment(HorizontalAlignment::Left);
+
+            TextBox revealedEmailPassword;
+            revealedEmailPassword.Header(box_value(L"Email password"));
+            revealedEmailPassword.IsReadOnly(true);
+            revealedEmailPassword.Visibility(Visibility::Collapsed);
+
+            TextBlock emailRevealCountdown;
+            emailRevealCountdown.FontSize(11);
+            emailRevealCountdown.Opacity(0.8);
+            emailRevealCountdown.Visibility(Visibility::Collapsed);
+
+            emailRevealPanel.Children().Append(revealEmailPassword);
+            emailRevealPanel.Children().Append(revealedEmailPassword);
+            emailRevealPanel.Children().Append(emailRevealCountdown);
+
+            const auto dialogOpen{ std::make_shared<bool>(true) };
+            const auto launcherSecondsRemaining{
+                std::make_shared<int>(PasswordRevealSeconds) };
+            const auto emailSecondsRemaining{
+                std::make_shared<int>(PasswordRevealSeconds) };
+
+            DispatcherQueueTimer launcherRevealTimer{
+                DispatcherQueue().CreateTimer() };
+            launcherRevealTimer.Interval(CountdownTickInterval);
+            launcherRevealTimer.IsRepeating(true);
+
+            const auto weakLauncherPassword{
+                make_weak(revealedLauncherPassword) };
+            const auto weakLauncherButton{
+                make_weak(revealLauncherPassword) };
+            const auto weakLauncherCountdown{
+                make_weak(launcherRevealCountdown) };
+            launcherRevealTimer.Tick(
+                [weakLauncherPassword,
+                weakLauncherButton,
+                weakLauncherCountdown,
+                launcherSecondsRemaining](
+                    DispatcherQueueTimer const& timer,
+                    IInspectable const&)
+                {
+                    try
+                    {
+                        const auto passwordText{ weakLauncherPassword.get() };
+                        const auto revealButton{ weakLauncherButton.get() };
+                        const auto countdownText{ weakLauncherCountdown.get() };
+                        if (!passwordText || !revealButton || !countdownText)
+                        {
+                            timer.Stop();
+                            return;
+                        }
+
+                        -- * launcherSecondsRemaining;
+                        if (*launcherSecondsRemaining <= 0)
+                        {
+                            timer.Stop();
+                            hideRevealedPassword(
+                                passwordText,
+                                revealButton,
+                                countdownText,
+                                L"Reveal launcher password");
+                            return;
+                        }
+
+                        showRevealCountdown(
+                            countdownText,
+                            *launcherSecondsRemaining);
+                    }
+                    catch (...)
+                    {
+                        try
+                        {
+                            timer.Stop();
+                            const auto passwordText{
+                                weakLauncherPassword.get() };
+                            const auto revealButton{
+                                weakLauncherButton.get() };
+                            const auto countdownText{
+                                weakLauncherCountdown.get() };
+                            if (passwordText && revealButton && countdownText)
+                            {
+                                hideRevealedPassword(
+                                    passwordText,
+                                    revealButton,
+                                    countdownText,
+                                    L"Reveal launcher password");
+                            }
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                });
+
+            DispatcherQueueTimer emailRevealTimer{
+                DispatcherQueue().CreateTimer() };
+            emailRevealTimer.Interval(CountdownTickInterval);
+            emailRevealTimer.IsRepeating(true);
+
+            const auto weakEmailPassword{ make_weak(revealedEmailPassword) };
+            const auto weakEmailButton{ make_weak(revealEmailPassword) };
+            const auto weakEmailCountdown{ make_weak(emailRevealCountdown) };
+            emailRevealTimer.Tick(
+                [weakEmailPassword,
+                weakEmailButton,
+                weakEmailCountdown,
+                emailSecondsRemaining](
+                    DispatcherQueueTimer const& timer,
+                    IInspectable const&)
+                {
+                    try
+                    {
+                        const auto passwordText{ weakEmailPassword.get() };
+                        const auto revealButton{ weakEmailButton.get() };
+                        const auto countdownText{ weakEmailCountdown.get() };
+                        if (!passwordText || !revealButton || !countdownText)
+                        {
+                            timer.Stop();
+                            return;
+                        }
+
+                        -- * emailSecondsRemaining;
+                        if (*emailSecondsRemaining <= 0)
+                        {
+                            timer.Stop();
+                            hideRevealedPassword(
+                                passwordText,
+                                revealButton,
+                                countdownText,
+                                L"Reveal email password");
+                            return;
+                        }
+
+                        showRevealCountdown(
+                            countdownText,
+                            *emailSecondsRemaining);
+                    }
+                    catch (...)
+                    {
+                        try
+                        {
+                            timer.Stop();
+                            const auto passwordText{ weakEmailPassword.get() };
+                            const auto revealButton{ weakEmailButton.get() };
+                            const auto countdownText{ weakEmailCountdown.get() };
+                            if (passwordText && revealButton && countdownText)
+                            {
+                                hideRevealedPassword(
+                                    passwordText,
+                                    revealButton,
+                                    countdownText,
+                                    L"Reveal email password");
+                            }
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                });
+
+            ToolTipService::SetToolTip(
+                revealLauncherPassword,
+                box_value(L"Automatically hides after 30 seconds"));
+            ToolTipService::SetToolTip(
+                revealEmailPassword,
+                box_value(L"Automatically hides after 30 seconds"));
 
             TextBlock validation;
-            validation.Text(L"All launcher and email fields are required.");
             validation.Visibility(Visibility::Collapsed);
             SolidColorBrush validationBrush;
             validationBrush.Color(color(248, 81, 73));
             validation.Foreground(validationBrush);
 
+            revealLauncherPassword.Click(
+                [this,
+                id,
+                dialogOpen,
+                launcherRevealTimer,
+                launcherSecondsRemaining,
+                revealedPassword = revealedLauncherPassword,
+                countdownText = launcherRevealCountdown,
+                validationText = validation](
+                    IInspectable const& sender,
+                    RoutedEventArgs const&)
+                -> fire_and_forget
+                {
+                    auto lifetime{ get_strong() };
+                    const auto revealButton{ sender.as<Button>() };
+
+                    try
+                    {
+                        if (revealedPassword.Visibility() == Visibility::Visible)
+                        {
+                            launcherRevealTimer.Stop();
+                            hideRevealedPassword(
+                                revealedPassword,
+                                revealButton,
+                                countdownText,
+                                L"Reveal launcher password");
+                            co_return;
+                        }
+
+                        revealButton.IsEnabled(false);
+                        const bool verified{ co_await verifyUser(
+                            L"Verify your identity to reveal the launcher password") };
+                        revealButton.IsEnabled(true);
+
+                        if (!verified || !*dialogOpen)
+                        {
+                            co_return;
+                        }
+
+                        const Account* current{ m_repository.find(id) };
+                        const auto password{ !current
+                            ? std::nullopt
+                            : current->protectedLauncherPassword.empty()
+                                ? m_credentials.legacyLauncherPassword(id)
+                                : m_credentials.unprotectPassword(
+                                    current->protectedLauncherPassword) };
+
+                        if (!password)
+                        {
+                            validationText.Text(
+                                L"The launcher password could not be decrypted.");
+                            validationText.Visibility(Visibility::Visible);
+                            co_return;
+                        }
+
+                        validationText.Visibility(Visibility::Collapsed);
+                        revealedPassword.Text(hstring{ *password });
+                        revealedPassword.Visibility(Visibility::Visible);
+                        revealButton.Content(box_value(L"Hide password"));
+                        *launcherSecondsRemaining = PasswordRevealSeconds;
+                        showRevealCountdown(
+                            countdownText,
+                            *launcherSecondsRemaining);
+                        launcherRevealTimer.Stop();
+                        launcherRevealTimer.Start();
+                    }
+                    catch (...)
+                    {
+                        launcherRevealTimer.Stop();
+                        hideRevealedPassword(
+                            revealedPassword,
+                            revealButton,
+                            countdownText,
+                            L"Reveal launcher password");
+
+                        try
+                        {
+                            revealButton.IsEnabled(true);
+                            validationText.Text(
+                                L"The launcher password could not be revealed.");
+                            validationText.Visibility(Visibility::Visible);
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                });
+
+            revealEmailPassword.Click(
+                [this,
+                id,
+                dialogOpen,
+                emailRevealTimer,
+                emailSecondsRemaining,
+                revealedPassword = revealedEmailPassword,
+                countdownText = emailRevealCountdown,
+                validationText = validation](
+                    IInspectable const& sender,
+                    RoutedEventArgs const&)
+                -> fire_and_forget
+                {
+                    auto lifetime{ get_strong() };
+                    const auto revealButton{ sender.as<Button>() };
+
+                    try
+                    {
+                        if (revealedPassword.Visibility() == Visibility::Visible)
+                        {
+                            emailRevealTimer.Stop();
+                            hideRevealedPassword(
+                                revealedPassword,
+                                revealButton,
+                                countdownText,
+                                L"Reveal email password");
+                            co_return;
+                        }
+
+                        revealButton.IsEnabled(false);
+                        const bool verified{ co_await verifyUser(
+                            L"Verify your identity to reveal the email password") };
+                        revealButton.IsEnabled(true);
+
+                        if (!verified || !*dialogOpen)
+                        {
+                            co_return;
+                        }
+
+                        const Account* current{ m_repository.find(id) };
+                        const auto password{ !current
+                            ? std::nullopt
+                            : current->protectedEmailPassword.empty()
+                                ? m_credentials.legacyEmailPassword(id)
+                                : m_credentials.unprotectPassword(
+                                    current->protectedEmailPassword) };
+
+                        if (!password)
+                        {
+                            validationText.Text(
+                                L"The email password could not be decrypted.");
+                            validationText.Visibility(Visibility::Visible);
+                            co_return;
+                        }
+
+                        validationText.Visibility(Visibility::Collapsed);
+                        revealedPassword.Text(hstring{ *password });
+                        revealedPassword.Visibility(Visibility::Visible);
+                        revealButton.Content(box_value(L"Hide password"));
+                        *emailSecondsRemaining = PasswordRevealSeconds;
+                        showRevealCountdown(
+                            countdownText,
+                            *emailSecondsRemaining);
+                        emailRevealTimer.Stop();
+                        emailRevealTimer.Start();
+                    }
+                    catch (...)
+                    {
+                        emailRevealTimer.Stop();
+                        hideRevealedPassword(
+                            revealedPassword,
+                            revealButton,
+                            countdownText,
+                            L"Reveal email password");
+
+                        try
+                        {
+                            revealButton.IsEnabled(true);
+                            validationText.Text(
+                                L"The email password could not be revealed.");
+                            validationText.Visibility(Visibility::Visible);
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                });
+
             launcherFields.Children().Append(launcherHeading);
             launcherFields.Children().Append(launcher);
             launcherFields.Children().Append(launcherUsername);
+            launcherFields.Children().Append(launcherRevealPanel);
             launcherFields.Children().Append(launcherPassword);
             launcherFields.Children().Append(linkedEmail);
 
             emailFields.Children().Append(emailHeading);
+            emailFields.Children().Append(providerLinkPanel);
             emailFields.Children().Append(emailProvider);
             emailFields.Children().Append(emailAddress);
+            emailFields.Children().Append(emailRevealPanel);
             emailFields.Children().Append(emailPassword);
 
             Grid::SetColumn(launcherFields, 0);
@@ -188,16 +682,16 @@ namespace winrt::AccountVault::implementation
             fields.Children().Append(sections);
             fields.Children().Append(validation);
 
-            ScrollViewer addAccountScroller;
-            addAccountScroller.MaxHeight(560);
-            addAccountScroller.HorizontalScrollBarVisibility(
+            ScrollViewer detailsScroller;
+            detailsScroller.MaxHeight(560);
+            detailsScroller.HorizontalScrollBarVisibility(
                 ScrollBarVisibility::Disabled);
-            addAccountScroller.VerticalScrollBarVisibility(
+            detailsScroller.VerticalScrollBarVisibility(
                 ScrollBarVisibility::Auto);
-            addAccountScroller.HorizontalContentAlignment(
+            detailsScroller.HorizontalContentAlignment(
                 HorizontalAlignment::Stretch);
-            addAccountScroller.Content(fields);
-            dialog.Content(addAccountScroller);
+            detailsScroller.Content(fields);
+            dialog.Content(detailsScroller);
 
             dialog.PrimaryButtonClick(
                 [&, this](
@@ -211,25 +705,58 @@ namespace winrt::AccountVault::implementation
                     const auto validationText{ validation };
                     const auto dispatcher{ DispatcherQueue() };
                     const auto deferral{ clickArgs.GetDeferral() };
-                    std::optional<RecordId> backgroundResult;
+                    bool backgroundResult{ false };
 
                     try
                     {
-                        if (launcher.SelectedIndex() < 0 ||
-                            launcherUsername.Text().empty() ||
-                            launcherPassword.Password().empty() ||
-                            emailProvider.SelectedIndex() < 0 ||
-                            emailAddress.Text().empty() ||
-                            emailPassword.Password().empty())
+                        if (!editing)
                         {
                             clickArgs.Cancel(true);
+                            editing = true;
+                            launcherRevealTimer.Stop();
+                            emailRevealTimer.Stop();
+                            launcher.IsEnabled(true);
+                            launcherUsername.IsReadOnly(false);
+                            hideRevealedPassword(
+                                revealedLauncherPassword,
+                                revealLauncherPassword,
+                                launcherRevealCountdown,
+                                L"Reveal launcher password");
+                            launcherRevealPanel.Visibility(Visibility::Collapsed);
+                            launcherPassword.Visibility(Visibility::Visible);
+                            launcherPassword.IsEnabled(true);
+                            providerLinkPanel.Visibility(Visibility::Collapsed);
+                            emailProvider.Visibility(Visibility::Visible);
+                            emailProvider.IsEnabled(true);
+                            emailAddress.IsReadOnly(false);
+                            hideRevealedPassword(
+                                revealedEmailPassword,
+                                revealEmailPassword,
+                                emailRevealCountdown,
+                                L"Reveal email password");
+                            emailRevealPanel.Visibility(Visibility::Collapsed);
+                            emailPassword.Visibility(Visibility::Visible);
+                            emailPassword.IsEnabled(true);
+                            activeDialog.PrimaryButtonText(L"Save changes");
+                            launcherUsername.Focus(FocusState::Programmatic);
+                            completeDeferral(deferral);
+                            co_return;
+                        }
+
+                        if (launcher.SelectedIndex() < 0 ||
+                            launcherUsername.Text().empty() ||
+                            emailProvider.SelectedIndex() < 0 ||
+                            emailAddress.Text().empty())
+                        {
+                            clickArgs.Cancel(true);
+                            validationText.Text(
+                                L"All launcher and email fields are required.");
                             validationText.Visibility(Visibility::Visible);
                             completeDeferral(deferral);
                             co_return;
                         }
 
-                        const auto launcherItem =
-                            launcher.SelectedItem().as<ComboBoxItem>();
+                        const auto launcherItem = launcher.SelectedItem().as<ComboBoxItem>();
                         const hstring launcherName =
                             unbox_value<hstring>(launcherItem.Content());
 
@@ -240,35 +767,45 @@ namespace winrt::AccountVault::implementation
                         const hstring providerWebsite =
                             unbox_value<hstring>(providerItem.Tag());
 
+                        std::optional<std::wstring> newLauncherPassword;
+                        if (!launcherPassword.Password().empty())
+                        {
+                            newLauncherPassword.emplace(
+                                launcherPassword.Password().c_str());
+                        }
+
+                        std::optional<std::wstring> newEmailPassword;
+                        if (!emailPassword.Password().empty())
+                        {
+                            newEmailPassword.emplace(emailPassword.Password().c_str());
+                        }
+
                         const std::wstring launcherValue{ launcherName.c_str() };
                         const std::wstring launcherUsernameValue{
                             launcherUsername.Text().c_str() };
-                        const std::wstring launcherPasswordValue{
-                            launcherPassword.Password().c_str() };
                         const std::wstring emailAddressValue{
                             emailAddress.Text().c_str() };
                         const std::wstring providerNameValue{ providerName.c_str() };
                         const std::wstring providerWebsiteValue{
                             providerWebsite.c_str() };
-                        const std::wstring emailPasswordValue{
-                            emailPassword.Password().c_str() };
 
                         activeDialog.IsPrimaryButtonEnabled(false);
                         activeDialog.PrimaryButtonText(L"Saving...");
 
                         co_await resume_background();
-                        backgroundResult = addAccount(
+                        backgroundResult = updateAccount(
+                            id,
                             launcherValue,
                             launcherUsernameValue,
-                            launcherPasswordValue,
+                            std::move(newLauncherPassword),
                             emailAddressValue,
                             providerNameValue,
                             providerWebsiteValue,
-                            emailPasswordValue);
+                            std::move(newEmailPassword));
                     }
                     catch (...)
                     {
-                        backgroundResult = std::nullopt;
+                        backgroundResult = false;
                     }
 
                     bool foregroundReady{ true };
@@ -290,18 +827,17 @@ namespace winrt::AccountVault::implementation
                     try
                     {
                         activeDialog.IsPrimaryButtonEnabled(true);
-                        activeDialog.PrimaryButtonText(L"Add");
+                        activeDialog.PrimaryButtonText(L"Save changes");
 
                         if (!backgroundResult)
                         {
                             clickArgs.Cancel(true);
-                            validationText.Text(
-                                L"The account could not be saved securely. Please try again.");
+                            validationText.Text(L"The account could not be updated.");
                             validationText.Visibility(Visibility::Visible);
                         }
                         else
                         {
-                            addedId = backgroundResult;
+                            saved = true;
                         }
                     }
                     catch (...)
@@ -309,8 +845,7 @@ namespace winrt::AccountVault::implementation
                         try
                         {
                             clickArgs.Cancel(true);
-                            validationText.Text(
-                                L"The account could not be saved securely. Please try again.");
+                            validationText.Text(L"The account could not be updated.");
                             validationText.Visibility(Visibility::Visible);
                         }
                         catch (...)
@@ -326,6 +861,20 @@ namespace winrt::AccountVault::implementation
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
 
+            *dialogOpen = false;
+            launcherRevealTimer.Stop();
+            emailRevealTimer.Stop();
+            hideRevealedPassword(
+                revealedLauncherPassword,
+                revealLauncherPassword,
+                launcherRevealCountdown,
+                L"Reveal launcher password");
+            hideRevealedPassword(
+                revealedEmailPassword,
+                revealEmailPassword,
+                emailRevealCountdown,
+                L"Reveal email password");
+
             auto rootChildren{ RootGrid().Children() };
             std::uint32_t dialogIndex{};
             if (rootChildren.IndexOf(dialog, dialogIndex))
@@ -333,26 +882,26 @@ namespace winrt::AccountVault::implementation
                 rootChildren.RemoveAt(dialogIndex);
             }
 
-            if (addedId)
+            if (saved)
             {
-                refreshAccountCard(*addedId);
-                StatusText().Text(L"Account saved securely");
+                refreshAccountCard(id);
+                StatusText().Text(L"Account details saved securely");
             }
         }
         catch (...)
         {
             try
             {
-                if (addedId)
+                if (saved)
                 {
                     refreshAccounts();
                     StatusText().Text(
-                        L"Account saved; the account view was refreshed");
+                        L"Account updated; the account view was refreshed");
                 }
                 else
                 {
                     StatusText().Text(
-                        L"The Add Account dialog encountered a UI error");
+                        L"The Account Details dialog encountered a UI error");
                 }
             }
             catch (...)
