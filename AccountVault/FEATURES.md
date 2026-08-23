@@ -1,7 +1,7 @@
 # Account Armory — Feature Tracker
 
 Updated: 2026-08-23  
-Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29 + v30 UI  
+Code baseline: v28 + v28.1 + v28.2 + v28.3 + v28.4 + v28.5 + v28.6 + v28.7.3 + v29 + v30 UI + v31  
 App name: **Account Armory**  
 Internal name: `AccountVault`
 
@@ -30,6 +30,10 @@ Internal name: `AccountVault`
 - A verification result cannot copy a password after the app locks.
 - Normal status messages never move or replace the auto-lock countdown.
 - Theme order stays synchronized across XAML, header, and C++.
+- Portable backups contain plaintext only inside authenticated ciphertext.
+- Imported accounts always receive fresh local `RecordId` values.
+- Wrong passwords or modified backups import zero accounts.
+- Import changes the repository only after the complete candidate state saves.
 
 ## Feature overview
 
@@ -55,7 +59,7 @@ Internal name: `AccountVault`
 | `[x]` | Startup theme | Right-click to set/remove default | `MainWindow.xaml.cpp` |
 | `[~]` | Custom themes | Editor works; themes are session-only | `Dialogs/ThemeEditorDialog.cpp` |
 | `[x]` | App auto-lock | Five-minute idle timer; lock on minimize/suspend | `MainWindow.xaml.cpp` |
-| `[ ]` | Export/import | Portable password-encrypted backup | — |
+| `[x]` | Export/import | AES-GCM backup for one or all accounts | `Services/PortableBackupService.cpp`, `Dialogs/BackupDialog.cpp` |
 
 ## Action menus
 
@@ -68,19 +72,18 @@ Card: CREDENTIALS
 
 Card: ACCOUNT
   Details
-  Export this account...       [disabled until encrypted backup]
+  Export this account...
   Remove
 
 Page: ACCOUNT ACTIONS
   Add account
-  Import one account...        [disabled until encrypted backup]
-  Import account group...      [disabled until encrypted backup]
-  Export account group...      [disabled until encrypted backup]
+  Import one account...
+  Import all accounts...
+  Export all accounts...
 ```
 
-Scope rule: individual export starts from a card. Imports and group export start
-from the page menu because they do not belong to an existing card. Group export
-will open an account-selection dialog, with all accounts selected by default.
+Scope rule: individual export starts from a card. Import and full-vault export
+start from the page menu. Imports append records; they never overwrite accounts.
 
 ## Account record
 
@@ -176,7 +179,6 @@ Limits:
 - Rewrites the complete JSON file per save.
 - Maximum JSON size: 16 MiB.
 - Maximum account count: 100,000.
-- No portable backup yet.
 
 ### Developer storage tests `[x]`
 
@@ -199,6 +201,39 @@ Covered: create/edit/remove persistence, password preservation, schema 1
 migration signal, corrupt JSON, future schema, duplicate/zero/next IDs, stale
 temp recovery, corrupt-final recovery, failed replacement rollback, invalid
 save-state rejection, and ID exhaustion.
+
+## Portable encrypted backups `[x]`
+
+| Item | Value |
+|---|---|
+| Extension | `.aabackup` |
+| Encryption | AES-256-GCM |
+| Password KDF | PBKDF2-HMAC-SHA-256, 600,000 rounds |
+| Random values | 16-byte salt, 12-byte nonce |
+| Authentication tag | 16 bytes |
+| Maximum file | 64 MiB |
+
+Rules:
+
+- Exports all seven account fields, including both passwords.
+- Individual export contains exactly one account.
+- Full export contains every account.
+- Import one rejects files containing anything other than one account.
+- Import all accepts one or many accounts.
+- Imported records receive fresh IDs; duplicate account values are allowed.
+- Import saves one complete candidate state before changing the repository/UI.
+- Wrong password, modified file, invalid data, or failed save adds nothing.
+- The export password is not stored and cannot be recovered.
+
+Debug backup tests:
+
+```text
+ACCOUNT_ARMORY_RUN_BACKUP_TESTS=1
+Debug x64 -> View -> Output -> Debug
+```
+
+Covered: Unicode/full-field round trip, wrong password, ciphertext modification,
+and unsupported format.
 
 ## Password security
 
@@ -363,7 +398,7 @@ Working:
 - UI work resumes through the dispatcher.
 - Add/Edit deferrals are completed.
 - Saved data survives card-refresh failure.
-- All eleven `fire_and_forget` bodies have an outer catch boundary.
+- Every `fire_and_forget` body has an outer catch boundary.
 - Copy/reveal buttons are re-enabled after coroutine failure.
 - Add/Edit handler setup failures still complete their deferrals.
 - Add/Details/Theme failures remove an attached orphan dialog.
@@ -403,7 +438,6 @@ type, and package changes.
 
 - [ ] Clear plaintext strings where practical.
 - [ ] Review crash dumps and logs.
-- [ ] Encrypted export/import.
 
 ### Reliability/UI
 
@@ -452,6 +486,17 @@ type, and package changes.
 - [ ] Locking closes open dialogs and hides revealed passwords.
 - [ ] JSON contains no plaintext password.
 
+### Encrypted backup
+
+- [ ] Individual export/import preserves all seven fields.
+- [ ] Full export/import preserves every account.
+- [ ] Import assigns fresh IDs and survives restart.
+- [ ] Import one rejects a multi-account backup.
+- [ ] Wrong password imports zero accounts.
+- [ ] Modified ciphertext imports zero accounts.
+- [ ] Failed storage replacement leaves repository/UI unchanged.
+- [ ] Canceling any picker, password prompt, or verification changes nothing.
+
 ### Async failure recovery
 
 - [ ] Failed password copy re-enables its button and does not crash.
@@ -483,6 +528,8 @@ Remaining issue:
 
 ### 2026-08-23
 
+- Added v31 password-encrypted `.aabackup` import/export for individual accounts
+  and the full vault, with fresh import IDs and transactional repository updates.
 - Added v29 storage reliability: state validation, durable temp-file flush,
   interrupted-save recovery, corrupt-file quarantine, future-schema
   preservation, ID overflow prevention, complete create rollback, and a
