@@ -383,19 +383,24 @@ namespace winrt::AccountVault::implementation
         card.Children().Append(emailPanel);
         card.Children().Append(actions);
 
-        if (index)
+        auto items{ AccountsList().Items() };
+        if (index && *index < items.Size())
         {
-            AccountsList().Items().InsertAt(*index, card);
+            // An edit replaces the existing visual in one collection operation.
+            // Keeping the same slot prevents a remove/insert layout flicker.
+            items.SetAt(*index, card);
         }
         else
         {
-            AccountsList().Items().Append(card);
+            // Newly created accounts have no existing visible slot.
+            items.Append(card);
         }
     }
     void MainWindow::refreshAccountCard(RecordId id)
     {
         auto items{ AccountsList().Items() };
 
+        std::optional<std::uint32_t> visibleIndex;
         for (std::uint32_t index = 0; index < items.Size(); ++index)
         {
             const auto element{ items.GetAt(index).try_as<FrameworkElement>() };
@@ -422,7 +427,7 @@ namespace winrt::AccountVault::implementation
 
             if (isTarget)
             {
-                items.RemoveAt(index);
+                visibleIndex = index;
                 break;
             }
         }
@@ -431,25 +436,34 @@ namespace winrt::AccountVault::implementation
         const std::wstring launcher{ selectedLauncher() };
         const auto matches{ m_repository.search(query, launcher) };
 
+        Account const* matchingAccount{ nullptr };
         for (std::uint32_t index = 0;
             index < static_cast<std::uint32_t>(matches.size());
             ++index)
         {
             if (matches[index]->recordId == id)
             {
-                // The repository is the source of truth, but the visible list
-                // can temporarily lag behind it during startup or filtering.
-                // InsertAt requires an index inside the current UI collection.
-                if (index >= items.Size())
-                {
-                    appendAccountCard(*matches[index]);
-                }
-                else
-                {
-                    appendAccountCard(*matches[index], index);
-                }
+                matchingAccount = matches[index];
                 break;
             }
+        }
+
+        if (matchingAccount && visibleIndex)
+        {
+            // The edited account still belongs in the filtered view. Replace
+            // its card atomically without making the account disappear first.
+            appendAccountCard(*matchingAccount, *visibleIndex);
+        }
+        else if (matchingAccount)
+        {
+            // A newly created account has no card to replace.
+            appendAccountCard(*matchingAccount);
+        }
+        else if (visibleIndex)
+        {
+            // Removing an account, or editing it so it no longer matches the
+            // active filter, legitimately removes it from the visible view.
+            items.RemoveAt(*visibleIndex);
         }
 
         EmptyState().Visibility(
