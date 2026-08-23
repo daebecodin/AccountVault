@@ -137,6 +137,7 @@
     <ClInclude Include="Services\AccountStorageService.h" />
     <ClInclude Include="Services\CredentialService.h" />
     <ClInclude Include="Services\EmailProviderCatalog.h" />
+    <ClInclude Include="Services\PortableBackupService.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -155,10 +156,12 @@
     <ClCompile Include="Components\AccountCard.cpp" />
     <ClCompile Include="Dialogs\AddAccountDialog.cpp" />
     <ClCompile Include="Dialogs\AccountDetailsDialog.cpp" />
+    <ClCompile Include="Dialogs\BackupDialog.cpp" />
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp" />
     <ClCompile Include="Services\AccountPersistence.cpp" />
     <ClCompile Include="Services\AccountStorageService.cpp" />
     <ClCompile Include="Services\CredentialService.cpp" />
+    <ClCompile Include="Services\PortableBackupService.cpp" />
     <ClCompile Include="Services\UserVerificationService.cpp" />
     <ClCompile Include="Themes\ThemeService.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />

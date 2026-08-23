@@ -336,11 +336,14 @@ namespace winrt::AccountVault::implementation
                 showAccountDetailsDialog(idFromMenuItem(sender));
             });
 
-        // UI reservation for the encrypted portable-backup feature. It is
-        // intentionally disabled until the export service is implemented.
         MenuFlyoutItem exportAccount{
             makeMenuItem(L"Export this account...") };
-        exportAccount.IsEnabled(false);
+        exportAccount.Click([this, idFromMenuItem](
+            IInspectable const& sender,
+            RoutedEventArgs const&)
+            {
+                showExportBackup(idFromMenuItem(sender));
+            });
 
         MenuFlyoutItem remove{ makeMenuItem(L"Remove") };
         remove.Click([this, idFromMenuItem](

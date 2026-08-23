@@ -45,7 +45,6 @@
                     Foreground="{StaticResource AppMutedTextBrush}" />
             </StackPanel>
 
-            <!-- v30: one page-level account menu replaces a growing button row. -->
             <DropDownButton
                 x:Name="AccountActionsButton"
                 Grid.Column="1"
@@ -61,17 +60,14 @@
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem
                             Text="Import one account..."
-                            IsEnabled="False"
-                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                            Click="ImportOneAccountButton_Click" />
                         <MenuFlyoutItem
-                            Text="Import account group..."
-                            IsEnabled="False"
-                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                            Text="Import all accounts..."
+                            Click="ImportAllAccountsButton_Click" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem
-                            Text="Export account group..."
-                            IsEnabled="False"
-                            ToolTipService.ToolTip="Enabled by the encrypted backup feature" />
+                            Text="Export all accounts..."
+                            Click="ExportAllAccountsButton_Click" />
                     </MenuFlyout>
                 </DropDownButton.Flyout>
             </DropDownButton>

@@ -5,6 +5,7 @@
 #include "Services/AccountRepository.h"
 #include "Services/AccountStorageService.h"
 #include "Services/CredentialService.h"
+#include "Services/PortableBackupService.h"
 
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Windowing.h>
@@ -25,6 +26,18 @@ namespace winrt::AccountVault::implementation
         ~MainWindow();
 
         void AddAccountButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        void ImportOneAccountButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        void ImportAllAccountsButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
+        void ExportAllAccountsButton_Click(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
@@ -55,7 +68,7 @@ namespace winrt::AccountVault::implementation
     private:
         using Account = account_vault::models::Account;
         using RecordId = account_vault::models::RecordId;
-
+        using PortableAccount = account_vault::services::PortableAccount;
         using ThemeDefinition = account_vault::models::ThemeDefinition;
 
         static constexpr int BuiltInThemeCount{ 10 };
@@ -64,11 +77,13 @@ namespace winrt::AccountVault::implementation
         account_vault::services::AccountRepository m_repository;
         account_vault::services::AccountStorageService m_accountStorage;
         account_vault::services::CredentialService m_credentials;
+        account_vault::services::PortableBackupService m_backupService;
         std::vector<ThemeDefinition> m_customThemes;
         bool m_windowReady{ false };
         bool m_storageReady{ true };
         bool m_isLocked{ false };
         bool m_unlockInProgress{ false };
+        bool m_backupOperationInProgress{ false };
         std::uint64_t m_lockGeneration{};
         std::uint32_t m_accountClipboardSequence{};
         std::chrono::steady_clock::time_point m_autoLockDeadline{};
@@ -131,6 +146,17 @@ namespace winrt::AccountVault::implementation
         [[nodiscard]] RecordId recordIdFrom(
             Microsoft::UI::Xaml::Controls::Button const& button) const;
 
+        [[nodiscard]] bool buildPortableAccounts(
+            std::optional<RecordId> onlyRecord,
+            std::vector<PortableAccount>& accounts,
+            std::wstring& error) const;
+
+        Windows::Foundation::IAsyncOperation<winrt::hstring>
+            requestBackupPassword(bool confirmPassword);
+
+        winrt::fire_and_forget showExportBackup(
+            std::optional<RecordId> onlyRecord);
+        winrt::fire_and_forget showImportBackup(bool requireSingleAccount);
         winrt::fire_and_forget showAddAccountDialog();
         winrt::fire_and_forget showAccountDetailsDialog(RecordId id);
         winrt::fire_and_forget showColorDialog();
