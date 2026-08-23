@@ -97,6 +97,8 @@ namespace winrt::AccountVault::implementation
         bool m_unlockInProgress{ false };
         bool m_backupOperationInProgress{ false };
         ShellLayout m_shellLayout{ ShellLayout::Unknown };
+        std::int32_t m_displayedWindowWidth{ -1 };
+        std::int32_t m_displayedWindowHeight{ -1 };
         std::uint64_t m_lockGeneration{};
         std::uint32_t m_accountClipboardSequence{};
         std::chrono::steady_clock::time_point m_autoLockDeadline{};
@@ -114,6 +116,7 @@ namespace winrt::AccountVault::implementation
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
         void removeAccount(RecordId id);
+        void updateWindowDimensions(double width, double height) noexcept;
         void updateShellLayout(double width) noexcept;
         void initializeAutoLock();
         void noteUserActivity() noexcept;

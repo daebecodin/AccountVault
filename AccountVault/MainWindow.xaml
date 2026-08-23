@@ -109,6 +109,16 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!-- Shared presentation for independent live status items. -->
+            <Style x:Key="StatusMetricTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Cascadia Mono" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
+                <Setter Property="Foreground" Value="{StaticResource AppAccentBrush}" />
+            </Style>
         </Grid.Resources>
 
         <VisualStateManager.VisualStateGroups>
@@ -153,12 +163,22 @@
                         <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
                         <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
+                        <Setter Target="StatusSizeColumn.Width" Value="Auto" />
+                        <Setter Target="StatusDividerColumn.Width" Value="Auto" />
                         <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="WindowSizeText.(Grid.Row)" Value="0" />
+                        <Setter Target="WindowSizeText.(Grid.Column)" Value="1" />
+                        <Setter Target="WindowSizeText.Margin" Value="0" />
+                        <Setter Target="WindowSizeText.MinWidth" Value="0" />
+                        <Setter Target="WindowSizeText.TextAlignment" Value="Right" />
+                        <Setter Target="StatusDividerText.(Grid.Row)" Value="0" />
+                        <Setter Target="StatusDividerText.(Grid.Column)" Value="2" />
+                        <Setter Target="StatusDividerText.Visibility" Value="Visible" />
                         <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
-                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="3" />
                         <Setter Target="AutoLockStatusText.Margin" Value="0" />
-                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
-                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Left" />
                     </VisualState.Setters>
                 </VisualState>
 
@@ -201,12 +221,22 @@
                         <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="2" />
                         <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
+                        <Setter Target="StatusSizeColumn.Width" Value="Auto" />
+                        <Setter Target="StatusDividerColumn.Width" Value="Auto" />
                         <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="WindowSizeText.(Grid.Row)" Value="0" />
+                        <Setter Target="WindowSizeText.(Grid.Column)" Value="1" />
+                        <Setter Target="WindowSizeText.Margin" Value="0" />
+                        <Setter Target="WindowSizeText.MinWidth" Value="0" />
+                        <Setter Target="WindowSizeText.TextAlignment" Value="Right" />
+                        <Setter Target="StatusDividerText.(Grid.Row)" Value="0" />
+                        <Setter Target="StatusDividerText.(Grid.Column)" Value="2" />
+                        <Setter Target="StatusDividerText.Visibility" Value="Visible" />
                         <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
-                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="3" />
                         <Setter Target="AutoLockStatusText.Margin" Value="0" />
-                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
-                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Left" />
                     </VisualState.Setters>
                 </VisualState>
 
@@ -247,12 +277,22 @@
                         <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
                         <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
+                        <Setter Target="StatusSizeColumn.Width" Value="Auto" />
+                        <Setter Target="StatusDividerColumn.Width" Value="Auto" />
                         <Setter Target="StatusTimerColumn.Width" Value="Auto" />
+                        <Setter Target="WindowSizeText.(Grid.Row)" Value="0" />
+                        <Setter Target="WindowSizeText.(Grid.Column)" Value="1" />
+                        <Setter Target="WindowSizeText.Margin" Value="0" />
+                        <Setter Target="WindowSizeText.MinWidth" Value="0" />
+                        <Setter Target="WindowSizeText.TextAlignment" Value="Right" />
+                        <Setter Target="StatusDividerText.(Grid.Row)" Value="0" />
+                        <Setter Target="StatusDividerText.(Grid.Column)" Value="2" />
+                        <Setter Target="StatusDividerText.Visibility" Value="Visible" />
                         <Setter Target="AutoLockStatusText.(Grid.Row)" Value="0" />
-                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="1" />
+                        <Setter Target="AutoLockStatusText.(Grid.Column)" Value="3" />
                         <Setter Target="AutoLockStatusText.Margin" Value="0" />
-                        <Setter Target="AutoLockStatusText.MinWidth" Value="132" />
-                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Right" />
+                        <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
+                        <Setter Target="AutoLockStatusText.TextAlignment" Value="Left" />
                     </VisualState.Setters>
                 </VisualState>
 
@@ -293,8 +333,16 @@
                         <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="0" />
                         <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
+                        <Setter Target="StatusSizeColumn.Width" Value="0" />
+                        <Setter Target="StatusDividerColumn.Width" Value="0" />
                         <Setter Target="StatusTimerColumn.Width" Value="0" />
-                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="1" />
+                        <Setter Target="WindowSizeText.(Grid.Row)" Value="1" />
+                        <Setter Target="WindowSizeText.(Grid.Column)" Value="0" />
+                        <Setter Target="WindowSizeText.Margin" Value="0,4,0,0" />
+                        <Setter Target="WindowSizeText.MinWidth" Value="0" />
+                        <Setter Target="WindowSizeText.TextAlignment" Value="Left" />
+                        <Setter Target="StatusDividerText.Visibility" Value="Collapsed" />
+                        <Setter Target="AutoLockStatusText.(Grid.Row)" Value="2" />
                         <Setter Target="AutoLockStatusText.(Grid.Column)" Value="0" />
                         <Setter Target="AutoLockStatusText.Margin" Value="0,4,0,0" />
                         <Setter Target="AutoLockStatusText.MinWidth" Value="0" />
@@ -553,13 +601,16 @@
                 BorderThickness="1"
                 CornerRadius="6"
                 AutomationProperties.Name="Application status bar">
-                <Grid x:Name="StatusGrid" ColumnSpacing="20" RowSpacing="6">
+                <Grid x:Name="StatusGrid" ColumnSpacing="0" RowSpacing="6">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="StatusSizeColumn" Width="Auto" />
+                        <ColumnDefinition x:Name="StatusDividerColumn" Width="Auto" />
                         <ColumnDefinition x:Name="StatusTimerColumn" Width="Auto" />
                     </Grid.ColumnDefinitions>
 
@@ -576,17 +627,30 @@
                         Foreground="{StaticResource AppMutedTextBrush}" />
 
                     <TextBlock
-                        x:Name="AutoLockStatusText"
+                        x:Name="WindowSizeText"
                         Grid.Column="1"
-                        MinWidth="132"
-                        Text="AUTO-LOCK 05:00"
-                        AutomationProperties.Name="Automatic lock countdown"
-                        TextAlignment="Right"
+                        Text="0 x 0"
+                        AutomationProperties.Name="Current application width and height"
+                        Style="{StaticResource StatusMetricTextStyle}"
+                        TextAlignment="Right" />
+
+                    <TextBlock
+                        x:Name="StatusDividerText"
+                        Grid.Column="2"
+                        Margin="12,0"
+                        Text="|"
                         FontFamily="Cascadia Mono"
                         FontSize="12"
-                        FontWeight="SemiBold"
                         VerticalAlignment="Center"
-                        Foreground="{StaticResource AppAccentBrush}" />
+                        Foreground="{StaticResource AppMutedTextBrush}" />
+
+                    <TextBlock
+                        x:Name="AutoLockStatusText"
+                        Grid.Column="3"
+                        Text="AUTO-LOCK 05:00"
+                        AutomationProperties.Name="Automatic lock countdown"
+                        Style="{StaticResource StatusMetricTextStyle}"
+                        TextAlignment="Left" />
                 </Grid>
             </Border>
 

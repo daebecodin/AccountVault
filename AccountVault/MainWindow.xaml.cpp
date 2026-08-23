@@ -49,6 +49,9 @@ namespace winrt::AccountVault::implementation
             {
                 if (const auto self{ shellWeak.get() })
                 {
+                    self->updateWindowDimensions(
+                        args.NewSize().Width,
+                        args.NewSize().Height);
                     self->updateShellLayout(args.NewSize().Width);
                 }
             });
@@ -59,8 +62,10 @@ namespace winrt::AccountVault::implementation
             {
                 if (const auto self{ shellWeak.get() })
                 {
-                    self->updateShellLayout(
-                        self->AdaptiveHost().ActualWidth());
+                    const double width{ self->AdaptiveHost().ActualWidth() };
+                    const double height{ self->AdaptiveHost().ActualHeight() };
+                    self->updateWindowDimensions(width, height);
+                    self->updateShellLayout(width);
                 }
             });
 
@@ -345,6 +350,36 @@ namespace winrt::AccountVault::implementation
         }
     }
 
+    void MainWindow::updateWindowDimensions(
+        double width,
+        double height) noexcept
+    {
+        try
+        {
+            const auto displayedWidth{
+                static_cast<std::int32_t>(width + 0.5) };
+            const auto displayedHeight{
+                static_cast<std::int32_t>(height + 0.5) };
+
+            if (displayedWidth == m_displayedWindowWidth &&
+                displayedHeight == m_displayedWindowHeight)
+            {
+                return;
+            }
+
+            std::wstring text{ std::to_wstring(displayedWidth) };
+            text += L" x ";
+            text += std::to_wstring(displayedHeight);
+
+            WindowSizeText().Text(hstring{ text });
+            m_displayedWindowWidth = displayedWidth;
+            m_displayedWindowHeight = displayedHeight;
+        }
+        catch (...)
+        {
+        }
+    }
+
     void MainWindow::updateShellLayout(double width) noexcept
     {
         ShellLayout nextLayout{ ShellLayout::Compact };
@@ -393,10 +428,9 @@ namespace winrt::AccountVault::implementation
                 return;
             }
 
-            m_shellLayout = nextLayout;
-
             const bool showRails{
-                nextLayout == ShellLayout::Wide || nextLayout == ShellLayout::Rails
+                nextLayout == ShellLayout::Wide ||
+                nextLayout == ShellLayout::Rails
             };
 
             const bool useWideWidths{
@@ -422,6 +456,8 @@ namespace winrt::AccountVault::implementation
 
             RootGrid().ColumnSpacing(
                 showRails ? (useWideWidths ? 18.0 : 14.0) : 0.0);
+
+            m_shellLayout = nextLayout;
         }
         catch (...)
         {
