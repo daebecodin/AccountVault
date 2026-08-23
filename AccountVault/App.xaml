@@ -10,7 +10,7 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Console Dark is the startup color scheme. -->
+            <!-- Console Dark is the fallback color scheme. -->
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0C0F0D" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="#151A17" />
             <SolidColorBrush x:Key="AppSurfaceAltBrush" Color="#1C241F" />

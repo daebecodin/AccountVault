@@ -424,11 +424,11 @@
                         x:Name="LauncherWorkspaceButton"
                         IsChecked="True"
                         Style="{StaticResource WorkspaceNavToggleStyle}"
-                        AutomationProperties.Name="Launcher accounts workspace"
+                        AutomationProperties.Name="Launcher Vault workspace"
                         Click="LauncherWorkspaceButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <SymbolIcon Symbol="Home" />
-                            <TextBlock Text="Launcher accounts" VerticalAlignment="Center" />
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7FC;" />
+                            <TextBlock Text="Launcher Vault" VerticalAlignment="Center" />
                         </StackPanel>
                     </ToggleButton>
 
@@ -438,8 +438,8 @@
                         AutomationProperties.Name="Credential Vault workspace"
                         Click="CredentialWorkspaceButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <SymbolIcon Symbol="Contact" />
-                            <TextBlock Text="Credential vault" VerticalAlignment="Center" />
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF540;" />
+                            <TextBlock Text="Credential Vault" VerticalAlignment="Center" />
                         </StackPanel>
                     </ToggleButton>
                 </StackPanel>
@@ -479,19 +479,19 @@
                 <NavigationView.MenuItems>
                     <NavigationViewItem
                         x:Name="LauncherNavigationItem"
-                        Content="Launcher accounts"
+                        Content="Launcher Vault"
                         Tag="launcher"
                         IsSelected="True">
                         <NavigationViewItem.Icon>
-                            <SymbolIcon Symbol="Home" />
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7FC;" />
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
                     <NavigationViewItem
                         x:Name="CredentialNavigationItem"
-                        Content="Credential vault"
+                        Content="Credential Vault"
                         Tag="credential">
                         <NavigationViewItem.Icon>
-                            <SymbolIcon Symbol="Contact" />
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF540;" />
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
                 </NavigationView.MenuItems>
@@ -527,7 +527,7 @@
                                 Foreground="{StaticResource AppAccentBrush}" />
                             <TextBlock
                                 x:Name="HeaderTitle"
-                                Text="Launcher accounts"
+                                Text="Launcher Vault"
                                 FontSize="30"
                                 FontWeight="SemiBold"
                                 TextWrapping="Wrap"
