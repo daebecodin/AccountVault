@@ -1529,7 +1529,7 @@ namespace winrt::AccountVault::implementation
         CompactAddMenuItem().Text(
             credential ? L"Add credential" : L"Add account");
         CompactImportOneMenuItem().Text(
-            credential ? L"Import one record..." : L"Import one account...");
+            credential ? L"Import one credential..." : L"Import one account...");
         CompactImportAllMenuItem().Text(
             credential ? L"Import vault..." : L"Import all accounts...");
         CompactImportBrowserCsvMenuItem().Visibility(
@@ -1537,7 +1537,7 @@ namespace winrt::AccountVault::implementation
         CompactExportAllMenuItem().Text(
             credential ? L"Export vault..." : L"Export all accounts...");
         AccountActionsButton().Content(box_value(
-            credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS"));
+            credential ? L"ACTIONS" : L"ACTIONS"));
         AutomationProperties::SetName(
             AccountActionsButton(),
             credential ? L"Credential Vault actions" : L"Account actions");

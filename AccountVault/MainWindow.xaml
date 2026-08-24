@@ -832,7 +832,7 @@
                                         FontSize="18"
                                         Glyph="&#xE785;" />
                                     <TextBlock
-                                        Text="Unlock"
+                                        Text=""
                                         VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
