@@ -6,6 +6,7 @@
 #include "MainWindow.g.cpp"
 #endif
 
+#include <microsoft.ui.xaml.window.h>
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
@@ -41,6 +42,16 @@ namespace winrt::AccountVault::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+
+        // Modeless tool-window coroutines intentionally keep MainWindow alive
+        // while they are open. Close those windows as soon as the shell closes
+        // so each coroutine can run its plaintext cleanup and release its
+        // strong reference; waiting for the destructor would be too late.
+        Closed([this](IInspectable const&, WindowEventArgs const&)
+        {
+            m_windowReady = false;
+            closeModelessWindows();
+        });
 
         // Drive the shell from the measured layout width. Full rails require
         // at least 1440 effective pixels; narrower windows use the centered
@@ -303,6 +314,8 @@ namespace winrt::AccountVault::implementation
     }
     MainWindow::~MainWindow()
     {
+        closeModelessWindows();
+
         try
         {
             if (m_autoLockTimer)
@@ -422,7 +435,7 @@ namespace winrt::AccountVault::implementation
                     y,
                     width,
                     height },
-                    displayArea);
+                displayArea);
         }
         catch (...)
         {
@@ -535,6 +548,12 @@ namespace winrt::AccountVault::implementation
             AccountActionsButton().Visibility(
                 showRails ? Visibility::Collapsed : Visibility::Visible);
 
+            TopAddAccountButton().Visibility(
+                showRails ? Visibility::Visible : Visibility::Collapsed);
+
+            TopMoreActionsButton().Visibility(
+                showRails ? Visibility::Visible : Visibility::Collapsed);
+
             LeftRailColumn().Width(
                 GridLengthHelper::FromPixels(
                     showRails ? 220.0 : 0.0));
@@ -559,6 +578,59 @@ namespace winrt::AccountVault::implementation
     {
         const Grid root{ RootGrid() };
 
+        // ContentDialog and its generated action buttons normally consume the
+        // operating-system control palette. Override those tokens locally so
+        // every add/details dialog follows Account Armory's active theme while
+        // retaining WinUI's native pointer-over/pressed transitions.
+        const auto applicationResources{ Application::Current().Resources() };
+        const auto dialogResources{ dialog.Resources() };
+        const auto aliasBrush = [&applicationResources, &dialogResources](
+            wchar_t const* targetKey,
+            wchar_t const* sourceKey)
+        {
+            dialogResources.Insert(
+                box_value(targetKey),
+                applicationResources.Lookup(box_value(sourceKey)));
+        };
+
+        aliasBrush(L"ContentDialogBackground", L"AppSurfaceBrush");
+        aliasBrush(L"ContentDialogForeground", L"AppTextBrush");
+        aliasBrush(L"ContentDialogBorderBrush", L"AppBorderBrush");
+        aliasBrush(L"ContentDialogSeparatorBorderBrush", L"AppBorderBrush");
+
+        aliasBrush(L"AccentButtonBackground", L"AppAccentBrush");
+        aliasBrush(L"AccentButtonBackgroundPointerOver", L"AppAccentHoverBrush");
+        aliasBrush(L"AccentButtonBackgroundPressed", L"AppAccentPressedBrush");
+        aliasBrush(L"AccentButtonBorderBrush", L"AppAccentBrush");
+        aliasBrush(L"AccentButtonBorderBrushPointerOver", L"AppAccentHoverBrush");
+        aliasBrush(L"AccentButtonBorderBrushPressed", L"AppAccentPressedBrush");
+        aliasBrush(L"AccentButtonForeground", L"AppBackgroundBrush");
+        aliasBrush(L"AccentButtonForegroundPointerOver", L"AppBackgroundBrush");
+        aliasBrush(L"AccentButtonForegroundPressed", L"AppBackgroundBrush");
+
+        aliasBrush(L"ButtonBackground", L"AppSurfaceAltBrush");
+        aliasBrush(L"ButtonBackgroundPointerOver", L"AppAccentLowBrush");
+        aliasBrush(L"ButtonBackgroundPressed", L"AppAccentMediumBrush");
+        aliasBrush(L"ButtonBorderBrush", L"AppBorderBrush");
+        aliasBrush(L"ButtonBorderBrushPointerOver", L"AppAccentBrush");
+        aliasBrush(L"ButtonBorderBrushPressed", L"AppAccentBrush");
+        aliasBrush(L"ButtonForeground", L"AppTextBrush");
+        aliasBrush(L"ButtonForegroundPointerOver", L"AppTextBrush");
+        aliasBrush(L"ButtonForegroundPressed", L"AppTextBrush");
+
+        // Current WinUI templates consume these semantic tokens for text,
+        // password, combo-box, and dialog surfaces.
+        aliasBrush(L"ControlFillColorDefaultBrush", L"AppSurfaceAltBrush");
+        aliasBrush(L"ControlFillColorSecondaryBrush", L"AppAccentLowBrush");
+        aliasBrush(L"ControlFillColorTertiaryBrush", L"AppAccentMediumBrush");
+        aliasBrush(L"ControlStrokeColorDefaultBrush", L"AppBorderBrush");
+        aliasBrush(L"ControlStrokeColorSecondaryBrush", L"AppAccentBrush");
+        aliasBrush(L"TextFillColorPrimaryBrush", L"AppTextBrush");
+        aliasBrush(L"TextFillColorSecondaryBrush", L"AppMutedTextBrush");
+        aliasBrush(L"AccentFillColorDefaultBrush", L"AppAccentBrush");
+        aliasBrush(L"AccentFillColorSecondaryBrush", L"AppAccentHoverBrush");
+        aliasBrush(L"AccentFillColorTertiaryBrush", L"AppAccentPressedBrush");
+
         // In-place ContentDialogs participate in their parent's Grid layout.
         // Span the live shell definition counts instead of preserving a magic
         // row/column count from an earlier RootGrid shape.
@@ -571,7 +643,105 @@ namespace winrt::AccountVault::implementation
             dialog,
             static_cast<std::int32_t>(root.ColumnDefinitions().Size()));
 
-        root.Children().Append(dialog);
+        // ContentDialogs are reserved for security and destructive flows.
+        // Disable every ordinary tool window for the duration so the prompt
+        // remains a true app-wide modal boundary.
+        setModelessWindowsInteraction(false);
+        try
+        {
+            root.Children().Append(dialog);
+        }
+        catch (...)
+        {
+            setModelessWindowsInteraction(true);
+            throw;
+        }
+    }
+
+    void MainWindow::detachDialogFromShell(
+        ContentDialog const& dialog) noexcept
+    {
+        try
+        {
+            const auto children{ RootGrid().Children() };
+            std::uint32_t index{};
+            if (children.IndexOf(dialog, index))
+            {
+                children.RemoveAt(index);
+            }
+        }
+        catch (...)
+        {
+        }
+
+        setModelessWindowsInteraction(true);
+    }
+
+    void MainWindow::attachDialogToShell(
+        account_vault::ui::ModelessToolWindow const& window)
+    {
+        if (window)
+        {
+            HWND ownerWindow{};
+            if (SUCCEEDED(
+                    m_inner.as<::IWindowNative>()->get_WindowHandle(
+                        &ownerWindow)))
+            {
+                window.OwnerWindowHandle(
+                    reinterpret_cast<std::intptr_t>(ownerWindow));
+            }
+            m_modelessWindows.push_back(window);
+        }
+    }
+
+    void MainWindow::detachModelessWindow(
+        account_vault::ui::ModelessToolWindow const& window) noexcept
+    {
+        try
+        {
+            const auto id{ window.Id() };
+            m_modelessWindows.erase(
+                std::remove_if(
+                    m_modelessWindows.begin(),
+                    m_modelessWindows.end(),
+                    [id](account_vault::ui::ModelessToolWindow const& candidate)
+                    {
+                        return candidate.Id() == id;
+                    }),
+                m_modelessWindows.end());
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void MainWindow::closeModelessWindows() noexcept
+    {
+        try
+        {
+            const auto windows{ m_modelessWindows };
+            for (auto const& window : windows)
+            {
+                window.Close();
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void MainWindow::setModelessWindowsInteraction(bool enabled) noexcept
+    {
+        try
+        {
+            for (auto const& window : m_modelessWindows)
+            {
+                window.IsInteractionEnabled(enabled);
+            }
+        }
+        catch (...)
+        {
+        }
     }
 
     void MainWindow::AddAccountButton_Click(
@@ -614,6 +784,33 @@ namespace winrt::AccountVault::implementation
             applyPreset(ThemePicker().SelectedIndex());
         }
     }
+    void MainWindow::CompactThemeMenuItem_Click(
+        IInspectable const& sender,
+        RoutedEventArgs const&)
+    {
+        try
+        {
+            const auto item{ sender.as<MenuFlyoutItem>() };
+            const auto tag{ unbox_value<hstring>(item.Tag()) };
+            if (tag.size() != 1 || tag[0] < L'0' || tag[0] > L'9')
+            {
+                return;
+            }
+
+            const int selectedIndex{ static_cast<int>(tag[0] - L'0') };
+            if (ThemePicker().SelectedIndex() == selectedIndex)
+            {
+                applyPreset(selectedIndex);
+            }
+            else
+            {
+                ThemePicker().SelectedIndex(selectedIndex);
+            }
+        }
+        catch (...)
+        {
+        }
+    }
     void MainWindow::ThemeOption_RightTapped(
         IInspectable const&,
         RightTappedRoutedEventArgs const& args)
@@ -627,6 +824,12 @@ namespace winrt::AccountVault::implementation
         RoutedEventArgs const&)
     {
         showColorDialog();
+    }
+    void MainWindow::PasswordGeneratorButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        showPasswordGenerator();
     }
     void MainWindow::UnlockButton_Click(
         IInspectable const&,
@@ -691,6 +894,7 @@ namespace winrt::AccountVault::implementation
                 true);
 
             m_appWindow = this->AppWindow();
+            applyWindowChromeTheme();
             applyDefaultWindowSize();
             m_appWindowChangedToken = m_appWindow.Changed(
                 [weak, dispatcher](
@@ -874,6 +1078,11 @@ namespace winrt::AccountVault::implementation
         {
         }
 
+        // Modeless account/tool windows may own password controls or revealed
+        // values. Closing them first resumes their cleanup coroutines before
+        // the lock overlay is presented.
+        closeModelessWindows();
+
         // Hiding every in-place dialog resumes its owning coroutine. Details
         // cleanup then stops reveal timers and clears revealed plaintext.
         try
@@ -1015,8 +1224,8 @@ namespace winrt::AccountVault::implementation
         const hstring tag{ unbox_value<hstring>(item.Tag()) };
         switchWorkspace(
             tag == L"credential"
-            ? WorkspaceSection::CredentialVault
-            : WorkspaceSection::LauncherAccounts);
+                ? WorkspaceSection::CredentialVault
+                : WorkspaceSection::LauncherAccounts);
 
         if (m_shellLayout != ShellLayout::Wide)
         {
@@ -1049,27 +1258,27 @@ namespace winrt::AccountVault::implementation
         CredentialWorkspaceButton().IsChecked(credential);
         CompactNavigation().SelectedItem(
             credential
-            ? CredentialNavigationItem()
-            : LauncherNavigationItem());
+                ? CredentialNavigationItem()
+                : LauncherNavigationItem());
         m_updatingWorkspaceNavigation = false;
 
         HeaderTitle().Text(
-            credential ? L"Credential vault" : L"Launcher accounts");
+            credential ? L"Credential Vault" : L"Launcher Vault");
         HeaderSubtitle().Text(
             credential
-            ? L"Store sign-ins for services, websites, school, work, and everyday accounts."
-            : L"Manage linked launcher and email credentials in one record.");
+                ? L"Store sign-ins for services, websites, school, work, and everyday accounts."
+                : L"Manage linked launcher and email credentials in one record.");
 
         SearchBox().Text(L"");
         SearchBox().PlaceholderText(
             credential
-            ? L"Search service, category, username, email, website, or notes"
-            : L"Search launcher, username, email, or provider website");
+                ? L"Search service, category, username, email, website, or notes"
+                : L"Search launcher, username, email, or provider website");
         AutomationProperties::SetName(
             SearchBox(),
             credential
-            ? L"Search credential vault"
-            : L"Search launcher accounts");
+                ? L"Search Credential Vault"
+                : L"Search Launcher Vault");
         AutomationProperties::SetHelpText(
             SearchBox(),
             SearchBox().PlaceholderText());
@@ -1086,44 +1295,33 @@ namespace winrt::AccountVault::implementation
             credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS"));
         AutomationProperties::SetName(
             AccountActionsButton(),
-            credential ? L"Credential vault actions" : L"Account actions");
-        RightAddAccountButton().Content(box_value(
+            credential ? L"Credential Vault actions" : L"Account actions");
+        TopAddAccountButton().Content(box_value(
             credential ? L"Add credential" : L"Add account"));
         AutomationProperties::SetName(
-            RightAddAccountButton(),
+            TopAddAccountButton(),
             credential ? L"Add credential" : L"Add account");
-        RightImportOneButton().Content(box_value(
-            credential ? L"Import one record..." : L"Import one account..."));
-        RightImportAllButton().Content(box_value(
-            credential ? L"Import vault..." : L"Import all accounts..."));
-        RightExportAllButton().Content(box_value(
-            credential ? L"Export vault..." : L"Export all accounts..."));
-        AutomationProperties::SetName(
-            RightImportOneButton(),
-            credential ? L"Import one vault record" : L"Import one account");
-        AutomationProperties::SetName(
-            RightImportAllButton(),
-            credential ? L"Import vault" : L"Import all accounts");
-        AutomationProperties::SetName(
-            RightExportAllButton(),
-            credential ? L"Export vault" : L"Export all accounts");
-        RightRailHeader().Text(
-            credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS");
+        TopImportOneMenuItem().Text(
+            credential ? L"Import one record..." : L"Import one account...");
+        TopImportAllMenuItem().Text(
+            credential ? L"Import vault..." : L"Import all accounts...");
+        TopExportAllMenuItem().Text(
+            credential ? L"Export vault..." : L"Export all accounts...");
 
         EmptyStateTitle().Text(
             credential ? L"No credentials found" : L"No accounts found");
         EmptyStateSubtitle().Text(
             credential
-            ? L"Add a credential or change your search."
-            : L"Add an account or change your search.");
+                ? L"Add a credential or change your search."
+                : L"Add an account or change your search.");
         AutomationProperties::SetName(
             AccountsList(),
             credential ? L"Stored credentials" : L"Accounts");
         AutomationProperties::SetHelpText(
             AccountsList(),
             credential
-            ? L"General service and website credentials"
-            : L"Stored launcher and email accounts");
+                ? L"General service and website credentials"
+                : L"Stored launcher and email accounts");
 
         rebuildRecordFilter();
         if (m_windowReady)
@@ -1139,11 +1337,11 @@ namespace winrt::AccountVault::implementation
         items.Clear();
 
         const auto appendItem = [&items](std::wstring_view text)
-            {
-                ComboBoxItem item;
-                item.Content(box_value(hstring{ text }));
-                items.Append(item);
-            };
+        {
+            ComboBoxItem item;
+            item.Content(box_value(hstring{ text }));
+            items.Append(item);
+        };
 
         if (m_workspaceSection == WorkspaceSection::LauncherAccounts)
         {

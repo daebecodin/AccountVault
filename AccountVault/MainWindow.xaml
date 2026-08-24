@@ -110,6 +110,22 @@
                 </Setter>
             </Style>
 
+            <Style
+                x:Key="ActionRailComboBoxStyle"
+                TargetType="ComboBox"
+                BasedOn="{StaticResource ToolbarComboBoxStyle}">
+                <Setter Property="Height" Value="34" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Padding" Value="10,0,8,0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FontFamily" Value="Cascadia Mono" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="CornerRadius" Value="4" />
+            </Style>
+
             <Style x:Key="WorkspaceNavToggleStyle" TargetType="ToggleButton">
                 <Setter Property="MinHeight" Value="40" />
                 <Setter Property="Padding" Value="10,8" />
@@ -221,6 +237,8 @@
                         <Setter Target="ToolbarColumn1.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn2.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn3.Width" Value="Auto" />
+                        <Setter Target="TopAddAccountButton.Visibility" Value="Visible" />
+                        <Setter Target="TopMoreActionsButton.Visibility" Value="Visible" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
@@ -228,13 +246,6 @@
                         <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="145" />
-                        <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
-                        <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
-                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="ThemePicker.MinWidth" Value="150" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="0" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
-                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="Auto" />
                         <Setter Target="StatusDividerColumn.Width" Value="Auto" />
@@ -278,8 +289,10 @@
                         <Setter Target="ToolbarGrid.Margin" Value="0,28,0,22" />
                         <Setter Target="ToolbarColumn0.Width" Value="*" />
                         <Setter Target="ToolbarColumn1.Width" Value="Auto" />
-                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
-                        <Setter Target="ToolbarColumn3.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn2.Width" Value="0" />
+                        <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="TopAddAccountButton.Visibility" Value="Collapsed" />
+                        <Setter Target="TopMoreActionsButton.Visibility" Value="Collapsed" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
@@ -287,13 +300,6 @@
                         <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="145" />
-                        <Setter Target="ThemePicker.(Grid.Row)" Value="0" />
-                        <Setter Target="ThemePicker.(Grid.Column)" Value="2" />
-                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="ThemePicker.MinWidth" Value="150" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="0" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="3" />
-                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="Auto" />
                         <Setter Target="StatusDividerColumn.Width" Value="Auto" />
@@ -339,6 +345,8 @@
                         <Setter Target="ToolbarColumn1.Width" Value="0" />
                         <Setter Target="ToolbarColumn2.Width" Value="0" />
                         <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="TopAddAccountButton.Visibility" Value="Collapsed" />
+                        <Setter Target="TopMoreActionsButton.Visibility" Value="Collapsed" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
@@ -346,13 +354,6 @@
                         <Setter Target="RecordFilter.(Grid.Column)" Value="0" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="0" />
-                        <Setter Target="ThemePicker.(Grid.Row)" Value="2" />
-                        <Setter Target="ThemePicker.(Grid.Column)" Value="0" />
-                        <Setter Target="ThemePicker.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="ThemePicker.MinWidth" Value="0" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Row)" Value="3" />
-                        <Setter Target="CustomizeColorsButton.(Grid.Column)" Value="0" />
-                        <Setter Target="CustomizeColorsButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="0" />
                         <Setter Target="StatusDividerColumn.Width" Value="0" />
@@ -474,6 +475,39 @@
                     <StaticResource
                         x:Key="NavigationViewContentBackground"
                         ResourceKey="AppBackgroundBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewSelectionIndicatorForeground"
+                        ResourceKey="AppAccentBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackground"
+                        ResourceKey="AppBackgroundBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackgroundPointerOver"
+                        ResourceKey="AppAccentLowBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackgroundPressed"
+                        ResourceKey="AppAccentMediumBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackgroundSelected"
+                        ResourceKey="AppAccentLowBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackgroundSelectedPointerOver"
+                        ResourceKey="AppAccentMediumBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemBackgroundSelectedPressed"
+                        ResourceKey="AppAccentMediumBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemForeground"
+                        ResourceKey="AppTextBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemForegroundPointerOver"
+                        ResourceKey="AppTextBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemForegroundSelected"
+                        ResourceKey="AppTextBrush" />
+                    <StaticResource
+                        x:Key="NavigationViewItemForegroundSelectedPointerOver"
+                        ResourceKey="AppTextBrush" />
                 </NavigationView.Resources>
 
                 <NavigationView.MenuItems>
@@ -547,8 +581,8 @@
                             Padding="18,10"
                             VerticalAlignment="Center"
                             AccessKey="A"
-                            AutomationProperties.Name="Account actions"
-                            AutomationProperties.HelpText="Add, import, or export accounts">
+                            AutomationProperties.Name="Account actions and tools"
+                            AutomationProperties.HelpText="Add, import, export, change appearance, or open utilities">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem x:Name="CompactAddMenuItem" Text="Add account" Click="AddAccountButton_Click" />
@@ -557,6 +591,22 @@
                                     <MenuFlyoutItem x:Name="CompactImportAllMenuItem" Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="CompactExportAllMenuItem" Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutSubItem Text="Theme">
+                                        <MenuFlyoutItem Text="Catppuccin Mocha" Tag="0" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Tokyo Night" Tag="1" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Dracula" Tag="2" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Ayu Mirage" Tag="3" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Dainty Dark" Tag="4" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="GitHub Dark" Tag="5" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Atom One Dark" Tag="6" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Houston" Tag="7" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Night Owl" Tag="8" Click="CompactThemeMenuItem_Click" />
+                                        <MenuFlyoutItem Text="Matcha" Tag="9" Click="CompactThemeMenuItem_Click" />
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutItem Text="Customize colors..." Click="CustomizeColorsButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Password generator..." Click="PasswordGeneratorButton_Click" />
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
@@ -606,39 +656,37 @@
                             <ComboBoxItem Content="Other" />
                         </ComboBox>
 
-                        <ComboBox
-                            x:Name="ThemePicker"
-                            Grid.Column="2"
-                            MinWidth="150"
-                            AccessKey="T"
-                            AutomationProperties.Name="Theme"
-                            AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
-                            Style="{StaticResource ToolbarComboBoxStyle}"
-                            SelectedIndex="3"
-                            ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
-                            SelectionChanged="ThemePicker_SelectionChanged">
-                            <ComboBoxItem Content="Catppuccin Mocha" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Tokyo Night" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Dracula" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Ayu Mirage" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Dainty Dark" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="GitHub Dark" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Atom One Dark" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Houston" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Night Owl" RightTapped="ThemeOption_RightTapped" />
-                            <ComboBoxItem Content="Matcha" RightTapped="ThemeOption_RightTapped" />
-                        </ComboBox>
-
                         <Button
-                            x:Name="CustomizeColorsButton"
-                            Grid.Column="3"
-                            Content="Customize colors"
+                            x:Name="TopAddAccountButton"
+                            Grid.Column="2"
+                            Content="Add account"
                             Height="44"
-                            HorizontalAlignment="Stretch"
-                            AccessKey="C"
-                            AutomationProperties.Name="Customize colors"
+                            Padding="18,0"
+                            Visibility="Collapsed"
+                            Style="{StaticResource PrimaryActionButtonStyle}"
+                            AccessKey="A"
+                            AutomationProperties.Name="Add account"
+                            Click="AddAccountButton_Click" />
+
+                        <DropDownButton
+                            x:Name="TopMoreActionsButton"
+                            Grid.Column="3"
+                            Content="IMPORT / EXPORT"
+                            Height="44"
                             Padding="16,0"
-                            Click="CustomizeColorsButton_Click" />
+                            Visibility="Collapsed"
+                            AccessKey="M"
+                            AutomationProperties.Name="Import or export accounts"
+                            AutomationProperties.HelpText="Import or export accounts">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem x:Name="TopImportOneMenuItem" Text="Import one account..." Click="ImportOneAccountButton_Click" />
+                                    <MenuFlyoutItem x:Name="TopImportAllMenuItem" Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TopExportAllMenuItem" Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
                     </Grid>
 
                     <Grid Grid.Row="2">
@@ -751,7 +799,7 @@
                 </Grid>
             </Border>
 
-            <!-- Container 4: wide-window global account actions. -->
+            <!-- Container 4: wide-window appearance and utility tools. -->
             <Border
                 x:Name="RightRail"
                 Grid.Column="2"
@@ -761,48 +809,73 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Visibility="Collapsed"
-                AutomationProperties.Name="Account actions">
+                AutomationProperties.Name="Tools">
                 <StackPanel Spacing="3">
                     <TextBlock
                         x:Name="RightRailHeader"
                         Margin="10,0,0,10"
-                        Text="ACCOUNT ACTIONS"
+                        Text="TOOLS"
                         FontFamily="Cascadia Mono"
                         FontSize="11"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource AppAccentBrush}" />
 
-                    <Button
-                        x:Name="RightAddAccountButton"
-                        Content="Add account"
-                        Style="{StaticResource ActionRailButtonStyle}"
-                        AccessKey="A"
-                        AutomationProperties.Name="Add account"
-                        Click="AddAccountButton_Click" />
+                    <TextBlock
+                        Margin="10,0,0,10"
+                        Text="UTILITIES"
+                        FontFamily="Cascadia Mono"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AppAccentBrush}" />
+
+                    <ComboBox
+                        x:Name="ThemePicker"
+                        Margin="0,0,0,4"
+                        MinWidth="0"
+                        HorizontalAlignment="Stretch"
+                        AccessKey="T"
+                        AutomationProperties.Name="Theme"
+                        AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
+                        Style="{StaticResource ActionRailComboBoxStyle}"
+                        SelectedIndex="3"
+                        ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
+                        SelectionChanged="ThemePicker_SelectionChanged">
+                        <ComboBox.Resources>
+                            <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="AppAccentLowBrush" />
+                            <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="AppAccentMediumBrush" />
+                            <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="AppAccentBrush" />
+                            <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="AppAccentBrush" />
+                            <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="AppMutedTextBrush" />
+                            <StaticResource x:Key="ComboBoxDropDownGlyphForegroundPointerOver" ResourceKey="AppTextBrush" />
+                            <StaticResource x:Key="ComboBoxDropDownGlyphForegroundPressed" ResourceKey="AppTextBrush" />
+                        </ComboBox.Resources>
+                        <ComboBoxItem Content="Catppuccin Mocha" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Tokyo Night" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Dracula" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Ayu Mirage" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Dainty Dark" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="GitHub Dark" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Atom One Dark" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Houston" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Night Owl" RightTapped="ThemeOption_RightTapped" />
+                        <ComboBoxItem Content="Matcha" RightTapped="ThemeOption_RightTapped" />
+                    </ComboBox>
 
                     <Button
-                        x:Name="RightImportOneButton"
-                        Content="Import one account..."
+                        x:Name="CustomizeColorsButton"
+                        Content="Customize colors..."
                         Style="{StaticResource ActionRailButtonStyle}"
-                        AccessKey="O"
-                        AutomationProperties.Name="Import one account"
-                        Click="ImportOneAccountButton_Click" />
+                        AccessKey="C"
+                        AutomationProperties.Name="Customize colors"
+                        Click="CustomizeColorsButton_Click" />
 
                     <Button
-                        x:Name="RightImportAllButton"
-                        Content="Import all accounts..."
+                        Content="Password generator..."
                         Style="{StaticResource ActionRailButtonStyle}"
-                        AccessKey="I"
-                        AutomationProperties.Name="Import all accounts"
-                        Click="ImportAllAccountsButton_Click" />
-
-                    <Button
-                        x:Name="RightExportAllButton"
-                        Content="Export all accounts..."
-                        Style="{StaticResource ActionRailButtonStyle}"
-                        AccessKey="E"
-                        AutomationProperties.Name="Export all accounts"
-                        Click="ExportAllAccountsButton_Click" />
+                        AccessKey="P"
+                        AutomationProperties.Name="Open password generator"
+                        AutomationProperties.HelpText="Generate and copy a cryptographically random password"
+                        Click="PasswordGeneratorButton_Click" />
                 </StackPanel>
             </Border>
 
@@ -843,11 +916,10 @@
                             Content="Unlock"
                             MinWidth="150"
                             Padding="18,10"
+                            Style="{StaticResource PrimaryActionButtonStyle}"
                             HorizontalAlignment="Center"
                             AccessKey="U"
                             AutomationProperties.Name="Unlock Account Armory"
-                            Background="{StaticResource AppAccentBrush}"
-                            Foreground="#0C0F0D"
                             Click="UnlockButton_Click" />
                     </StackPanel>
                 </Border>
