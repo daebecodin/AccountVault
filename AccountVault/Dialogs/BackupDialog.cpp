@@ -661,7 +661,6 @@ namespace winrt::AccountVault::implementation
                     {
                         if (portable.serviceName.empty() ||
                             portable.category.empty() ||
-                            portable.emailAddress.empty() ||
                             portable.password.empty())
                         {
                             importError =

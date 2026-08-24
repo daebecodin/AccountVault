@@ -9,10 +9,12 @@
 #include <winrt/Windows.Storage.FileProperties.h>
 #include <winrt/Windows.Storage.Pickers.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.UI.Text.h>
 
 #include <algorithm>
 #include <cstdint>
-#include <optional>
+#include <cwctype>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,9 +31,17 @@ using namespace Windows::Storage::Streams;
 
 namespace
 {
+    using BrowserCredential =
+        account_vault::services::BrowserCsvCredential;
+    using Account = account_vault::models::Account;
+    using AccountKind = account_vault::models::AccountKind;
+
+    constexpr std::wstring_view DefaultImportCategory{ L"Browser Import" };
+    constexpr std::size_t MaximumVaultRecordCount{ 100000 };
+
     struct BrowserCredentialWiper
     {
-        std::vector<account_vault::services::BrowserCsvCredential>& values;
+        std::vector<BrowserCredential>& values;
 
         ~BrowserCredentialWiper()
         {
@@ -39,11 +49,108 @@ namespace
         }
     };
 
+    [[nodiscard]] std::wstring trimCopy(std::wstring_view value)
+    {
+        while (!value.empty() && std::iswspace(value.front()))
+        {
+            value.remove_prefix(1);
+        }
+        while (!value.empty() && std::iswspace(value.back()))
+        {
+            value.remove_suffix(1);
+        }
+        return std::wstring{ value };
+    }
+
+    [[nodiscard]] std::wstring lowerCopy(std::wstring_view value)
+    {
+        std::wstring lowered{ value };
+        std::ranges::transform(
+            lowered,
+            lowered.begin(),
+            [](wchar_t character)
+            {
+                return static_cast<wchar_t>(std::towlower(character));
+            });
+        return lowered;
+    }
+
+    [[nodiscard]] std::wstring normalizedUrl(std::wstring_view value)
+    {
+        std::wstring normalized{ lowerCopy(trimCopy(value)) };
+        while (normalized.size() > 1 && normalized.back() == L'/')
+        {
+            normalized.pop_back();
+        }
+        return normalized;
+    }
+
     [[nodiscard]] bool looksLikeEmail(std::wstring_view value) noexcept
     {
         const std::size_t at{ value.find(L'@') };
         return at != std::wstring_view::npos && at != 0 &&
             at + 1 < value.size();
+    }
+
+    [[nodiscard]] std::wstring serviceNameFor(
+        BrowserCredential const& credential)
+    {
+        if (!credential.name.empty())
+        {
+            return credential.name;
+        }
+
+        std::wstring_view remainder{ credential.url };
+        const std::size_t schemeEnd{ remainder.find(L"://") };
+        if (schemeEnd != std::wstring_view::npos)
+        {
+            remainder.remove_prefix(schemeEnd + 3);
+        }
+
+        const std::size_t pathStart{ remainder.find_first_of(L"/?#") };
+        std::wstring_view host{ remainder.substr(0, pathStart) };
+        const std::size_t userInfoEnd{ host.rfind(L'@') };
+        if (userInfoEnd != std::wstring_view::npos)
+        {
+            host.remove_prefix(userInfoEnd + 1);
+        }
+        const std::size_t portStart{ host.rfind(L':') };
+        if (portStart != std::wstring_view::npos &&
+            host.find(L':') == portStart)
+        {
+            host = host.substr(0, portStart);
+        }
+        if (host.starts_with(L"www."))
+        {
+            host.remove_prefix(4);
+        }
+
+        std::wstring serviceName{ trimCopy(host) };
+        if (serviceName.empty())
+        {
+            serviceName = L"Imported login";
+        }
+        return serviceName;
+    }
+
+    [[nodiscard]] bool matchesBrowserCredential(
+        Account const& account,
+        BrowserCredential const& credential)
+    {
+        if (account.kind != AccountKind::Credential ||
+            normalizedUrl(account.website) != normalizedUrl(credential.url))
+        {
+            return false;
+        }
+
+        const std::wstring importedUser{ lowerCopy(credential.username) };
+        if (importedUser.empty())
+        {
+            return account.username.empty() && account.emailAddress.empty();
+        }
+        return lowerCopy(account.username) == importedUser ||
+            (!account.emailAddress.empty() &&
+                lowerCopy(account.emailAddress) == importedUser);
     }
 }
 
@@ -66,6 +173,7 @@ namespace winrt::AccountVault::implementation
     {
         account_vault::ui::ModelessToolWindow dialog{ nullptr };
         bool dialogAttached{};
+        bool interactionDisabled{};
 
         try
         {
@@ -86,18 +194,6 @@ namespace winrt::AccountVault::implementation
             {
                 StatusText().Text(
                     L"Open the Credential Vault to import browser logins");
-                co_return;
-            }
-            const bool hasCredentialRecord{ std::ranges::any_of(
-                m_repository.accounts(),
-                [](Account const& account)
-                {
-                    return account.kind == AccountKind::Credential;
-                }) };
-            if (!hasCredentialRecord)
-            {
-                StatusText().Text(
-                    L"Add a Credential Vault record before mapping a browser login");
                 co_return;
             }
 
@@ -136,15 +232,17 @@ namespace winrt::AccountVault::implementation
                 co_return;
             }
 
-            const hstring fileText{ co_await FileIO::ReadTextAsync(
+            hstring fileText{ co_await FileIO::ReadTextAsync(
                 file,
                 UnicodeEncoding::Utf8) };
             if (m_isLocked || m_lockGeneration != operationGeneration)
             {
+                fileText = hstring{};
                 co_return;
             }
 
             std::wstring csvText{ fileText.c_str(), fileText.size() };
+            fileText = hstring{};
             auto wipeCsvText{ account_vault::security::wipeOnExit(csvText) };
             auto parsed{
                 account_vault::services::BrowserCsvImportService::parse(
@@ -159,15 +257,15 @@ namespace winrt::AccountVault::implementation
             }
 
             dialog = account_vault::ui::ModelessToolWindow{
-                L"Import browser CSV",
-                760,
-                610 };
+                L"Import browser passwords",
+                700,
+                470 };
             dialog.XamlRoot(Content().XamlRoot());
-            dialog.Title(box_value(L"Map browser login to credential"));
-            dialog.PrimaryButtonText(L"Import to credential");
+            dialog.Title(box_value(L"Import browser passwords"));
+            dialog.PrimaryButtonText(L"Import all logins");
             dialog.CloseButtonText(L"Cancel");
             dialog.DefaultButton(ContentDialogButton::Primary);
-            dialog.MaxWidth(760);
+            dialog.MaxWidth(700);
 
             const auto resources{ Application::Current().Resources() };
             const auto mutedBrush{ resources
@@ -178,148 +276,65 @@ namespace winrt::AccountVault::implementation
             StackPanel content;
             content.Spacing(16);
 
+            std::wstring summary{ L"Loaded " };
+            summary += std::to_wstring(parsed.credentials.size());
+            summary += parsed.credentials.size() == 1
+                ? L" complete browser login."
+                : L" complete browser logins.";
+            if (parsed.skippedRows != 0)
+            {
+                summary += L" ";
+                summary += std::to_wstring(parsed.skippedRows);
+                summary += L" incomplete row(s) will be skipped.";
+            }
+
             TextBlock introduction;
-            introduction.Text(
-                L"Choose one browser login and map it to an existing Credential Vault record.");
+            introduction.Text(hstring{ summary });
             introduction.TextWrapping(TextWrapping::Wrap);
-            introduction.Foreground(mutedBrush);
 
-            ComboBox loginPicker;
-            loginPicker.Header(box_value(L"Browser login"));
-            loginPicker.HorizontalAlignment(HorizontalAlignment::Stretch);
-            for (std::size_t index{}; index < parsed.credentials.size(); ++index)
-            {
-                const auto& credential{ parsed.credentials[index] };
-                std::wstring label{
-                    credential.name.empty() ? credential.url : credential.name };
-                label += L"  —  ";
-                label += credential.username;
+            TextBlock formatSupport;
+            formatSupport.Text(
+                L"Chrome, Edge, Firefox, Safari, and compatible browser CSV formats are detected automatically.");
+            formatSupport.TextWrapping(TextWrapping::Wrap);
+            formatSupport.Foreground(mutedBrush);
 
-                ComboBoxItem item;
-                item.Content(box_value(hstring{ label }));
-                item.Tag(box_value(static_cast<std::uint32_t>(index)));
-                loginPicker.Items().Append(item);
-                account_vault::security::wipe(label);
-            }
-            loginPicker.SelectedIndex(0);
+            TextBlock mappingHeading;
+            mappingHeading.Text(L"CARD MAPPING");
+            mappingHeading.FontFamily(FontFamily{ L"Cascadia Mono" });
+            mappingHeading.FontWeight(
+                Windows::UI::Text::FontWeights::SemiBold());
+            mappingHeading.Foreground(accentBrush);
 
-            TextBlock loginDetails;
-            loginDetails.TextWrapping(TextWrapping::Wrap);
-            loginDetails.Foreground(mutedBrush);
+            TextBlock mapping;
+            mapping.Text(
+                L"URL  →  Website and card name\n"
+                L"Username  →  Username and email when present\n"
+                L"Password  →  Protected primary password\n"
+                L"Matching URL + username  →  Update existing card");
+            mapping.TextWrapping(TextWrapping::Wrap);
+            mapping.Foreground(mutedBrush);
 
-            const auto updateLoginDetails = [&]()
-            {
-                const int index{ loginPicker.SelectedIndex() };
-                if (index < 0 ||
-                    static_cast<std::size_t>(index) >= parsed.credentials.size())
-                {
-                    loginDetails.Text(L"");
-                    return;
-                }
-
-                const auto& credential{ parsed.credentials[index] };
-                std::wstring details{ credential.url };
-                details += L"\nUsername: ";
-                details += credential.username;
-                loginDetails.Text(hstring{ details });
-                account_vault::security::wipe(details);
-            };
-            loginPicker.SelectionChanged(
-                [&](IInspectable const&, SelectionChangedEventArgs const&)
-                {
-                    updateLoginDetails();
-                });
-            updateLoginDetails();
-
-            ComboBox accountPicker;
-            accountPicker.Header(box_value(L"Credential record"));
-            accountPicker.PlaceholderText(L"Choose a Credential Vault record");
-            accountPicker.HorizontalAlignment(HorizontalAlignment::Stretch);
-            for (auto const& account : m_repository.accounts())
-            {
-                if (account.kind != AccountKind::Credential)
-                {
-                    continue;
-                }
-
-                std::wstring label{ account.serviceName.empty()
-                    ? account.category
-                    : account.serviceName };
-                label += L"  —  ";
-                label += account.username.empty()
-                    ? account.emailAddress
-                    : account.username;
-
-                ComboBoxItem item;
-                item.Content(box_value(hstring{ label }));
-                item.Tag(box_value(account.recordId));
-                accountPicker.Items().Append(item);
-            }
-            ComboBox destinationPicker;
-            destinationPicker.Header(box_value(L"Credential slot"));
-            destinationPicker.PlaceholderText(L"Choose a credential slot");
-            destinationPicker.HorizontalAlignment(HorizontalAlignment::Stretch);
-
-            const auto updateDestinations = [&]()
-            {
-                destinationPicker.Items().Clear();
-                if (accountPicker.SelectedIndex() < 0)
-                {
-                    return;
-                }
-
-                const auto selectedAccountItem{
-                    accountPicker.SelectedItem().as<ComboBoxItem>() };
-                const RecordId id{
-                    unbox_value<RecordId>(selectedAccountItem.Tag()) };
-                const Account* account{ m_repository.find(id) };
-                if (!account || account->kind != AccountKind::Credential)
-                {
-                    return;
-                }
-
-                ComboBoxItem primary;
-                ComboBoxItem secondary;
-                primary.Content(box_value(L"Primary sign-in"));
-                secondary.Content(box_value(L"Recovery email sign-in"));
-                primary.Tag(box_value(0));
-                secondary.Tag(box_value(1));
-                destinationPicker.Items().Append(primary);
-                destinationPicker.Items().Append(secondary);
-            };
-            accountPicker.SelectionChanged(
-                [&](IInspectable const&, SelectionChangedEventArgs const&)
-                {
-                    updateDestinations();
-                });
-            updateDestinations();
+            TextBox category;
+            category.Header(box_value(L"Category for new cards"));
+            category.Text(hstring{ DefaultImportCategory });
+            category.PlaceholderText(L"Browser Import");
 
             TextBlock validation;
-            validation.Text(L"Select a browser login, Credential Vault record, and credential slot.");
+            validation.Text(L"Enter a category for newly created cards.");
             validation.Foreground(accentBrush);
             validation.Visibility(Visibility::Collapsed);
 
             TextBlock warning;
             warning.Text(
-                L"Importing replaces the selected slot's saved sign-in details. Browser CSV exports contain plaintext passwords, so delete the CSV after you finish importing it.");
+                L"This imports every complete row. Browser CSV exports contain plaintext passwords, so delete the CSV after confirming the cards were saved.");
             warning.TextWrapping(TextWrapping::Wrap);
             warning.Foreground(accentBrush);
 
             content.Children().Append(introduction);
-            if (parsed.skippedRows != 0)
-            {
-                std::wstring skipped{ std::to_wstring(parsed.skippedRows) };
-                skipped += L" incomplete CSV row(s) were skipped.";
-                TextBlock skippedNotice;
-                skippedNotice.Text(hstring{ skipped });
-                skippedNotice.Foreground(mutedBrush);
-                content.Children().Append(skippedNotice);
-            }
-
-            content.Children().Append(loginPicker);
-            content.Children().Append(loginDetails);
-            content.Children().Append(accountPicker);
-            content.Children().Append(destinationPicker);
+            content.Children().Append(formatSupport);
+            content.Children().Append(mappingHeading);
+            content.Children().Append(mapping);
+            content.Children().Append(category);
             content.Children().Append(validation);
             content.Children().Append(warning);
             dialog.Content(content);
@@ -328,10 +343,7 @@ namespace winrt::AccountVault::implementation
                 [&](account_vault::ui::ModelessToolWindow const&,
                     account_vault::ui::ModelessButtonClickEventArgs const& args)
                 {
-                    const bool valid{
-                        loginPicker.SelectedIndex() >= 0 &&
-                        accountPicker.SelectedIndex() >= 0 &&
-                        destinationPicker.SelectedIndex() >= 0 };
+                    const bool valid{ !trimCopy(category.Text().c_str()).empty() };
                     validation.Visibility(
                         valid ? Visibility::Collapsed : Visibility::Visible);
                     args.Cancel(!valid);
@@ -354,70 +366,172 @@ namespace winrt::AccountVault::implementation
                 co_return;
             }
 
-            const std::size_t loginIndex{
-                static_cast<std::size_t>(loginPicker.SelectedIndex()) };
-            const auto accountItem{
-                accountPicker.SelectedItem().as<ComboBoxItem>() };
-            const RecordId accountId{
-                unbox_value<RecordId>(accountItem.Tag()) };
-            const int destination{ destinationPicker.SelectedIndex() };
-            const Account* account{ m_repository.find(accountId) };
-            if (!account || account->kind != AccountKind::Credential ||
-                loginIndex >= parsed.credentials.size())
+            const std::wstring importCategory{
+                trimCopy(category.Text().c_str()) };
+            StatusText().Text(L"Protecting browser passwords for import...");
+            setLockedInteractionState(true);
+            setModelessWindowsInteraction(false);
+            interactionDisabled = true;
+
+            apartment_context uiThread;
+            std::vector<std::wstring> protectedPasswords;
+            std::wstring preparationError;
+            protectedPasswords.reserve(parsed.credentials.size());
+
+            co_await resume_background();
+            try
             {
-                StatusText().Text(
-                    L"The selected Credential Vault record is no longer available");
+                account_vault::services::CredentialService credentials;
+                for (auto const& credential : parsed.credentials)
+                {
+                    const auto protectedPassword{
+                        credentials.protectPassword(credential.password) };
+                    if (!protectedPassword)
+                    {
+                        preparationError =
+                            L"A browser password could not be protected locally.";
+                        protectedPasswords.clear();
+                        break;
+                    }
+                    protectedPasswords.push_back(*protectedPassword);
+                }
+            }
+            catch (...)
+            {
+                preparationError =
+                    L"The browser passwords could not be prepared for import.";
+                protectedPasswords.clear();
+            }
+            co_await uiThread;
+
+            if (!preparationError.empty() || m_isLocked ||
+                m_lockGeneration != operationGeneration)
+            {
+                setLockedInteractionState(m_isLocked);
+                setModelessWindowsInteraction(!m_isLocked);
+                interactionDisabled = false;
+                if (!m_isLocked && !preparationError.empty())
+                {
+                    StatusText().Text(hstring{ preparationError });
+                }
                 co_return;
             }
 
-            const Account current{ *account };
-            const auto& imported{ parsed.credentials[loginIndex] };
-            bool updated{};
-            if (destination == 0)
+            std::vector<Account> candidate{ m_repository.accounts() };
+            RecordId nextId{ m_repository.nextId() };
+            const RecordId maximumId{
+                (std::numeric_limits<RecordId>::max)() };
+            std::size_t createdCount{};
+            std::size_t updatedCount{};
+
+            for (std::size_t index{};
+                 index < parsed.credentials.size();
+                 ++index)
             {
-                updated = updateCredential(
-                    accountId,
-                    imported.name.empty()
-                        ? current.serviceName
-                        : imported.name,
-                    current.category,
-                    imported.username,
-                    looksLikeEmail(imported.username)
+                const auto& imported{ parsed.credentials[index] };
+                const auto match{ std::ranges::find_if(
+                    candidate,
+                    [&](Account const& account)
+                    {
+                        return matchesBrowserCredential(account, imported);
+                    }) };
+
+                if (match != candidate.end())
+                {
+                    if (match->serviceName.empty())
+                    {
+                        match->serviceName = serviceNameFor(imported);
+                    }
+                    match->username = imported.username;
+                    if (looksLikeEmail(imported.username))
+                    {
+                        match->emailAddress = imported.username;
+                    }
+                    match->website = imported.url;
+                    match->protectedPassword = protectedPasswords[index];
+                    ++updatedCount;
+                    continue;
+                }
+
+                if (nextId == 0 || nextId == maximumId ||
+                    candidate.size() >= MaximumVaultRecordCount)
+                {
+                    preparationError =
+                        L"Importing this CSV would exceed the vault record limit.";
+                    break;
+                }
+
+                candidate.push_back(Account{
+                    .recordId = nextId++,
+                    .kind = AccountKind::Credential,
+                    .emailAddress = looksLikeEmail(imported.username)
                         ? imported.username
-                        : current.emailAddress,
-                    std::optional<std::wstring>{ imported.password },
-                    imported.url,
-                    current.recoveryEmail,
-                    std::nullopt,
-                    current.notes);
-            }
-            else
-            {
-                updated = updateCredential(
-                    accountId,
-                    current.serviceName,
-                    current.category,
-                    current.username,
-                    current.emailAddress,
-                    std::nullopt,
-                    current.website,
-                    imported.username,
-                    std::optional<std::wstring>{ imported.password },
-                    current.notes);
+                        : std::wstring{},
+                    .serviceName = serviceNameFor(imported),
+                    .category = importCategory,
+                    .username = imported.username,
+                    .website = imported.url,
+                    .notes = L"Imported from browser CSV",
+                    .protectedPassword = protectedPasswords[index],
+                });
+                ++createdCount;
             }
 
-            if (!updated)
+            if (!preparationError.empty())
             {
-                StatusText().Text(
-                    L"The browser login could not be protected and saved");
+                setLockedInteractionState(m_isLocked);
+                setModelessWindowsInteraction(!m_isLocked);
+                interactionDisabled = false;
+                StatusText().Text(hstring{ preparationError });
                 co_return;
             }
 
-            refreshAccountCard(accountId);
-            std::wstring status{ L"Browser login imported into " };
-            status += unbox_value<hstring>(accountItem.Content()).c_str();
-            status += L". Delete the plaintext CSV when finished.";
-            StatusText().Text(hstring{ status });
+            std::wstring saveError;
+            bool saved{};
+            co_await resume_background();
+            try
+            {
+                saved = m_accountStorage.save(candidate, nextId, saveError);
+            }
+            catch (...)
+            {
+                saved = false;
+            }
+            co_await uiThread;
+
+            if (!saved)
+            {
+                setLockedInteractionState(m_isLocked);
+                setModelessWindowsInteraction(!m_isLocked);
+                interactionDisabled = false;
+                if (!m_isLocked)
+                {
+                    StatusText().Text(
+                        L"The browser CSV could not be saved; nothing changed");
+                }
+                co_return;
+            }
+
+            // The atomic disk save succeeded, so synchronize the in-memory
+            // repository even if the inactivity timer locked the app while
+            // the save was completing.
+            m_repository.replaceAll(std::move(candidate), nextId);
+            rebuildRecordFilter();
+            refreshAccounts();
+            setLockedInteractionState(m_isLocked);
+            setModelessWindowsInteraction(!m_isLocked);
+            interactionDisabled = false;
+
+            if (!m_isLocked)
+            {
+                std::wstring status{ L"Browser CSV imported: " };
+                status += std::to_wstring(createdCount);
+                status += L" card(s) created, ";
+                status += std::to_wstring(updatedCount);
+                status += L" matching card(s) updated. Delete the plaintext CSV when finished.";
+                StatusText().Text(hstring{ status });
+                noteUserActivity();
+            }
         }
         catch (...)
         {
@@ -436,6 +550,11 @@ namespace winrt::AccountVault::implementation
 
             try
             {
+                if (interactionDisabled)
+                {
+                    setLockedInteractionState(m_isLocked);
+                    setModelessWindowsInteraction(!m_isLocked);
+                }
                 StatusText().Text(
                     L"The browser CSV import encountered an unexpected error");
             }

@@ -76,7 +76,7 @@ and completion messages in its own file:
 | Add launcher account | `Dialogs/AddAccountDialog.cpp` |
 | View/edit launcher account | `Dialogs/AccountDetailsDialog.cpp` |
 | Add/view/edit general credential | `Dialogs/CredentialDialog.cpp` |
-| Import browser password CSV | `Dialogs/BrowserCsvImportDialog.cpp` |
+| Bulk-import browser password CSV into credential cards | `Dialogs/BrowserCsvImportDialog.cpp` |
 | Encrypted import/export backup | `Dialogs/BackupDialog.cpp` |
 | Password generator | `Dialogs/PasswordGeneratorDialog.cpp` |
 | Auto-lock settings | `Dialogs/AutoLockDialog.cpp` |
@@ -93,6 +93,10 @@ CloseButtonText
 .Text(
 .Content(
 ```
+
+The browser importer automatically recognizes common Chrome, Edge, Firefox,
+Safari, and Chromium-style column names. Header aliases and comma, semicolon,
+or tab format detection are defined in `Services/BrowserCsvImportService.cpp`.
 
 `Components/ModelessToolWindow.cpp` controls how shared popup buttons are laid
 out and displayed. It normally should not be edited just to rename a popup.

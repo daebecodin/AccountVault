@@ -468,7 +468,7 @@ namespace winrt::AccountVault::implementation
         credentialFlyout.Items().Append(copyEmailPassword);
 
         DropDownButton credentialActions{
-            makeMenuButton(L"CREDENTIALS") };
+            makeMenuButton(L"COPY") };
         credentialActions.Flyout(credentialFlyout);
 
         MenuFlyoutItem details{ makeMenuItem(L"Details") };
@@ -515,7 +515,7 @@ namespace winrt::AccountVault::implementation
         accountFlyout.Items().Append(remove);
 
         DropDownButton accountActions{
-            makeMenuButton(credential ? L"RECORD" : L"ACCOUNT") };
+            makeMenuButton(credential ? L"Actions" : L"Actions") };
         accountActions.Flyout(accountFlyout);
 
         Grid::SetColumn(credentialActions, 0);

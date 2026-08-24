@@ -77,8 +77,59 @@ namespace
         return normalized;
     }
 
+    [[nodiscard]] wchar_t detectDelimiter(std::wstring_view text) noexcept
+    {
+        constexpr std::array<wchar_t, 3> Candidates{ L',', L';', L'\t' };
+        std::array<std::size_t, Candidates.size()> counts{};
+        bool quoted{};
+
+        // Only inspect the header record. Delimiters inside quoted headings
+        // are data and must not influence format detection.
+        for (std::size_t index{}; index < text.size(); ++index)
+        {
+            const wchar_t character{ text[index] };
+            if (character == L'"')
+            {
+                if (quoted && index + 1 < text.size() &&
+                    text[index + 1] == L'"')
+                {
+                    ++index;
+                }
+                else
+                {
+                    quoted = !quoted;
+                }
+                continue;
+            }
+            if (!quoted && (character == L'\r' || character == L'\n'))
+            {
+                break;
+            }
+            if (!quoted)
+            {
+                for (std::size_t candidate{};
+                     candidate < Candidates.size();
+                     ++candidate)
+                {
+                    if (character == Candidates[candidate])
+                    {
+                        ++counts[candidate];
+                    }
+                }
+            }
+        }
+
+        const auto best{ std::ranges::max_element(counts) };
+        if (best == counts.end() || *best == 0)
+        {
+            return L',';
+        }
+        return Candidates[static_cast<std::size_t>(best - counts.begin())];
+    }
+
     [[nodiscard]] bool parseTable(
         std::wstring_view text,
+        wchar_t delimiter,
         CsvTable& rows,
         std::wstring& error)
     {
@@ -155,7 +206,7 @@ namespace
             {
                 quoted = true;
             }
-            else if (character == L',')
+            else if (character == delimiter)
             {
                 if (!pushField())
                 {
@@ -232,7 +283,11 @@ namespace account_vault::services
             result.error = L"The browser CSV is empty.";
             return result;
         }
-        if (!parseTable(csvText, rows, result.error))
+        if (!parseTable(
+                csvText,
+                detectDelimiter(csvText),
+                rows,
+                result.error))
         {
             return result;
         }
@@ -245,21 +300,26 @@ namespace account_vault::services
         const CsvRow& headers{ rows.front() };
         const auto urlColumn{ findColumn(
             headers,
-            { L"url", L"origin", L"website", L"hostname", L"loginuri" }) };
+            { L"url", L"origin", L"website", L"hostname", L"loginuri",
+                L"uri", L"siteurl", L"websiteurl", L"formurl" }) };
         const auto usernameColumn{ findColumn(
             headers,
-            { L"username", L"user", L"login", L"loginusername" }) };
+            { L"username", L"user", L"login", L"loginusername",
+                L"userid", L"email", L"emailaddress", L"account",
+                L"accountname" }) };
         const auto passwordColumn{ findColumn(
             headers,
-            { L"password", L"pass", L"loginpassword" }) };
+            { L"password", L"pass", L"passwd", L"loginpassword",
+                L"pwd" }) };
         const auto nameColumn{ findColumn(
             headers,
-            { L"name", L"title", L"service", L"site" }) };
+            { L"name", L"title", L"service", L"site", L"label",
+                L"servicename" }) };
 
         if (!urlColumn || !usernameColumn || !passwordColumn)
         {
             result.error =
-                L"The browser CSV must contain url, username, and password columns.";
+                L"The browser CSV must contain URL, username, and password headers.";
             return result;
         }
 
@@ -287,8 +347,10 @@ namespace account_vault::services
             credential.username = trimCopy(row[*usernameColumn]);
             credential.password = row[*passwordColumn];
 
-            if (credential.url.empty() || credential.username.empty() ||
-                credential.password.empty())
+            // Browsers can store password-only form entries without a
+            // username. URL and password are sufficient to create a useful
+            // Credential Vault card; the username can be added later.
+            if (credential.url.empty() || credential.password.empty())
             {
                 security::wipe(credential.name);
                 security::wipe(credential.url);

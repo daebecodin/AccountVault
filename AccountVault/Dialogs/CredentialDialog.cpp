@@ -143,7 +143,7 @@ namespace winrt::AccountVault::implementation
             username.PlaceholderText(L"Username or account ID");
 
             TextBox email;
-            email.Header(box_value(L"Email address"));
+            email.Header(box_value(L"Email address (optional)"));
             email.PlaceholderText(L"name@example.com");
 
             TextBox website;
@@ -208,7 +208,7 @@ namespace winrt::AccountVault::implementation
 
             TextBlock validation;
             validation.Text(
-                L"Service name, category, email, and password are required.");
+                L"Service name, category, password, and a username or email are required.");
             validation.Visibility(Visibility::Collapsed);
             SolidColorBrush validationBrush;
             validationBrush.Color(color(248, 81, 73));
@@ -245,12 +245,12 @@ namespace winrt::AccountVault::implementation
                             categoryValue(category) };
                         if (serviceName.Text().empty() ||
                             categoryText.empty() ||
-                            email.Text().empty() ||
+                            (username.Text().empty() && email.Text().empty()) ||
                             password.Password().empty())
                         {
                             clickArgs.Cancel(true);
                             validationText.Text(
-                                L"Service name, category, email, and password are required.");
+                                L"Service name, category, password, and a username or email are required.");
                             validationText.Visibility(Visibility::Visible);
                             completeDeferral(deferral);
                             co_return;
@@ -469,7 +469,7 @@ namespace winrt::AccountVault::implementation
             username.IsReadOnly(true);
 
             TextBox email;
-            email.Header(box_value(L"Email address"));
+            email.Header(box_value(L"Email address (optional)"));
             email.Text(account->emailAddress);
             email.IsReadOnly(true);
 
@@ -573,11 +573,11 @@ namespace winrt::AccountVault::implementation
                             categoryValue(category) };
                         if (serviceName.Text().empty() ||
                             categoryText.empty() ||
-                            email.Text().empty())
+                            (username.Text().empty() && email.Text().empty()))
                         {
                             clickArgs.Cancel(true);
                             validation.Text(
-                                L"Service name, category, and email are required.");
+                                L"Service name, category, and a username or email are required.");
                             validation.Visibility(Visibility::Visible);
                             completeDeferral(deferral);
                             co_return;
