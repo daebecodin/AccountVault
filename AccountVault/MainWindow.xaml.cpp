@@ -41,6 +41,8 @@ namespace
     constexpr int DefaultStartupThemeIndex{ 3 }; // Ayu Mirage
     constexpr wchar_t StartupThemeSettingKey[]{ L"StartupThemeIndex" };
     constexpr wchar_t AutoLockTimeoutSettingKey[]{ L"AutoLockTimeoutSeconds" };
+    constexpr wchar_t GettingStartedVersionSettingKey[]{
+        L"GettingStartedTourVersion" };
 }
 
 namespace winrt::AccountVault::implementation
@@ -87,6 +89,33 @@ namespace winrt::AccountVault::implementation
                     const double height{ self->AdaptiveHost().ActualHeight() };
                     self->updateWindowDimensions(width, height);
                     self->updateShellLayout(width);
+                    self->showGettingStartedIfNeeded();
+                }
+            });
+
+        GettingStartedTip().ActionButtonClick(
+            [shellWeak](TeachingTip const&, IInspectable const&)
+            {
+                if (const auto self{ shellWeak.get() })
+                {
+                    const int nextStep{ self->m_gettingStartedStep + 1 };
+                    if (nextStep >= self->GettingStartedStepCount)
+                    {
+                        self->finishGettingStartedTour(true);
+                    }
+                    else
+                    {
+                        self->showGettingStartedStep(nextStep);
+                    }
+                }
+            });
+
+        GettingStartedTip().CloseButtonClick(
+            [shellWeak](TeachingTip const&, IInspectable const&)
+            {
+                if (const auto self{ shellWeak.get() })
+                {
+                    self->finishGettingStartedTour(true);
                 }
             });
 
@@ -704,6 +733,11 @@ namespace winrt::AccountVault::implementation
                 showRails ? 20.0 : 0.0);
 
             m_shellLayout = nextLayout;
+
+            if (m_gettingStartedActive && m_gettingStartedStep >= 0)
+            {
+                showGettingStartedStep(m_gettingStartedStep);
+            }
         }
         catch (...)
         {
@@ -981,11 +1015,177 @@ namespace winrt::AccountVault::implementation
     {
         showAutoLockDialog();
     }
+    void MainWindow::HelpButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        startGettingStartedTour();
+    }
     void MainWindow::UnlockButton_Click(
         IInspectable const&,
         RoutedEventArgs const&)
     {
         unlockApplication();
+    }
+    void MainWindow::showGettingStartedIfNeeded() noexcept
+    {
+        if (m_gettingStartedChecked)
+        {
+            return;
+        }
+
+        m_gettingStartedChecked = true;
+
+        try
+        {
+            const auto values{
+                ApplicationData::Current().LocalSettings().Values() };
+            if (values.HasKey(GettingStartedVersionSettingKey))
+            {
+                const auto completedVersion{ unbox_value<std::int32_t>(
+                    values.Lookup(GettingStartedVersionSettingKey)) };
+                if (completedVersion >= GettingStartedTourVersion)
+                {
+                    return;
+                }
+            }
+        }
+        catch (...)
+        {
+            // A settings read should never keep the rest of the app from
+            // loading. If package settings are unavailable, show the tour for
+            // this session and simply skip persistence.
+        }
+
+        try
+        {
+            startGettingStartedTour();
+        }
+        catch (...)
+        {
+        }
+    }
+    void MainWindow::startGettingStartedTour()
+    {
+        if (m_isLocked)
+        {
+            return;
+        }
+
+        m_gettingStartedActive = true;
+        showGettingStartedStep(0);
+    }
+    void MainWindow::showGettingStartedStep(int step)
+    {
+        if (!m_gettingStartedActive ||
+            step < 0 ||
+            step >= GettingStartedStepCount)
+        {
+            return;
+        }
+
+        const bool wideLayout{ m_shellLayout == ShellLayout::Wide };
+        const auto tip{ GettingStartedTip() };
+
+        m_gettingStartedStep = step;
+        tip.ActionButtonContent(box_value(
+            step + 1 == GettingStartedStepCount ? L"Done" : L"Next"));
+        tip.CloseButtonContent(box_value(
+            step + 1 == GettingStartedStepCount ? L"Close" : L"Skip"));
+
+        switch (step)
+        {
+        case 0:
+            tip.Title(L"Welcome to Account Armory");
+            tip.Subtitle(
+                L"Launcher Vault keeps linked launcher and email logins. "
+                L"Credential Vault keeps website and app credentials. "
+                L"Switch between them from Navigation.");
+            tip.Target(HeaderTitle());
+            tip.PreferredPlacement(TeachingTipPlacementMode::Bottom);
+            break;
+        case 1:
+            tip.Title(L"Add or import records");
+            tip.Subtitle(
+                L"Add records individually, or open Credential Vault and "
+                L"choose Import browser CSV for Chrome, Edge, Firefox, and "
+                L"compatible browser exports.");
+            tip.Target(
+                wideLayout
+                    ? TopAddAccountButton().as<FrameworkElement>()
+                    : AccountActionsButton().as<FrameworkElement>());
+            tip.PreferredPlacement(TeachingTipPlacementMode::Bottom);
+            break;
+        case 2:
+            tip.Title(L"Back up carefully");
+            tip.Subtitle(
+                L"Use Import / Export for encrypted vault backups. Keep the "
+                L"recovery password safe: a forgotten recovery password "
+                L"cannot be reset or recovered.");
+            tip.Target(
+                wideLayout
+                    ? TopMoreActionsButton().as<FrameworkElement>()
+                    : AccountActionsButton().as<FrameworkElement>());
+            tip.PreferredPlacement(TeachingTipPlacementMode::Bottom);
+            break;
+        case 3:
+            tip.Title(L"Security and utilities");
+            tip.Subtitle(
+                L"Passwords stay on this Windows account and are protected "
+                L"with Windows DPAPI. Account Armory can auto-lock and uses "
+                L"Windows Hello to unlock. Utilities also includes the "
+                L"password generator, themes, and this walkthrough. "
+                L"Account Armory 1.0.");
+            tip.Target(
+                wideLayout
+                    ? HelpUtilityButton().as<FrameworkElement>()
+                    : UtilitiesButton().as<FrameworkElement>());
+            tip.PreferredPlacement(
+                wideLayout
+                    ? TeachingTipPlacementMode::Left
+                    : TeachingTipPlacementMode::Bottom);
+            break;
+        default:
+            return;
+        }
+
+        if (!tip.IsOpen())
+        {
+            tip.IsOpen(true);
+        }
+    }
+    void MainWindow::finishGettingStartedTour(
+        bool rememberCompletion) noexcept
+    {
+        try
+        {
+            GettingStartedTip().IsOpen(false);
+        }
+        catch (...)
+        {
+        }
+
+        m_gettingStartedActive = false;
+        m_gettingStartedStep = -1;
+
+        if (!rememberCompletion)
+        {
+            return;
+        }
+
+        try
+        {
+            ApplicationData::Current()
+                .LocalSettings()
+                .Values()
+                .Insert(
+                    GettingStartedVersionSettingKey,
+                    box_value(static_cast<std::int32_t>(
+                        GettingStartedTourVersion)));
+        }
+        catch (...)
+        {
+        }
     }
     void MainWindow::initializeAutoLock()
     {
@@ -1291,6 +1491,7 @@ namespace winrt::AccountVault::implementation
             CustomizeColorsButton().IsEnabled(enabled);
             PasswordGeneratorUtilityButton().IsEnabled(enabled);
             AutoLockUtilityButton().IsEnabled(enabled);
+            HelpUtilityButton().IsEnabled(enabled);
 
             if (locked)
             {
@@ -1338,6 +1539,7 @@ namespace winrt::AccountVault::implementation
         // Modeless account/tool windows may own password controls or revealed
         // values. Closing them first resumes their cleanup coroutines before
         // the lock overlay is presented.
+        finishGettingStartedTour(false);
         closeModelessWindows();
 
         // Hiding every in-place dialog resumes its owning coroutine. Details

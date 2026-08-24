@@ -6,6 +6,7 @@ Visible text is currently defined close to the screen or feature that owns it.
 | --- | --- |
 | Main shell, navigation, lock screen, static menus | `AccountVault/MainWindow.xaml` |
 | Dynamic workspace, filter, lock, and status text | `AccountVault/MainWindow.xaml.cpp` |
+| Getting-started walkthrough | `AccountVault/MainWindow.xaml.cpp` |
 | Account cards and record actions | `AccountVault/Components/AccountCard.cpp` |
 | Add launcher account | `AccountVault/Dialogs/AddAccountDialog.cpp` |
 | Launcher account details | `AccountVault/Dialogs/AccountDetailsDialog.cpp` |
@@ -28,4 +29,3 @@ labels.
 Do not rename persisted JSON fields, backup fields, encryption-purpose strings,
 settings keys, resource keys, namespaces, generated class names, or XAML event
 handlers unless the related migration/build changes are also made.
-

@@ -82,6 +82,10 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        void HelpButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void UnlockButton_Click(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -110,6 +114,8 @@ namespace winrt::AccountVault::implementation
 
         static constexpr int BuiltInThemeCount{ 10 };
         static constexpr int DefaultAutoLockTimeoutSeconds{ 90 };
+        static constexpr int GettingStartedTourVersion{ 1 };
+        static constexpr int GettingStartedStepCount{ 4 };
         static constexpr std::int32_t StartupEdgeMargin{ 48 };
         static constexpr std::int32_t RegularStartupWidth{ 1440 };
         static constexpr std::int32_t RegularStartupHeight{ 984 };
@@ -140,6 +146,9 @@ namespace winrt::AccountVault::implementation
         bool m_removeVisibleInProgress{ false };
         bool m_updatingWorkspaceNavigation{ false };
         bool m_updatingRecordFilter{ false };
+        bool m_gettingStartedChecked{ false };
+        bool m_gettingStartedActive{ false };
+        int m_gettingStartedStep{ -1 };
         ShellLayout m_shellLayout{ ShellLayout::Unknown };
         WorkspaceSection m_workspaceSection{
             WorkspaceSection::LauncherAccounts };
@@ -189,6 +198,10 @@ namespace winrt::AccountVault::implementation
         void lockApplication(std::wstring_view reason) noexcept;
         winrt::fire_and_forget unlockApplication();
         winrt::fire_and_forget showAutoLockDialog();
+        void showGettingStartedIfNeeded() noexcept;
+        void startGettingStartedTour();
+        void showGettingStartedStep(int step);
+        void finishGettingStartedTour(bool rememberCompletion) noexcept;
 
         [[nodiscard]] std::optional<RecordId> addAccount(
             Launcher launcher,

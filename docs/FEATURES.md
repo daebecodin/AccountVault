@@ -55,6 +55,7 @@ different column orders are ignored.
 | Built-in themes | Complete | Ten palettes |
 | Custom color editor | Partial | Works during the current session only |
 | Auto-lock utility | Complete | Lock now and configure timeout |
+| Getting-started walkthrough | Complete | First-run TeachingTip tour; reopen from Utilities |
 | Accessibility metadata | Complete | Names, help text, access keys, and live status |
 
 ## Reliability rules
@@ -90,4 +91,3 @@ Passed manually with fake data:
 - Add broader automated UI/input-validation tests.
 - Optional future features: Microsoft account linking, cloud sync, and game
   discovery/launching.
-

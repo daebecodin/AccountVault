@@ -12,6 +12,15 @@ Notable Account Armory changes are recorded here.
   and sensitive export files.
 - Removed the obsolete tracked `AccountVault/current` project duplicate.
 
+### Added
+
+- Added a first-run TeachingTip walkthrough covering vault navigation, adding
+  and importing records, encrypted backups, recovery-password safety, DPAPI,
+  and security utilities.
+- Added a reusable **Getting started** entry to both compact and wide utility
+  layouts, with completion remembered in local app settings.
+- Added concise tooltips to the primary navigation and compact action controls.
+
 ## 2026-08-24 — Personal alpha
 
 ### Added
@@ -69,4 +78,3 @@ Notable Account Armory changes are recorded here.
 - A signed MSIX installer and clean-machine installation test are pending.
 - Microsoft account linking, cloud sync, and automatic game discovery/launching
   are not implemented.
-

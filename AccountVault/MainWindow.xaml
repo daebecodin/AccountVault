@@ -448,6 +448,7 @@
                         IsChecked="True"
                         Style="{StaticResource WorkspaceNavToggleStyle}"
                         AutomationProperties.Name="Launcher Vault workspace"
+                        ToolTipService.ToolTip="Open Launcher Vault"
                         Click="LauncherWorkspaceButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7FC;" />
@@ -459,6 +460,7 @@
                         x:Name="CredentialWorkspaceButton"
                         Style="{StaticResource WorkspaceNavToggleStyle}"
                         AutomationProperties.Name="Credential Vault workspace"
+                        ToolTipService.ToolTip="Open Credential Vault"
                         Click="CredentialWorkspaceButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF540;" />
@@ -606,7 +608,8 @@
                             VerticalAlignment="Center"
                             AccessKey="A"
                             AutomationProperties.Name="Account actions"
-                            AutomationProperties.HelpText="Add, import, or export account records">
+                            AutomationProperties.HelpText="Add, import, or export account records"
+                            ToolTipService.ToolTip="Add, import, or export records">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem x:Name="CompactAddMenuItem" Text="Add account" Click="AddAccountButton_Click" />
@@ -628,7 +631,8 @@
                             VerticalAlignment="Center"
                             AccessKey="U"
                             AutomationProperties.Name="Utilities"
-                            AutomationProperties.HelpText="Change appearance or open utility tools">
+                            AutomationProperties.HelpText="Change appearance or open utility tools"
+                            ToolTipService.ToolTip="Utilities and getting started">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
                                     <MenuFlyoutSubItem Text="Theme">
@@ -647,6 +651,8 @@
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem Text="Password generator..." Click="PasswordGeneratorButton_Click" />
                                     <MenuFlyoutItem Text="Auto-lock..." Click="AutoLockButton_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Getting started..." Click="HelpButton_Click" />
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
@@ -984,10 +990,34 @@
                         AutomationProperties.Name="Auto-lock settings"
                         AutomationProperties.HelpText="Lock the vault now or change the inactivity timer"
                         Click="AutoLockButton_Click" />
+
+                    <Button
+                        x:Name="HelpUtilityButton"
+                        Content="Getting started..."
+                        Style="{StaticResource ActionRailButtonStyle}"
+                        AccessKey="H"
+                        AutomationProperties.Name="Getting started"
+                        AutomationProperties.HelpText="Open the Account Armory walkthrough"
+                        Click="HelpButton_Click" />
                 </StackPanel>
             </Border>
 
             </Grid>
         </Border>
+
+        <!--
+            A single reusable TeachingTip drives the first-run walkthrough and
+            the Help entry. Its text and target are selected in MainWindow so
+            the same tour follows both wide and compact shell layouts.
+        -->
+        <TeachingTip
+            x:Name="GettingStartedTip"
+            MaxWidth="420"
+            IsLightDismissEnabled="False"
+            ShouldConstrainToRootBounds="True"
+            PreferredPlacement="Bottom"
+            ActionButtonContent="Next"
+            CloseButtonContent="Skip"
+            AutomationProperties.Name="Account Armory getting started" />
     </Grid>
 </Window>
