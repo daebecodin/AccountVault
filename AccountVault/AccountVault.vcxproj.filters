@@ -241,18 +241,11 @@
     <Filter Include="Resource Files">
       <UniqueIdentifier>{85aa3705-e494-4b68-a5e3-1f74482851a4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Documentation">
-      <UniqueIdentifier>{5f9ef6e5-a51d-4e31-b349-594afef87020}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AccountArmory.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="readme.txt" />
-    <Text Include="STORAGE-README.txt" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="app.manifest" />
@@ -262,9 +255,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="TEXT_EDITING_GUIDE.md">
-      <Filter>Documentation</Filter>
-    </None>
     <None Include="Assets\AppIconSource.png">
       <Filter>Assets</Filter>
     </None>

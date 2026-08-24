@@ -1,3 +1,0 @@
-#include "resource.h"
-
-IDI_ACCOUNT_ARMORY ICON "Assets\\AccountArmory.ico"

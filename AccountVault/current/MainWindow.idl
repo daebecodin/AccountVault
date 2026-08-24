@@ -1,8 +1,0 @@
-namespace AccountVault
-{
-    [default_interface]
-    unsealed runtimeclass MainWindow : Microsoft.UI.Xaml.Window
-    {
-        MainWindow();
-    }
-}
