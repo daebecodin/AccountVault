@@ -38,6 +38,10 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        void ImportBrowserCsvButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void ExportAllAccountsButton_Click(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -123,6 +127,7 @@ namespace winrt::AccountVault::implementation
         std::vector<account_vault::ui::ModelessToolWindow> m_modelessWindows;
         account_vault::ui::ModelessToolWindow m_passwordGeneratorWindow{ nullptr };
         account_vault::ui::ModelessToolWindow m_autoLockSettingsWindow{ nullptr };
+        account_vault::ui::ModelessToolWindow m_browserCsvImportWindow{ nullptr };
         bool m_windowReady{ false };
         bool m_storageReady{ true };
         bool m_isLocked{ false };
@@ -270,6 +275,7 @@ namespace winrt::AccountVault::implementation
         winrt::fire_and_forget showCredentialDetailsDialog(RecordId id);
         winrt::fire_and_forget showColorDialog();
         winrt::fire_and_forget showPasswordGenerator();
+        winrt::fire_and_forget showBrowserCsvImport();
 
     public:
         void WorkspaceNavigation_SelectionChanged(

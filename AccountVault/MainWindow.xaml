@@ -598,6 +598,7 @@
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="CompactImportOneMenuItem" Text="Import one account..." Click="ImportOneAccountButton_Click" />
                                     <MenuFlyoutItem x:Name="CompactImportAllMenuItem" Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
+                                    <MenuFlyoutItem x:Name="CompactImportBrowserCsvMenuItem" Text="Import browser CSV..." Click="ImportBrowserCsvButton_Click" />
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="CompactExportAllMenuItem" Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
                                 </MenuFlyout>
@@ -700,6 +701,7 @@
                                 <MenuFlyout>
                                     <MenuFlyoutItem x:Name="TopImportOneMenuItem" Text="Import one account..." Click="ImportOneAccountButton_Click" />
                                     <MenuFlyoutItem x:Name="TopImportAllMenuItem" Text="Import all accounts..." Click="ImportAllAccountsButton_Click" />
+                                    <MenuFlyoutItem x:Name="TopImportBrowserCsvMenuItem" Text="Import browser CSV..." Click="ImportBrowserCsvButton_Click" />
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="TopExportAllMenuItem" Text="Export all accounts..." Click="ExportAllAccountsButton_Click" />
                                 </MenuFlyout>

@@ -36,6 +36,9 @@
     <ClCompile Include="Dialogs\BackupDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="Dialogs\BrowserCsvImportDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
@@ -46,6 +49,9 @@
       <Filter>Services</Filter>
     </ClCompile>
     <ClCompile Include="Services\CredentialService.cpp">
+      <Filter>Services</Filter>
+    </ClCompile>
+    <ClCompile Include="Services\BrowserCsvImportService.cpp">
       <Filter>Services</Filter>
     </ClCompile>
     <ClCompile Include="Services\PortableBackupService.cpp">
@@ -85,6 +91,9 @@
       <Filter>Services</Filter>
     </ClInclude>
     <ClInclude Include="Services\CredentialService.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\BrowserCsvImportService.h">
       <Filter>Services</Filter>
     </ClInclude>
     <ClInclude Include="Services\CredentialCategoryCatalog.h">
@@ -232,6 +241,9 @@
     <Filter Include="Resource Files">
       <UniqueIdentifier>{85aa3705-e494-4b68-a5e3-1f74482851a4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Documentation">
+      <UniqueIdentifier>{5f9ef6e5-a51d-4e31-b349-594afef87020}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AccountArmory.rc">
@@ -250,6 +262,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="TEXT_EDITING_GUIDE.md">
+      <Filter>Documentation</Filter>
+    </None>
     <None Include="Assets\AppIconSource.png">
       <Filter>Assets</Filter>
     </None>

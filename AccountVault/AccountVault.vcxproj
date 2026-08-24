@@ -143,6 +143,7 @@
     <ClInclude Include="Services\AccountRepository.h" />
     <ClInclude Include="Services\AccountStorageService.h" />
     <ClInclude Include="Services\CredentialService.h" />
+    <ClInclude Include="Services\BrowserCsvImportService.h" />
     <ClInclude Include="Services\CredentialCategoryCatalog.h" />
     <ClInclude Include="Services\EmailProviderCatalog.h" />
     <ClInclude Include="Services\LauncherCatalog.h" />
@@ -170,10 +171,12 @@
     <ClCompile Include="Dialogs\CredentialDialog.cpp" />
     <ClCompile Include="Dialogs\PasswordGeneratorDialog.cpp" />
     <ClCompile Include="Dialogs\BackupDialog.cpp" />
+    <ClCompile Include="Dialogs\BrowserCsvImportDialog.cpp" />
     <ClCompile Include="Dialogs\ThemeEditorDialog.cpp" />
     <ClCompile Include="Services\AccountPersistence.cpp" />
     <ClCompile Include="Services\AccountStorageService.cpp" />
     <ClCompile Include="Services\CredentialService.cpp" />
+    <ClCompile Include="Services\BrowserCsvImportService.cpp" />
     <ClCompile Include="Services\PortableBackupService.cpp" />
     <ClCompile Include="Services\UserVerificationService.cpp" />
     <ClCompile Include="Themes\ThemeService.cpp" />
@@ -247,6 +250,7 @@
   -->
   <ItemGroup>
     <None Include="FEATURES.md" />
+    <None Include="TEXT_EDITING_GUIDE.md" />
     <None Include="packages.config" />
     <None Include="Assets\AppIconSource.png">
       <DeploymentContent>false</DeploymentContent>
