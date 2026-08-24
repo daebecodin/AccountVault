@@ -730,7 +730,7 @@
                             Content="Remove shown"
                             Height="44"
                             Padding="16,0"
-                            Visibility="Collapsed"
+                            Visibility="Visible"
                             AccessKey="R"
                             Background="{StaticResource AppSurfaceAltBrush}"
                             BorderBrush="{StaticResource AppBorderBrush}"

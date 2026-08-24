@@ -679,6 +679,19 @@ namespace winrt::AccountVault::implementation
             TopMoreActionsButton().Visibility(
                 showRails ? Visibility::Visible : Visibility::Collapsed);
 
+            // Keep this action visible at every window size. Its local XAML
+            // values otherwise win over the responsive-state setters.
+            TopRemoveVisibleButton().Visibility(Visibility::Visible);
+            Grid::SetRow(
+                TopRemoveVisibleButton(),
+                nextLayout == ShellLayout::Compact ? 1 : 0);
+            Grid::SetColumn(
+                TopRemoveVisibleButton(),
+                nextLayout == ShellLayout::Wide
+                    ? 4
+                    : nextLayout == ShellLayout::CenterOnly ? 2 : 1);
+            Grid::SetColumnSpan(TopRemoveVisibleButton(), 1);
+
             LeftRailColumn().Width(
                 GridLengthHelper::FromPixels(
                     showRails ? 220.0 : 0.0));
