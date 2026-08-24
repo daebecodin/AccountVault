@@ -535,8 +535,6 @@
                     Margin="12"
                     Padding="18"
                     Background="{StaticResource AppBackgroundBrush}"
-                    BorderBrush="{StaticResource AppBorderBrush}"
-                    BorderThickness="1"
                     CornerRadius="10,10,10,10"
                     AutomationProperties.Name="Account workspace">
                 <Grid>
