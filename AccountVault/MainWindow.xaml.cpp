@@ -7,6 +7,7 @@
 #endif
 
 #include <microsoft.ui.xaml.window.h>
+#include <commctrl.h>
 #include <winrt/Microsoft.UI.Input.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
@@ -20,6 +21,8 @@
 #include <chrono>
 #include <string>
 #include <vector>
+
+#pragma comment(lib, "Comctl32.lib")
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -316,6 +319,15 @@ namespace winrt::AccountVault::implementation
     {
         closeModelessWindows();
 
+        if (m_windowHandle && ::IsWindow(m_windowHandle))
+        {
+            ::RemoveWindowSubclass(
+                m_windowHandle,
+                &MainWindow::windowSubclassProc,
+                reinterpret_cast<UINT_PTR>(this));
+        }
+        m_windowHandle = nullptr;
+
         try
         {
             if (m_autoLockTimer)
@@ -366,6 +378,113 @@ namespace winrt::AccountVault::implementation
         catch (...)
         {
         }
+    }
+
+    void MainWindow::installWindowSizeConstraints() noexcept
+    {
+        try
+        {
+            HWND windowHandle{};
+            check_hresult(
+                m_inner.as<::IWindowNative>()->get_WindowHandle(&windowHandle));
+
+            if (!windowHandle)
+            {
+                return;
+            }
+
+            if (::SetWindowSubclass(
+                    windowHandle,
+                    &MainWindow::windowSubclassProc,
+                    reinterpret_cast<UINT_PTR>(this),
+                    reinterpret_cast<DWORD_PTR>(this)))
+            {
+                m_windowHandle = windowHandle;
+            }
+        }
+        catch (...)
+        {
+            // Retain normal Windows sizing behavior if subclassing is unavailable.
+        }
+    }
+
+    void MainWindow::applyWindowSizeConstraints(
+        MINMAXINFO& limits) const noexcept
+    {
+        if (!m_windowHandle)
+        {
+            return;
+        }
+
+        const UINT dpi{ ::GetDpiForWindow(m_windowHandle) };
+        const DWORD style{
+            static_cast<DWORD>(::GetWindowLongPtrW(m_windowHandle, GWL_STYLE)) };
+        const DWORD extendedStyle{
+            static_cast<DWORD>(::GetWindowLongPtrW(m_windowHandle, GWL_EXSTYLE)) };
+
+        const auto outerSizeForClient =
+            [dpi, style, extendedStyle](std::int32_t width, std::int32_t height)
+            {
+                RECT bounds{
+                    0,
+                    0,
+                    ::MulDiv(width, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI),
+                    ::MulDiv(height, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI) };
+
+                static_cast<void>(::AdjustWindowRectExForDpi(
+                    &bounds,
+                    style,
+                    FALSE,
+                    extendedStyle,
+                    dpi));
+
+                return SIZE{
+                    bounds.right - bounds.left,
+                    bounds.bottom - bounds.top };
+            };
+
+        const SIZE minimum{
+            outerSizeForClient(MinimumClientWidth, MinimumClientHeight) };
+        const SIZE maximum{
+            outerSizeForClient(MaximumClientWidth, MaximumClientHeight) };
+
+        limits.ptMinTrackSize.x = minimum.cx;
+        limits.ptMinTrackSize.y = minimum.cy;
+        limits.ptMaxTrackSize.x = maximum.cx;
+        limits.ptMaxTrackSize.y = maximum.cy;
+        limits.ptMaxSize.x = (std::min)(limits.ptMaxSize.x, maximum.cx);
+        limits.ptMaxSize.y = (std::min)(limits.ptMaxSize.y, maximum.cy);
+    }
+
+    LRESULT CALLBACK MainWindow::windowSubclassProc(
+        HWND windowHandle,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData) noexcept
+    {
+        auto* self{ reinterpret_cast<MainWindow*>(referenceData) };
+
+        if (self && message == WM_GETMINMAXINFO)
+        {
+            const LRESULT result{
+                ::DefSubclassProc(windowHandle, message, wParam, lParam) };
+            self->applyWindowSizeConstraints(
+                *reinterpret_cast<MINMAXINFO*>(lParam));
+            return result;
+        }
+
+        if (self && message == WM_NCDESTROY)
+        {
+            ::RemoveWindowSubclass(
+                windowHandle,
+                &MainWindow::windowSubclassProc,
+                subclassId);
+            self->m_windowHandle = nullptr;
+        }
+
+        return ::DefSubclassProc(windowHandle, message, wParam, lParam);
     }
 
     void MainWindow::applyDefaultWindowSize() noexcept
@@ -894,6 +1013,7 @@ namespace winrt::AccountVault::implementation
                 true);
 
             m_appWindow = this->AppWindow();
+            installWindowSizeConstraints();
             applyWindowChromeTheme();
             applyDefaultWindowSize();
             m_appWindowChangedToken = m_appWindow.Changed(

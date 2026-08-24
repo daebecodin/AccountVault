@@ -99,9 +99,13 @@ namespace winrt::AccountVault::implementation
         static constexpr int AutoLockTimeoutSeconds{ 5 * 60 };
         static constexpr std::int32_t StartupEdgeMargin{ 48 };
         static constexpr std::int32_t RegularStartupWidth{ 1440 };
-        static constexpr std::int32_t RegularStartupHeight{ 900 };
+        static constexpr std::int32_t RegularStartupHeight{ 984 };
         static constexpr std::int32_t UltrawideStartupWidth{ 2300 };
         static constexpr std::int32_t UltrawideStartupHeight{ 984 };
+        static constexpr std::int32_t MinimumClientWidth{ 1120 };
+        static constexpr std::int32_t MinimumClientHeight{ 945 };
+        static constexpr std::int32_t MaximumClientWidth{ 2315 };
+        static constexpr std::int32_t MaximumClientHeight{ 945 };
         static constexpr double UltrawideAspectRatioThreshold{ 2.0 };
         static constexpr double CenterOnlyShellMinWidth{ 760.0 };
         static constexpr double WideShellMinWidth{ 1440.0 };
@@ -130,6 +134,7 @@ namespace winrt::AccountVault::implementation
         std::chrono::steady_clock::time_point m_autoLockDeadline{};
         Microsoft::UI::Dispatching::DispatcherQueueTimer m_autoLockTimer{ nullptr };
         Microsoft::UI::Windowing::AppWindow m_appWindow{ nullptr };
+        HWND m_windowHandle{};
         winrt::event_token m_appWindowChangedToken{};
         winrt::event_token m_suspendStatusChangedToken{};
 
@@ -146,6 +151,15 @@ namespace winrt::AccountVault::implementation
             winrt::hstring const& message);
         void removeAccount(RecordId id);
         void applyDefaultWindowSize() noexcept;
+        void installWindowSizeConstraints() noexcept;
+        void applyWindowSizeConstraints(MINMAXINFO& limits) const noexcept;
+        static LRESULT CALLBACK windowSubclassProc(
+            HWND windowHandle,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData) noexcept;
         void applyWindowChromeTheme() noexcept;
         void updateWindowDimensions(double width, double height) noexcept;
         void updateShellLayout(double width) noexcept;
