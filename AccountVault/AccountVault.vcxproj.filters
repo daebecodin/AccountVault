@@ -21,6 +21,9 @@
     <ClCompile Include="Dialogs\AddAccountDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="Dialogs\AutoLockDialog.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
     <ClCompile Include="Dialogs\AccountDetailsDialog.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>

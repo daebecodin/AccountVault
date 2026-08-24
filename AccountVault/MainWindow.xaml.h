@@ -70,6 +70,10 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        void AutoLockButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void UnlockButton_Click(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
@@ -97,7 +101,7 @@ namespace winrt::AccountVault::implementation
         };
 
         static constexpr int BuiltInThemeCount{ 10 };
-        static constexpr int AutoLockTimeoutSeconds{ 5 * 60 };
+        static constexpr int DefaultAutoLockTimeoutSeconds{ 90 };
         static constexpr std::int32_t StartupEdgeMargin{ 48 };
         static constexpr std::int32_t RegularStartupWidth{ 1440 };
         static constexpr std::int32_t RegularStartupHeight{ 984 };
@@ -118,6 +122,7 @@ namespace winrt::AccountVault::implementation
         std::vector<ThemeDefinition> m_customThemes;
         std::vector<account_vault::ui::ModelessToolWindow> m_modelessWindows;
         account_vault::ui::ModelessToolWindow m_passwordGeneratorWindow{ nullptr };
+        account_vault::ui::ModelessToolWindow m_autoLockSettingsWindow{ nullptr };
         bool m_windowReady{ false };
         bool m_storageReady{ true };
         bool m_isLocked{ false };
@@ -132,6 +137,7 @@ namespace winrt::AccountVault::implementation
         std::int32_t m_displayedWindowHeight{ -1 };
         std::uint64_t m_lockGeneration{};
         std::uint32_t m_accountClipboardSequence{};
+        int m_autoLockTimeoutSeconds{ DefaultAutoLockTimeoutSeconds };
         std::chrono::steady_clock::time_point m_autoLockDeadline{};
         Microsoft::UI::Dispatching::DispatcherQueueTimer m_autoLockTimer{ nullptr };
         Microsoft::UI::Windowing::AppWindow m_appWindow{ nullptr };
@@ -166,9 +172,11 @@ namespace winrt::AccountVault::implementation
         void updateShellLayout(double width) noexcept;
         void initializeAutoLock();
         void noteUserActivity() noexcept;
+        void setAutoLockTimeout(int timeoutSeconds) noexcept;
         void updateAutoLockStatus() noexcept;
         void lockApplication(std::wstring_view reason) noexcept;
         winrt::fire_and_forget unlockApplication();
+        winrt::fire_and_forget showAutoLockDialog();
 
         [[nodiscard]] std::optional<RecordId> addAccount(
             Launcher launcher,

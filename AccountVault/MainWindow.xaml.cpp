@@ -40,6 +40,7 @@ namespace
 {
     constexpr int DefaultStartupThemeIndex{ 3 }; // Ayu Mirage
     constexpr wchar_t StartupThemeSettingKey[]{ L"StartupThemeIndex" };
+    constexpr wchar_t AutoLockTimeoutSettingKey[]{ L"AutoLockTimeoutSeconds" };
 }
 
 namespace winrt::AccountVault::implementation
@@ -955,6 +956,12 @@ namespace winrt::AccountVault::implementation
     {
         showPasswordGenerator();
     }
+    void MainWindow::AutoLockButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        showAutoLockDialog();
+    }
     void MainWindow::UnlockButton_Click(
         IInspectable const&,
         RoutedEventArgs const&)
@@ -967,6 +974,26 @@ namespace winrt::AccountVault::implementation
         {
             const auto weak{ get_weak() };
             const auto dispatcher{ DispatcherQueue() };
+
+            try
+            {
+                const auto values{ ApplicationData::Current()
+                    .LocalSettings()
+                    .Values() };
+                if (values.HasKey(AutoLockTimeoutSettingKey))
+                {
+                    const auto savedTimeout{ unbox_value<std::int32_t>(
+                        values.Lookup(AutoLockTimeoutSettingKey)) };
+                    if (savedTimeout >= 30 && savedTimeout <= 15 * 60)
+                    {
+                        m_autoLockTimeoutSeconds = savedTimeout;
+                    }
+                }
+            }
+            catch (...)
+            {
+                m_autoLockTimeoutSeconds = DefaultAutoLockTimeoutSeconds;
+            }
 
             m_autoLockTimer = dispatcher.CreateTimer();
             m_autoLockTimer.Interval(std::chrono::seconds{ 1 });
@@ -1090,7 +1117,7 @@ namespace winrt::AccountVault::implementation
                     });
 
             m_autoLockDeadline = std::chrono::steady_clock::now() +
-                std::chrono::seconds{ AutoLockTimeoutSeconds };
+                std::chrono::seconds{ m_autoLockTimeoutSeconds };
             m_autoLockTimer.Start();
             updateAutoLockStatus();
         }
@@ -1119,7 +1146,50 @@ namespace winrt::AccountVault::implementation
             // Only move the deadline here. The one-second timer owns text
             // updates so high-frequency pointer movement stays inexpensive.
             m_autoLockDeadline = std::chrono::steady_clock::now() +
-                std::chrono::seconds{ AutoLockTimeoutSeconds };
+                std::chrono::seconds{ m_autoLockTimeoutSeconds };
+        }
+        catch (...)
+        {
+        }
+    }
+    void MainWindow::setAutoLockTimeout(int timeoutSeconds) noexcept
+    {
+        if (timeoutSeconds <= 0)
+        {
+            return;
+        }
+
+        m_autoLockTimeoutSeconds = timeoutSeconds;
+
+        try
+        {
+            ApplicationData::Current()
+                .LocalSettings()
+                .Values()
+                .Insert(
+                    AutoLockTimeoutSettingKey,
+                    box_value(static_cast<std::int32_t>(timeoutSeconds)));
+        }
+        catch (...)
+        {
+            // The active session still uses the selected timer if settings
+            // storage is temporarily unavailable.
+        }
+
+        if (m_isLocked)
+        {
+            return;
+        }
+
+        try
+        {
+            m_autoLockDeadline = std::chrono::steady_clock::now() +
+                std::chrono::seconds{ m_autoLockTimeoutSeconds };
+            if (m_autoLockTimer)
+            {
+                m_autoLockTimer.Start();
+            }
+            updateAutoLockStatus();
         }
         catch (...)
         {
@@ -1138,7 +1208,7 @@ namespace winrt::AccountVault::implementation
             const auto now{ std::chrono::steady_clock::now() };
             if (now >= m_autoLockDeadline)
             {
-                lockApplication(L"five minutes of inactivity elapsed");
+                lockApplication(L"the inactivity timer elapsed");
                 return;
             }
 
@@ -1260,7 +1330,6 @@ namespace winrt::AccountVault::implementation
         {
             LockOverlay().Visibility(Visibility::Visible);
             UnlockButton().IsEnabled(true);
-            UnlockButton().Content(box_value(L"Unlock"));
             AutoLockStatusText().Text(L"LOCKED");
 
             std::wstring status{ L"Account Armory locked: " };
@@ -1288,7 +1357,6 @@ namespace winrt::AccountVault::implementation
             const std::uint64_t unlockGeneration{ m_lockGeneration };
             unlockButton = UnlockButton();
             unlockButton.IsEnabled(false);
-            unlockButton.Content(box_value(L"Verifying..."));
 
             const bool verified{ co_await verifyUser(
                 L"Verify your identity to unlock Account Armory") };
@@ -1299,7 +1367,7 @@ namespace winrt::AccountVault::implementation
                 m_isLocked = false;
                 LockOverlay().Visibility(Visibility::Collapsed);
                 m_autoLockDeadline = std::chrono::steady_clock::now() +
-                    std::chrono::seconds{ AutoLockTimeoutSeconds };
+                    std::chrono::seconds{ m_autoLockTimeoutSeconds };
                 m_autoLockTimer.Start();
                 updateAutoLockStatus();
                 StatusText().Text(L"Account Armory unlocked");
@@ -1322,7 +1390,6 @@ namespace winrt::AccountVault::implementation
             if (unlockButton)
             {
                 unlockButton.IsEnabled(true);
-                unlockButton.Content(box_value(L"Unlock"));
             }
         }
         catch (...)

@@ -165,6 +165,7 @@
     <ClCompile Include="Components\AccountCard.cpp" />
     <ClCompile Include="Components\ModelessToolWindow.cpp" />
     <ClCompile Include="Dialogs\AddAccountDialog.cpp" />
+    <ClCompile Include="Dialogs\AutoLockDialog.cpp" />
     <ClCompile Include="Dialogs\AccountDetailsDialog.cpp" />
     <ClCompile Include="Dialogs\CredentialDialog.cpp" />
     <ClCompile Include="Dialogs\PasswordGeneratorDialog.cpp" />
