@@ -472,6 +472,9 @@
                 -->
                 <NavigationView.Resources>
                     <CornerRadius x:Key="NavigationViewContentGridCornerRadius">10,10,10,10</CornerRadius>
+                    <Thickness x:Key="NavigationViewContentGridBorderThickness">0</Thickness>
+                    <Thickness x:Key="NavigationViewMinimalContentGridBorderThickness">0</Thickness>
+                    <Thickness x:Key="TopNavigationViewContentGridBorderThickness">0</Thickness>
                     <StaticResource
                         x:Key="NavigationViewContentBackground"
                         ResourceKey="AppBackgroundBrush" />
