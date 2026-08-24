@@ -1241,6 +1241,46 @@ namespace winrt::AccountVault::implementation
             }
         }
     }
+    void MainWindow::setLockedInteractionState(bool locked) noexcept
+    {
+        const bool enabled{ !locked };
+
+        try
+        {
+            LeftRail().IsHitTestVisible(enabled);
+            RightRail().IsHitTestVisible(enabled);
+            HeaderGrid().IsHitTestVisible(enabled);
+            ToolbarGrid().IsHitTestVisible(enabled);
+            WorkspaceRecordsContainer().IsHitTestVisible(enabled);
+            StatusContainer().IsHitTestVisible(enabled);
+
+            LauncherWorkspaceButton().IsEnabled(enabled);
+            CredentialWorkspaceButton().IsEnabled(enabled);
+            LauncherNavigationItem().IsEnabled(enabled);
+            CredentialNavigationItem().IsEnabled(enabled);
+            AccountActionsButton().IsEnabled(enabled);
+            UtilitiesButton().IsEnabled(enabled);
+            SearchBox().IsEnabled(enabled);
+            RecordFilter().IsEnabled(enabled);
+            TopAddAccountButton().IsEnabled(enabled);
+            TopMoreActionsButton().IsEnabled(enabled);
+            AccountsList().IsEnabled(enabled);
+            ThemePicker().IsEnabled(enabled);
+            CustomizeColorsButton().IsEnabled(enabled);
+            PasswordGeneratorUtilityButton().IsEnabled(enabled);
+            AutoLockUtilityButton().IsEnabled(enabled);
+
+            if (locked)
+            {
+                CompactNavigation().IsPaneOpen(false);
+            }
+            CompactNavigation().IsPaneToggleButtonVisible(
+                enabled && m_shellLayout != ShellLayout::Wide);
+        }
+        catch (...)
+        {
+        }
+    }
     void MainWindow::lockApplication(std::wstring_view reason) noexcept
     {
         // Every lock request invalidates an unlock already awaiting Windows
@@ -1328,6 +1368,7 @@ namespace winrt::AccountVault::implementation
 
         try
         {
+            setLockedInteractionState(true);
             LockOverlay().Visibility(Visibility::Visible);
             UnlockButton().IsEnabled(true);
             AutoLockStatusText().Text(L"LOCKED");
@@ -1366,6 +1407,7 @@ namespace winrt::AccountVault::implementation
             {
                 m_isLocked = false;
                 LockOverlay().Visibility(Visibility::Collapsed);
+                setLockedInteractionState(false);
                 m_autoLockDeadline = std::chrono::steady_clock::now() +
                     std::chrono::seconds{ m_autoLockTimeoutSeconds };
                 m_autoLockTimer.Start();

@@ -174,6 +174,7 @@ namespace winrt::AccountVault::implementation
         void noteUserActivity() noexcept;
         void setAutoLockTimeout(int timeoutSeconds) noexcept;
         void updateAutoLockStatus() noexcept;
+        void setLockedInteractionState(bool locked) noexcept;
         void lockApplication(std::wstring_view reason) noexcept;
         winrt::fire_and_forget unlockApplication();
         winrt::fire_and_forget showAutoLockDialog();

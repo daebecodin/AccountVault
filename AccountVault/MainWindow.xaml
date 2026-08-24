@@ -707,7 +707,7 @@
                         </DropDownButton>
                     </Grid>
 
-                    <Grid Grid.Row="2">
+                    <Grid x:Name="WorkspaceRecordsContainer" Grid.Row="2">
                         <ListView
                             x:Name="AccountsList"
                             SelectionMode="None"
@@ -749,6 +749,61 @@
                                 Foreground="{StaticResource AppMutedTextBrush}" />
                         </StackPanel>
                     </Grid>
+
+                    <Border
+                        x:Name="LockOverlay"
+                        Grid.Row="2"
+                        Canvas.ZIndex="1000"
+                        Padding="36"
+                        Background="{StaticResource AppBackgroundBrush}"
+                        AutomationProperties.Name="Account Armory locked"
+                        AutomationProperties.LiveSetting="Assertive"
+                        Visibility="Collapsed">
+                        <StackPanel
+                            MaxWidth="620"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="24">
+                            <Image
+                                Width="280"
+                                Height="280"
+                                HorizontalAlignment="Center"
+                                Source="Assets/Square150x150Logo.scale-200.png"
+                                Stretch="Uniform"
+                                AutomationProperties.Name="Account Armory vault icon" />
+                            <TextBlock
+                                Text="Unlock To Enter The Vault"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap"
+                                FontSize="28"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource AppTextBrush}" />
+                            <Button
+                                x:Name="UnlockButton"
+                                MinWidth="240"
+                                Height="48"
+                                Padding="18,0"
+                                Style="{StaticResource PrimaryActionButtonStyle}"
+                                HorizontalAlignment="Center"
+                                AccessKey="U"
+                                AutomationProperties.Name="Unlock Account Armory"
+                                ToolTipService.ToolTip="Unlock Account Armory"
+                                Click="UnlockButton_Click">
+                                <StackPanel
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="10">
+                                    <FontIcon
+                                        FontFamily="Segoe Fluent Icons"
+                                        FontSize="18"
+                                        Glyph="&#xE785;" />
+                                    <TextBlock
+                                        Text="Unlock"
+                                        VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                     </Grid>
                 </Border>
             </NavigationView>
@@ -879,6 +934,7 @@
                         Click="CustomizeColorsButton_Click" />
 
                     <Button
+                        x:Name="PasswordGeneratorUtilityButton"
                         Content="Password generator..."
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="P"
@@ -887,6 +943,7 @@
                         Click="PasswordGeneratorButton_Click" />
 
                     <Button
+                        x:Name="AutoLockUtilityButton"
                         Content="Auto-lock..."
                         Style="{StaticResource ActionRailButtonStyle}"
                         AccessKey="L"
@@ -896,70 +953,6 @@
                 </StackPanel>
             </Border>
 
-            <Border
-                x:Name="LockOverlay"
-                Grid.RowSpan="2"
-                Grid.ColumnSpan="3"
-                Canvas.ZIndex="1000"
-                Padding="48"
-                Background="{StaticResource AppBackgroundBrush}"
-                AutomationProperties.Name="Account Armory locked"
-                AutomationProperties.LiveSetting="Assertive"
-                Visibility="Collapsed">
-                <Grid
-                    MaxWidth="620"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-                    <StackPanel
-                        HorizontalAlignment="Center"
-                        Spacing="24">
-                        <Image
-                            Width="300"
-                            Height="300"
-                            HorizontalAlignment="Center"
-                            Source="Assets/Square150x150Logo.scale-200.png"
-                            Stretch="Uniform"
-                            AutomationProperties.Name="Account Armory vault icon" />
-                        <TextBlock
-                            Text="Unlock To Enter The Vault"
-                            TextAlignment="Center"
-                            TextWrapping="Wrap"
-                            FontSize="28"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource AppTextBrush}" />
-                        <Button
-                            x:Name="UnlockButton"
-                            Width="88"
-                            Height="88"
-                            Padding="0"
-                            Style="{StaticResource PrimaryActionButtonStyle}"
-                            HorizontalAlignment="Center"
-                            CornerRadius="44"
-                            AccessKey="U"
-                            AutomationProperties.Name="Unlock Account Armory"
-                            ToolTipService.ToolTip="Unlock Account Armory"
-                            Click="UnlockButton_Click">
-                            <Grid Width="34" Height="44">
-                                <Ellipse
-                                    Width="22"
-                                    Height="22"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Top"
-                                    Fill="{StaticResource AppBackgroundBrush}" />
-                                <Path
-                                    Width="26"
-                                    Height="30"
-                                    Margin="0,14,0,0"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Bottom"
-                                    Data="M 10,0 L 16,0 L 24,30 L 2,30 Z"
-                                    Fill="{StaticResource AppBackgroundBrush}"
-                                    Stretch="Fill" />
-                            </Grid>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
             </Grid>
         </Border>
     </Grid>

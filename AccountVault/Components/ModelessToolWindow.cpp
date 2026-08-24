@@ -676,8 +676,16 @@ namespace account_vault::ui
         primary.Click([weakState](IInspectable const&, RoutedEventArgs const&)
         {
             const auto state{ weakState.lock() };
-            if (!state || state->closed || !state->primaryHandler)
+            if (!state || state->closed)
             {
+                return;
+            }
+
+            // Match ContentDialog semantics: a primary button closes with a
+            // Primary result even when the caller has no validation handler.
+            if (!state->primaryHandler)
+            {
+                ModelessToolWindow{ state }.Close(ContentDialogResult::Primary);
                 return;
             }
 

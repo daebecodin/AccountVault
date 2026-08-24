@@ -73,12 +73,10 @@ namespace winrt::AccountVault::implementation
             resources.Lookup(box_value(L"AppBorderBrush")).as<Brush>() };
         const auto accentBrush{
             resources.Lookup(box_value(L"AppAccentBrush")).as<Brush>() };
-        const auto accentHoverBrush{
-            resources.Lookup(box_value(L"AppAccentHoverBrush")).as<Brush>() };
-        const auto accentPressedBrush{
-            resources.Lookup(box_value(L"AppAccentPressedBrush")).as<Brush>() };
-        const auto backgroundBrush{
-            resources.Lookup(box_value(L"AppBackgroundBrush")).as<Brush>() };
+        const auto accentLowBrush{
+            resources.Lookup(box_value(L"AppAccentLowBrush")).as<Brush>() };
+        const auto accentMediumBrush{
+            resources.Lookup(box_value(L"AppAccentMediumBrush")).as<Brush>() };
         const auto textBrush{
             resources.Lookup(box_value(L"AppTextBrush")).as<Brush>() };
         const auto mutedTextBrush{
@@ -187,10 +185,11 @@ namespace winrt::AccountVault::implementation
         const RecordId cardId{ account.recordId };
 
         const auto makeMenuButton = [
+            surfaceAltBrush,
+            borderBrush,
             accentBrush,
-            accentHoverBrush,
-            accentPressedBrush,
-            backgroundBrush](hstring const& label)
+            accentLowBrush,
+            accentMediumBrush](hstring const& label)
         {
             DropDownButton button;
             button.Content(box_value(label));
@@ -200,40 +199,40 @@ namespace winrt::AccountVault::implementation
             button.HorizontalAlignment(HorizontalAlignment::Stretch);
             button.HorizontalContentAlignment(HorizontalAlignment::Center);
 
-            // These are the card's primary actions. Preserve the stock
-            // DropDownButton template/chevron and override only its themed
-            // state brushes so WinUI keeps the native transition animation.
-            button.Background(accentBrush);
-            button.Foreground(backgroundBrush);
-            button.BorderBrush(accentBrush);
+            // Repeated card actions stay neutral at rest so the page's primary
+            // action retains visual priority. Theme accents remain visible in
+            // the label, chevron, border, hover, and pressed states.
+            button.Background(surfaceAltBrush);
+            button.Foreground(accentBrush);
+            button.BorderBrush(borderBrush);
             const auto buttonResources{ button.Resources() };
             buttonResources.Insert(
                 box_value(L"ButtonBackground"),
-                accentBrush);
+                surfaceAltBrush);
             buttonResources.Insert(
                 box_value(L"ButtonBackgroundPointerOver"),
-                accentHoverBrush);
+                accentLowBrush);
             buttonResources.Insert(
                 box_value(L"ButtonBackgroundPressed"),
-                accentPressedBrush);
+                accentMediumBrush);
             buttonResources.Insert(
                 box_value(L"ButtonBorderBrush"),
-                accentBrush);
+                borderBrush);
             buttonResources.Insert(
                 box_value(L"ButtonBorderBrushPointerOver"),
-                accentHoverBrush);
+                accentBrush);
             buttonResources.Insert(
                 box_value(L"ButtonBorderBrushPressed"),
-                accentPressedBrush);
+                accentBrush);
             buttonResources.Insert(
                 box_value(L"ButtonForeground"),
-                backgroundBrush);
+                accentBrush);
             buttonResources.Insert(
                 box_value(L"ButtonForegroundPointerOver"),
-                backgroundBrush);
+                accentBrush);
             buttonResources.Insert(
                 box_value(L"ButtonForegroundPressed"),
-                backgroundBrush);
+                accentBrush);
             return button;
         };
 
