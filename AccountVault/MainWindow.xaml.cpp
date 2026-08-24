@@ -667,6 +667,9 @@ namespace winrt::AccountVault::implementation
             AccountActionsButton().Visibility(
                 showRails ? Visibility::Collapsed : Visibility::Visible);
 
+            UtilitiesButton().Visibility(
+                showRails ? Visibility::Collapsed : Visibility::Visible);
+
             TopAddAccountButton().Visibility(
                 showRails ? Visibility::Visible : Visibility::Collapsed);
 

@@ -3,22 +3,31 @@
 #include "../resource.h"
 
 #include <microsoft.ui.xaml.window.h>
+#include <winrt/Microsoft.UI.Composition.h>
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Microsoft.UI.Xaml.Hosting.h>
+#include <winrt/Windows.Foundation.Numerics.h>
 #include <winrt/Windows.Graphics.h>
 #include <winrt/Windows.UI.h>
 #include <winrt/Windows.UI.Text.h>
+#include <winrt/Windows.UI.ViewManagement.h>
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <utility>
 
 using namespace winrt;
+using namespace Microsoft::UI::Composition;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
+using namespace Microsoft::UI::Xaml::Hosting;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace Windows::Foundation;
+using namespace Windows::Foundation::Numerics;
 using namespace Windows::Graphics;
+using namespace Windows::UI::ViewManagement;
 
 namespace account_vault::ui
 {
@@ -32,6 +41,7 @@ namespace account_vault::ui
         Button primaryButton{ nullptr };
         Button closeButton{ nullptr };
         Microsoft::UI::Dispatching::DispatcherQueue dispatcher{ nullptr };
+        CompositionScopedBatch closeAnimationBatch{ nullptr };
         winrt::handle closedEvent;
         ContentDialogResult result{ ContentDialogResult::None };
         std::function<void(
@@ -44,6 +54,8 @@ namespace account_vault::ui
         HWND windowHandle{};
         HWND ownerWindowHandle{};
         std::atomic_bool closed{};
+        std::atomic_bool entryAnimationPlayed{};
+        std::atomic_bool closeAnimationStarted{};
         bool activated{};
 
         ~ModelessToolWindowState()
@@ -255,6 +267,202 @@ namespace account_vault::ui
             alias(L"AccentButtonForeground", L"AppBackgroundBrush");
             alias(L"AccentButtonForegroundPointerOver", L"AppBackgroundBrush");
             alias(L"AccentButtonForegroundPressed", L"AppBackgroundBrush");
+        }
+
+        bool systemAnimationsEnabled() noexcept
+        {
+            try
+            {
+                return UISettings{}.AnimationsEnabled();
+            }
+            catch (...)
+            {
+                return true;
+            }
+        }
+
+        void centerVisual(
+            Visual const& visual,
+            FrameworkElement const& element) noexcept
+        {
+            try
+            {
+                const float2 size{ visual.Size() };
+                const float width{
+                    size.x > 0.0f
+                        ? size.x
+                        : static_cast<float>(element.ActualWidth()) };
+                const float height{
+                    size.y > 0.0f
+                        ? size.y
+                        : static_cast<float>(element.ActualHeight()) };
+                visual.CenterPoint(float3{
+                    width * 0.5f,
+                    height * 0.5f,
+                    0.0f });
+            }
+            catch (...)
+            {
+            }
+        }
+
+        void playEntryAnimation(
+            std::shared_ptr<ModelessToolWindowState> const& state) noexcept
+        {
+            try
+            {
+                if (!state || state->closed ||
+                    state->entryAnimationPlayed.exchange(true) ||
+                    !systemAnimationsEnabled())
+                {
+                    return;
+                }
+
+                const Visual visual{
+                    ElementCompositionPreview::GetElementVisual(state->root) };
+                centerVisual(visual, state->root);
+                visual.Opacity(0.0f);
+                visual.Scale(float3{ 0.975f, 0.975f, 1.0f });
+
+                const Compositor compositor{ visual.Compositor() };
+                const CubicBezierEasingFunction easing{
+                    compositor.CreateCubicBezierEasingFunction(
+                        float2{ 0.16f, 1.0f },
+                        float2{ 0.30f, 1.0f }) };
+
+                const ScalarKeyFrameAnimation opacity{
+                    compositor.CreateScalarKeyFrameAnimation() };
+                opacity.Duration(std::chrono::milliseconds{ 190 });
+                opacity.InsertKeyFrame(1.0f, 1.0f, easing);
+
+                const Vector3KeyFrameAnimation scale{
+                    compositor.CreateVector3KeyFrameAnimation() };
+                scale.Duration(std::chrono::milliseconds{ 190 });
+                scale.InsertKeyFrame(
+                    1.0f,
+                    float3{ 1.0f, 1.0f, 1.0f },
+                    easing);
+
+                visual.StartAnimation(L"Opacity", opacity);
+                visual.StartAnimation(L"Scale", scale);
+            }
+            catch (...)
+            {
+                try
+                {
+                    if (state)
+                    {
+                        const Visual visual{
+                            ElementCompositionPreview::GetElementVisual(
+                                state->root) };
+                        visual.Opacity(1.0f);
+                        visual.Scale(float3{ 1.0f, 1.0f, 1.0f });
+                    }
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+
+        void closeNativeWindow(
+            std::shared_ptr<ModelessToolWindowState> const& state) noexcept
+        {
+            if (!state || state->closed)
+            {
+                return;
+            }
+
+            try
+            {
+                if (state->dispatcher && !state->dispatcher.HasThreadAccess())
+                {
+                    const std::weak_ptr<ModelessToolWindowState> weakState{
+                        state };
+                    static_cast<void>(state->dispatcher.TryEnqueue(
+                        [weakState]() noexcept
+                        {
+                            if (const auto current{ weakState.lock() })
+                            {
+                                closeNativeWindow(current);
+                            }
+                        }));
+                    return;
+                }
+
+                state->window.Close();
+            }
+            catch (...)
+            {
+                if (!state->closed)
+                {
+                    state->closed = true;
+                    signalClosedWhenIdle(state);
+                }
+            }
+        }
+
+        void playExitAnimation(
+            std::shared_ptr<ModelessToolWindowState> const& state) noexcept
+        {
+            try
+            {
+                if (!state || state->closed || !state->activated ||
+                    !systemAnimationsEnabled())
+                {
+                    closeNativeWindow(state);
+                    return;
+                }
+
+                state->root.IsHitTestVisible(false);
+                const Visual visual{
+                    ElementCompositionPreview::GetElementVisual(state->root) };
+                centerVisual(visual, state->root);
+
+                const Compositor compositor{ visual.Compositor() };
+                const CubicBezierEasingFunction easing{
+                    compositor.CreateCubicBezierEasingFunction(
+                        float2{ 0.40f, 0.0f },
+                        float2{ 1.0f, 1.0f }) };
+
+                const ScalarKeyFrameAnimation opacity{
+                    compositor.CreateScalarKeyFrameAnimation() };
+                opacity.Duration(std::chrono::milliseconds{ 120 });
+                opacity.InsertKeyFrame(1.0f, 0.0f, easing);
+
+                const Vector3KeyFrameAnimation scale{
+                    compositor.CreateVector3KeyFrameAnimation() };
+                scale.Duration(std::chrono::milliseconds{ 120 });
+                scale.InsertKeyFrame(
+                    1.0f,
+                    float3{ 0.985f, 0.985f, 1.0f },
+                    easing);
+
+                const CompositionScopedBatch batch{
+                    compositor.CreateScopedBatch(
+                        CompositionBatchTypes::Animation) };
+                const std::weak_ptr<ModelessToolWindowState> weakState{ state };
+                batch.Completed(
+                    [weakState](
+                        IInspectable const&,
+                        CompositionBatchCompletedEventArgs const&) noexcept
+                    {
+                        if (const auto current{ weakState.lock() })
+                        {
+                            current->closeAnimationBatch = nullptr;
+                            closeNativeWindow(current);
+                        }
+                    });
+
+                state->closeAnimationBatch = batch;
+                visual.StartAnimation(L"Opacity", opacity);
+                visual.StartAnimation(L"Scale", scale);
+                batch.End();
+            }
+            catch (...)
+            {
+                closeNativeWindow(state);
+            }
         }
     }
 
@@ -481,6 +689,22 @@ namespace account_vault::ui
             }
         });
 
+        m_state->window.AppWindow().Closing(
+            [weakState](
+                Microsoft::UI::Windowing::AppWindow const&,
+                Microsoft::UI::Windowing::AppWindowClosingEventArgs const& args)
+            {
+                if (const auto state{ weakState.lock() })
+                {
+                    if (!state->closed &&
+                        !state->closeAnimationStarted.exchange(true))
+                    {
+                        args.Cancel(true);
+                        playExitAnimation(state);
+                    }
+                }
+            });
+
         m_state->window.Closed(
             [weakState](IInspectable const&, WindowEventArgs const&)
             {
@@ -490,6 +714,7 @@ namespace account_vault::ui
                     {
                         state->closed = true;
                     }
+                    state->closeAnimationBatch = nullptr;
                     signalClosedWhenIdle(state);
                 }
             });
@@ -747,6 +972,8 @@ namespace account_vault::ui
                         0,
                         SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
                 }
+
+                playEntryAnimation(m_state);
             }
             else
             {
@@ -777,7 +1004,10 @@ namespace account_vault::ui
                 return;
             }
             m_state->result = result;
-            m_state->window.Close();
+            if (!m_state->closeAnimationStarted.exchange(true))
+            {
+                playExitAnimation(m_state);
+            }
         }
         catch (...)
         {
