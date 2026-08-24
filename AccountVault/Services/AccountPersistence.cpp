@@ -24,7 +24,7 @@ namespace winrt::AccountVault::implementation
     }
 
     std::optional<MainWindow::RecordId> MainWindow::addAccount(
-        std::wstring launcher,
+        Launcher launcher,
         std::wstring launcherUsername,
         std::wstring launcherPassword,
         std::wstring emailAddress,
@@ -57,7 +57,7 @@ namespace winrt::AccountVault::implementation
         const RecordId oldNextId{ m_repository.nextId() };
 
         const RecordId id{ m_repository.add(
-            std::move(launcher),
+            launcher,
             std::move(launcherUsername),
             std::move(emailAddress),
             std::move(emailProvider),
@@ -77,7 +77,7 @@ namespace winrt::AccountVault::implementation
 
     bool MainWindow::updateAccount(
         RecordId id,
-        std::wstring launcher,
+        Launcher launcher,
         std::wstring launcherUsername,
         std::optional<std::wstring> launcherPassword,
         std::wstring emailAddress,
@@ -126,7 +126,7 @@ namespace winrt::AccountVault::implementation
 
         if (!m_repository.update(
                 id,
-                std::move(launcher),
+                launcher,
                 std::move(launcherUsername),
                 std::move(emailAddress),
                 std::move(emailProvider),

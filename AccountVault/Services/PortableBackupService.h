@@ -7,6 +7,11 @@
 
 namespace account_vault::services
 {
+    inline constexpr std::uint64_t MaximumPortableBackupBytes{
+        64U * 1024U * 1024U };
+    inline constexpr std::size_t MaximumPortableAccountCount{ 100000 };
+    inline constexpr std::size_t MaximumPortablePasswordCharacters{ 256 };
+
     struct PortableAccount
     {
         std::wstring kind{ L"launcher" };

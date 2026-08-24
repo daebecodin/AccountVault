@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
 #include "../Security/SensitiveData.h"
+#include "../Services/LauncherCatalog.h"
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.UI.Text.h>
@@ -130,8 +131,10 @@ namespace winrt::AccountVault::implementation
         launcherBadge.Background(surfaceAltBrush);
 
         TextBlock launcherText;
-        launcherText.Text(
-            credential ? account.category : account.launcher);
+        launcherText.Text(credential
+            ? hstring{ account.category }
+            : hstring{ account_vault::services::launcherDisplayName(
+                account.launcher) });
         launcherText.FontFamily(FontFamily{ L"Cascadia Mono" });
         launcherText.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
         launcherText.Foreground(accentBrush);

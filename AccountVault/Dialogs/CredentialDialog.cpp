@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
 #include "../Security/SensitiveData.h"
+#include "../Services/CredentialCategoryCatalog.h"
 
 #include <winrt/Windows.UI.Text.h>
 
@@ -51,20 +52,6 @@ namespace
         ComboBoxItem item;
         item.Content(box_value(hstring{ value }));
         category.Items().Append(item);
-    }
-
-    [[nodiscard]] bool isBuiltInCategory(std::wstring_view value)
-    {
-        for (auto const* builtIn : {
-            L"Finance", L"School", L"Work", L"Shopping", L"Social",
-            L"Entertainment", L"Utilities", L"Other" })
-        {
-            if (value == builtIn)
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
 }
@@ -126,15 +113,14 @@ namespace winrt::AccountVault::implementation
             category.PlaceholderText(L"Choose or type a category");
             category.IsEditable(true);
             category.IsTextSearchEnabled(true);
-            for (auto const* value : {
-                L"Finance", L"School", L"Work", L"Shopping", L"Social",
-                L"Entertainment", L"Utilities", L"Other" })
+            for (auto const value :
+                 account_vault::services::DefaultCredentialCategories)
             {
                 addCategory(category, value);
             }
             for (auto const& value : m_repository.credentialCategories())
             {
-                if (!isBuiltInCategory(value))
+                if (!account_vault::services::isDefaultCredentialCategory(value))
                 {
                     addCategory(category, value);
                 }
@@ -459,15 +445,14 @@ namespace winrt::AccountVault::implementation
             category.IsEditable(true);
             category.Text(account->category);
             category.IsEnabled(false);
-            for (auto const* value : {
-                L"Finance", L"School", L"Work", L"Shopping", L"Social",
-                L"Entertainment", L"Utilities", L"Other" })
+            for (auto const value :
+                 account_vault::services::DefaultCredentialCategories)
             {
                 addCategory(category, value);
             }
             for (auto const& value : m_repository.credentialCategories())
             {
-                if (!isBuiltInCategory(value))
+                if (!account_vault::services::isDefaultCredentialCategory(value))
                 {
                     addCategory(category, value);
                 }

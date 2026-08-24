@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Models/Account.h"
+#include "LauncherCatalog.h"
 
 #include <algorithm>
 #include <cwctype>
@@ -16,10 +17,11 @@ namespace account_vault::services
     {
     public:
         using Account = models::Account;
+        using Launcher = models::Launcher;
         using RecordId = models::RecordId;
 
         [[nodiscard]] RecordId add(
-            std::wstring launcher,
+            Launcher launcher,
             std::wstring launcherUsername,
             std::wstring emailAddress,
             std::wstring emailProvider,
@@ -31,7 +33,7 @@ namespace account_vault::services
 
             m_accounts.push_back(Account{
                 .recordId = id,
-                .launcher = std::move(launcher),
+                .launcher = launcher,
                 .launcherUsername = std::move(launcherUsername),
                 .emailAddress = std::move(emailAddress),
                 .emailProvider = std::move(emailProvider),
@@ -94,7 +96,7 @@ namespace account_vault::services
 
         [[nodiscard]] bool update(
             RecordId id,
-            std::wstring launcher,
+            Launcher launcher,
             std::wstring launcherUsername,
             std::wstring emailAddress,
             std::wstring emailProvider,
@@ -113,7 +115,7 @@ namespace account_vault::services
                 return false;
             }
 
-            account->launcher = std::move(launcher);
+            account->launcher = launcher;
             account->launcherUsername = std::move(launcherUsername);
             account->emailAddress = std::move(emailAddress);
             account->emailProvider = std::move(emailProvider);
@@ -227,7 +229,7 @@ namespace account_vault::services
 
         [[nodiscard]] std::vector<Account const*> search(
             std::wstring_view query,
-            std::wstring_view launcher) const
+            std::optional<Launcher> launcher) const
         {
             const std::wstring loweredQuery{ toLower(query) };
             std::vector<Account const*> matches;
@@ -241,11 +243,13 @@ namespace account_vault::services
                 }
 
                 const bool launcherMatches =
-                    launcher.empty() || account.launcher == launcher;
+                    !launcher || account.launcher == *launcher;
 
                 const bool queryMatches =
                     loweredQuery.empty() ||
-                    containsIgnoreCase(account.launcher, loweredQuery) ||
+                    containsIgnoreCase(
+                        launcherDisplayName(account.launcher),
+                        loweredQuery) ||
                     containsIgnoreCase(account.launcherUsername, loweredQuery) ||
                     containsIgnoreCase(account.emailAddress, loweredQuery) ||
                     containsIgnoreCase(account.emailProvider, loweredQuery) ||

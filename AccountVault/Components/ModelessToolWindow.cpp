@@ -570,43 +570,59 @@ namespace account_vault::ui
 
         Grid shell;
         shell.Background(appBrush(L"AppBackgroundBrush"));
-        shell.Padding(Thickness{ 16 });
+        shell.Padding(Thickness{ 0 });
         aliasControlBrushes(shell.Resources());
 
-        Border card;
-        card.Background(appBrush(L"AppSurfaceBrush"));
-        card.BorderBrush(appBrush(L"AppBorderBrush"));
-        card.BorderThickness(Thickness{ 1 });
-        card.CornerRadius(CornerRadius{ 10 });
-        card.HorizontalAlignment(HorizontalAlignment::Stretch);
-        card.VerticalAlignment(VerticalAlignment::Stretch);
+        // Popup hierarchy:
+        // outer shell -> main layout -> header, input, and button containers.
+        // Keeping the outer shell flush with the window prevents an inset strip
+        // from cutting across the footer on the left side.
+        Border outerContainer;
+        outerContainer.Background(appBrush(L"AppSurfaceBrush"));
+        outerContainer.BorderBrush(appBrush(L"AppBorderBrush"));
+        outerContainer.BorderThickness(Thickness{ 1 });
+        outerContainer.CornerRadius(CornerRadius{ 10 });
+        outerContainer.HorizontalAlignment(HorizontalAlignment::Stretch);
+        outerContainer.VerticalAlignment(VerticalAlignment::Stretch);
 
-        Grid layout;
-        layout.RowDefinitions().Append(RowDefinition{});
-        layout.RowDefinitions().GetAt(0).Height(GridLengthHelper::Auto());
-        layout.RowDefinitions().Append(RowDefinition{});
-        layout.RowDefinitions().GetAt(1).Height(
+        Grid mainContentContainer;
+        mainContentContainer.RowDefinitions().Append(RowDefinition{});
+        mainContentContainer.RowDefinitions().GetAt(0).Height(
+            GridLengthHelper::Auto());
+        mainContentContainer.RowDefinitions().Append(RowDefinition{});
+        mainContentContainer.RowDefinitions().GetAt(1).Height(
             GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
-        layout.RowDefinitions().Append(RowDefinition{});
-        layout.RowDefinitions().GetAt(2).Height(GridLengthHelper::Auto());
+        mainContentContainer.RowDefinitions().Append(RowDefinition{});
+        mainContentContainer.RowDefinitions().GetAt(2).Height(
+            GridLengthHelper::Auto());
 
         TextBlock title;
         title.Text(windowTitle);
         title.FontSize(20);
         title.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
         title.Foreground(appBrush(L"AppTextBrush"));
-        title.Margin(Thickness{ 24, 20, 24, 12 });
+        title.Margin(Thickness{ 0 });
+
+        Border headerContainer;
+        headerContainer.Background(appBrush(L"AppSurfaceBrush"));
+        headerContainer.Padding(Thickness{ 24, 20, 24, 12 });
+        headerContainer.Child(title);
 
         ContentPresenter presenter;
-        presenter.Margin(Thickness{ 24, 0, 24, 20 });
+        presenter.Margin(Thickness{ 0 });
         presenter.HorizontalContentAlignment(HorizontalAlignment::Stretch);
         presenter.VerticalContentAlignment(VerticalAlignment::Stretch);
 
-        Border footer;
-        footer.Background(appBrush(L"AppBackgroundBrush"));
-        footer.BorderBrush(appBrush(L"AppBorderBrush"));
-        footer.BorderThickness(Thickness{ 0, 1, 0, 0 });
-        footer.Padding(Thickness{ 24, 16, 24, 16 });
+        Border inputContainer;
+        inputContainer.Background(appBrush(L"AppSurfaceBrush"));
+        inputContainer.Padding(Thickness{ 24, 0, 24, 20 });
+        inputContainer.Child(presenter);
+
+        Border buttonContainer;
+        buttonContainer.Background(appBrush(L"AppBackgroundBrush"));
+        buttonContainer.BorderBrush(appBrush(L"AppBorderBrush"));
+        buttonContainer.BorderThickness(Thickness{ 0, 1, 0, 0 });
+        buttonContainer.Padding(Thickness{ 24, 16, 24, 16 });
 
         Grid footerLayout;
         footerLayout.ColumnSpacing(8);
@@ -636,20 +652,20 @@ namespace account_vault::ui
 
         footerLayout.Children().Append(primary);
         footerLayout.Children().Append(close);
-        footer.Child(footerLayout);
+        buttonContainer.Child(footerLayout);
 
-        Grid::SetRow(title, 0);
-        Grid::SetRow(presenter, 1);
-        Grid::SetRow(footer, 2);
-        layout.Children().Append(title);
-        layout.Children().Append(presenter);
-        layout.Children().Append(footer);
-        card.Child(layout);
-        shell.Children().Append(card);
+        Grid::SetRow(headerContainer, 0);
+        Grid::SetRow(inputContainer, 1);
+        Grid::SetRow(buttonContainer, 2);
+        mainContentContainer.Children().Append(headerContainer);
+        mainContentContainer.Children().Append(inputContainer);
+        mainContentContainer.Children().Append(buttonContainer);
+        outerContainer.Child(mainContentContainer);
+        shell.Children().Append(outerContainer);
 
         m_state->root = shell;
         m_state->dispatcher = shell.DispatcherQueue();
-        m_state->card = card;
+        m_state->card = outerContainer;
         m_state->title = title;
         m_state->presenter = presenter;
         m_state->primaryButton = primary;

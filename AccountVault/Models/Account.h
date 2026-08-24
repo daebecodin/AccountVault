@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Launcher.h"
+
 #include <cstdint>
 #include <string>
 
@@ -18,9 +20,9 @@ namespace account_vault::models
         RecordId recordId{};
         AccountKind kind{ AccountKind::Launcher };
 
-        // Launcher-account fields. These remain unchanged so schema-v1/v2
-        // records continue to load without a destructive migration.
-        std::wstring launcher;
+        // Launcher-account fields. The enum is converted to its stable display
+        // name only at storage and portable-backup boundaries.
+        Launcher launcher{ Launcher::Other };
         std::wstring launcherUsername;
         std::wstring emailAddress;
         std::wstring emailProvider;

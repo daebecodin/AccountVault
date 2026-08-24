@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AccountStorageService.h"
+#include "LauncherCatalog.h"
 
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Storage.h>
@@ -154,7 +155,9 @@ namespace account_vault::services
                 result.accounts.push_back(models::Account{
                     .recordId = id,
                     .kind = kind,
-                    .launcher = optionalString(object, L"launcher"),
+                    .launcher = launcherFromName(
+                        optionalString(object, L"launcher"))
+                        .value_or(models::Launcher::Other),
                     .launcherUsername = optionalString(
                         object,
                         L"launcherUsername"),
@@ -254,7 +257,8 @@ namespace account_vault::services
                                 : L"launcher" }));
                 object.Insert(
                     L"launcher",
-                    JsonValue::CreateStringValue(hstring{ account.launcher }));
+                    JsonValue::CreateStringValue(hstring{
+                        launcherDisplayName(account.launcher) }));
                 object.Insert(
                     L"launcherUsername",
                     JsonValue::CreateStringValue(

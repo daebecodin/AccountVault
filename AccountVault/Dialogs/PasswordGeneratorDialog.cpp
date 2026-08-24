@@ -105,7 +105,7 @@ namespace winrt::AccountVault::implementation
             dialog = account_vault::ui::ModelessToolWindow{
                 L"Password generator",
                 720,
-                650 };
+                600 };
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(L"Password generator"));
             dialog.PrimaryButtonText(L"");
@@ -120,7 +120,7 @@ namespace winrt::AccountVault::implementation
                 .Lookup(box_value(L"AppBorderBrush")).as<Brush>() };
 
             StackPanel content;
-            content.Spacing(18);
+            content.Spacing(16);
 
             TextBlock introduction;
             introduction.Text(
@@ -140,7 +140,7 @@ namespace winrt::AccountVault::implementation
                 L"Generated password");
 
             Grid actions;
-            actions.ColumnSpacing(10);
+            actions.ColumnSpacing(12);
             for (int column{}; column < 2; ++column)
             {
                 ColumnDefinition definition;
@@ -175,7 +175,7 @@ namespace winrt::AccountVault::implementation
             divider.Background(borderBrush);
 
             Grid optionsHeader;
-            optionsHeader.ColumnSpacing(12);
+            optionsHeader.ColumnSpacing(16);
             optionsHeader.ColumnDefinitions().Append(ColumnDefinition{});
             optionsHeader.ColumnDefinitions().GetAt(0).Width(
                 GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
@@ -208,8 +208,8 @@ namespace winrt::AccountVault::implementation
             optionsHeader.Children().Append(length);
 
             Grid characterOptions;
-            characterOptions.ColumnSpacing(18);
-            characterOptions.RowSpacing(8);
+            characterOptions.ColumnSpacing(24);
+            characterOptions.RowSpacing(10);
             for (int column{}; column < 2; ++column)
             {
                 ColumnDefinition definition;

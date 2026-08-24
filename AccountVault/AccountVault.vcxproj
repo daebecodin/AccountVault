@@ -137,12 +137,15 @@
     </ClInclude>
     <ClInclude Include="Components\ModelessToolWindow.h" />
     <ClInclude Include="Models\Account.h" />
+    <ClInclude Include="Models\Launcher.h" />
     <ClInclude Include="Models\ThemeDefinition.h" />
     <ClInclude Include="Security\SensitiveData.h" />
     <ClInclude Include="Services\AccountRepository.h" />
     <ClInclude Include="Services\AccountStorageService.h" />
     <ClInclude Include="Services\CredentialService.h" />
+    <ClInclude Include="Services\CredentialCategoryCatalog.h" />
     <ClInclude Include="Services\EmailProviderCatalog.h" />
+    <ClInclude Include="Services\LauncherCatalog.h" />
     <ClInclude Include="Services\PortableBackupService.h" />
   </ItemGroup>
   <ItemGroup>

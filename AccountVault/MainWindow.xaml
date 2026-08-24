@@ -671,13 +671,7 @@
                             AutomationProperties.Name="Record filter"
                             Style="{StaticResource ToolbarComboBoxStyle}"
                             SelectedIndex="0"
-                            SelectionChanged="RecordFilter_SelectionChanged">
-                            <ComboBoxItem Content="All launchers" />
-                            <ComboBoxItem Content="Steam" />
-                            <ComboBoxItem Content="Riot" />
-                            <ComboBoxItem Content="Epic" />
-                            <ComboBoxItem Content="Other" />
-                        </ComboBox>
+                            SelectionChanged="RecordFilter_SelectionChanged" />
 
                         <Button
                             x:Name="TopAddAccountButton"

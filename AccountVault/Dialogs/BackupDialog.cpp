@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "../MainWindow.xaml.h"
 #include "../Security/SensitiveData.h"
+#include "../Services/LauncherCatalog.h"
 
 #include <microsoft.ui.xaml.window.h>
 #include <shobjidl.h>
@@ -26,10 +27,7 @@ using namespace Windows::Storage::Streams;
 
 namespace
 {
-    constexpr std::uint64_t MaximumBackupBytes{ 64U * 1024U * 1024U };
-    constexpr std::size_t MaximumAccountCount{ 100000 };
     constexpr std::size_t MinimumNewPasswordCharacters{ 12 };
-    constexpr std::size_t MaximumPasswordCharacters{ 256 };
 
     struct ScopeExit
     {
@@ -185,7 +183,9 @@ namespace winrt::AccountVault::implementation
 
             accounts.push_back(PortableAccount{
                 .kind = L"launcher",
-                .launcher = account.launcher,
+                .launcher = std::wstring{
+                    account_vault::services::launcherDisplayName(
+                        account.launcher) },
                 .launcherUsername = account.launcherUsername,
                 .launcherPassword = std::move(*launcherPassword),
                 .emailAddress = account.emailAddress,
@@ -279,7 +279,8 @@ namespace winrt::AccountVault::implementation
 
             password.Header(box_value(L"Backup password"));
             password.PasswordRevealMode(PasswordRevealMode::Peek);
-            password.MaxLength(static_cast<int>(MaximumPasswordCharacters));
+            password.MaxLength(static_cast<int>(
+                account_vault::services::MaximumPortablePasswordCharacters));
             content.Children().Append(password);
 
             if (confirmPassword)
@@ -287,7 +288,8 @@ namespace winrt::AccountVault::implementation
                 confirmation.Header(box_value(L"Confirm backup password"));
                 confirmation.PasswordRevealMode(PasswordRevealMode::Peek);
                 confirmation.MaxLength(
-                    static_cast<int>(MaximumPasswordCharacters));
+                    static_cast<int>(
+                        account_vault::services::MaximumPortablePasswordCharacters));
                 content.Children().Append(confirmation);
             }
 
@@ -311,7 +313,8 @@ namespace winrt::AccountVault::implementation
                         : 1U };
 
                     if (value.size() < minimumLength ||
-                        value.size() > MaximumPasswordCharacters)
+                        value.size() >
+                            account_vault::services::MaximumPortablePasswordCharacters)
                     {
                         validation.Text(confirmPassword
                             ? L"Use 12 to 256 characters."
@@ -594,7 +597,8 @@ namespace winrt::AccountVault::implementation
 
             const auto properties{ co_await file.GetBasicPropertiesAsync() };
             if (properties.Size() == 0 ||
-                properties.Size() > MaximumBackupBytes)
+                properties.Size() >
+                    account_vault::services::MaximumPortableBackupBytes)
             {
                 StatusText().Text(L"The backup file size is invalid");
                 co_return;
@@ -721,7 +725,9 @@ namespace winrt::AccountVault::implementation
 
                     protectedImports.push_back(Account{
                         .recordId = 0,
-                        .launcher = std::move(portable.launcher),
+                        .launcher = account_vault::services::launcherFromName(
+                            portable.launcher)
+                            .value_or(Launcher::Other),
                         .launcherUsername =
                             std::move(portable.launcherUsername),
                         .emailAddress = std::move(portable.emailAddress),
@@ -752,7 +758,8 @@ namespace winrt::AccountVault::implementation
             }
             if (protectedImports.empty() ||
                 protectedImports.size() >
-                    MaximumAccountCount - m_repository.accounts().size())
+                    account_vault::services::MaximumPortableAccountCount -
+                        m_repository.accounts().size())
             {
                 StatusText().Text(
                     L"Importing this backup would exceed the vault record limit");

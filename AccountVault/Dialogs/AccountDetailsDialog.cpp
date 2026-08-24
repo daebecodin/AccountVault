@@ -2,6 +2,7 @@
 #include "../MainWindow.xaml.h"
 #include "../Security/SensitiveData.h"
 #include "../Services/EmailProviderCatalog.h"
+#include "../Services/LauncherCatalog.h"
 
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Windows.UI.Text.h>
@@ -146,29 +147,17 @@ namespace winrt::AccountVault::implementation
         ComboBox launcher;
         launcher.Header(box_value(L"Launcher"));
         launcher.IsEnabled(false);
-        for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
+        for (auto const& definition :
+             account_vault::services::LauncherCatalog)
         {
             ComboBoxItem item;
-            item.Content(box_value(name));
+            item.Content(box_value(hstring{ definition.displayName }));
+            item.Tag(box_value(
+                static_cast<std::uint32_t>(definition.value)));
             launcher.Items().Append(item);
         }
-
-        if (account->launcher == L"Steam")
-        {
-            launcher.SelectedIndex(0);
-        }
-        else if (account->launcher == L"Riot")
-        {
-            launcher.SelectedIndex(1);
-        }
-        else if (account->launcher == L"Epic")
-        {
-            launcher.SelectedIndex(2);
-        }
-        else
-        {
-            launcher.SelectedIndex(3);
-        }
+        launcher.SelectedIndex(
+            account_vault::services::findLauncherIndex(account->launcher));
 
         TextBox launcherUsername;
         launcherUsername.Header(box_value(L"Launcher username / account ID"));
@@ -791,8 +780,8 @@ namespace winrt::AccountVault::implementation
                     }
 
                 const auto launcherItem = launcher.SelectedItem().as<ComboBoxItem>();
-                const hstring launcherName =
-                    unbox_value<hstring>(launcherItem.Content());
+                const Launcher launcherValue{ static_cast<Launcher>(
+                    unbox_value<std::uint32_t>(launcherItem.Tag())) };
 
                 const auto providerItem =
                     emailProvider.SelectedItem().as<ComboBoxItem>();
@@ -822,7 +811,6 @@ namespace winrt::AccountVault::implementation
                 launcherPassword.Password(L"");
                 emailPassword.Password(L"");
 
-                const std::wstring launcherValue{ launcherName.c_str() };
                 const std::wstring launcherUsernameValue{
                     launcherUsername.Text().c_str() };
                 const std::wstring emailAddressValue{

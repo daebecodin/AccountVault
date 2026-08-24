@@ -66,6 +66,9 @@
     <ClInclude Include="Models\Account.h">
       <Filter>Models</Filter>
     </ClInclude>
+    <ClInclude Include="Models\Launcher.h">
+      <Filter>Models</Filter>
+    </ClInclude>
     <ClInclude Include="Models\ThemeDefinition.h">
       <Filter>Models</Filter>
     </ClInclude>
@@ -81,7 +84,13 @@
     <ClInclude Include="Services\CredentialService.h">
       <Filter>Services</Filter>
     </ClInclude>
+    <ClInclude Include="Services\CredentialCategoryCatalog.h">
+      <Filter>Services</Filter>
+    </ClInclude>
     <ClInclude Include="Services\EmailProviderCatalog.h">
+      <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Services\LauncherCatalog.h">
       <Filter>Services</Filter>
     </ClInclude>
     <ClInclude Include="Services\PortableBackupService.h">

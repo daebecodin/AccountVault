@@ -2,6 +2,8 @@
 // Account Armory automatic-lock compile fix v28.7.3.
 #include "MainWindow.xaml.h"
 #include "Security/SensitiveData.h"
+#include "Services/CredentialCategoryCatalog.h"
+#include "Services/LauncherCatalog.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -1459,10 +1461,16 @@ namespace winrt::AccountVault::implementation
         const auto items{ RecordFilter().Items() };
         items.Clear();
 
-        const auto appendItem = [&items](std::wstring_view text)
+        const auto appendItem = [&items](
+            std::wstring_view text,
+            std::optional<Launcher> launcher = std::nullopt)
         {
             ComboBoxItem item;
             item.Content(box_value(hstring{ text }));
+            if (launcher)
+            {
+                item.Tag(box_value(static_cast<std::uint32_t>(*launcher)));
+            }
             items.Append(item);
         };
 
@@ -1470,25 +1478,24 @@ namespace winrt::AccountVault::implementation
         {
             AutomationProperties::SetName(RecordFilter(), L"Launcher filter");
             appendItem(L"All launchers");
-            for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
+            for (auto const& launcher :
+                 account_vault::services::LauncherCatalog)
             {
-                appendItem(name);
+                appendItem(launcher.displayName, launcher.value);
             }
         }
         else
         {
             AutomationProperties::SetName(RecordFilter(), L"Category filter");
             appendItem(L"All categories");
-            std::vector<std::wstring> categories{
-                L"Finance",
-                L"School",
-                L"Work",
-                L"Shopping",
-                L"Social",
-                L"Entertainment",
-                L"Utilities",
-                L"Other"
-            };
+            std::vector<std::wstring> categories;
+            categories.reserve(
+                account_vault::services::DefaultCredentialCategories.size());
+            for (auto const category :
+                 account_vault::services::DefaultCredentialCategories)
+            {
+                categories.emplace_back(category);
+            }
 
             for (auto const& saved : m_repository.credentialCategories())
             {
@@ -1510,10 +1517,14 @@ namespace winrt::AccountVault::implementation
     std::vector<MainWindow::Account const*> MainWindow::visibleAccounts()
     {
         const std::wstring query{ SearchBox().Text().c_str() };
-        const std::wstring filter{ selectedFilter() };
-        return m_workspaceSection == WorkspaceSection::CredentialVault
-            ? m_repository.searchCredentials(query, filter)
-            : m_repository.search(query, filter);
+        if (m_workspaceSection == WorkspaceSection::CredentialVault)
+        {
+            return m_repository.searchCredentials(
+                query,
+                selectedCategoryFilter());
+        }
+
+        return m_repository.search(query, selectedLauncherFilter());
     }
 
     void MainWindow::refreshAccounts()
@@ -1545,7 +1556,7 @@ namespace winrt::AccountVault::implementation
         status += L"  |  passwords protected locally with Windows DPAPI";
         StatusText().Text(hstring{ status });
     }
-    std::wstring MainWindow::selectedFilter()
+    std::wstring MainWindow::selectedCategoryFilter()
     {
         const int selectedIndex{ RecordFilter().SelectedIndex() };
 
@@ -1558,5 +1569,22 @@ namespace winrt::AccountVault::implementation
             .SelectedItem()
             .as<ComboBoxItem>();
         return unbox_value<hstring>(item.Content()).c_str();
+    }
+
+    std::optional<MainWindow::Launcher> MainWindow::selectedLauncherFilter()
+    {
+        if (RecordFilter().SelectedIndex() <= 0)
+        {
+            return std::nullopt;
+        }
+
+        const auto item{ RecordFilter().SelectedItem().as<ComboBoxItem>() };
+        if (!item.Tag())
+        {
+            return std::nullopt;
+        }
+
+        return static_cast<Launcher>(
+            unbox_value<std::uint32_t>(item.Tag()));
     }
 }

@@ -77,6 +77,7 @@ namespace winrt::AccountVault::implementation
     private:
         using Account = account_vault::models::Account;
         using AccountKind = account_vault::models::AccountKind;
+        using Launcher = account_vault::models::Launcher;
         using RecordId = account_vault::models::RecordId;
         using PortableAccount = account_vault::services::PortableAccount;
         using ThemeDefinition = account_vault::models::ThemeDefinition;
@@ -170,7 +171,7 @@ namespace winrt::AccountVault::implementation
         winrt::fire_and_forget unlockApplication();
 
         [[nodiscard]] std::optional<RecordId> addAccount(
-            std::wstring launcher,
+            Launcher launcher,
             std::wstring launcherUsername,
             std::wstring launcherPassword,
             std::wstring emailAddress,
@@ -180,7 +181,7 @@ namespace winrt::AccountVault::implementation
 
         [[nodiscard]] bool updateAccount(
             RecordId id,
-            std::wstring launcher,
+            Launcher launcher,
             std::wstring launcherUsername,
             std::optional<std::wstring> launcherPassword,
             std::wstring emailAddress,
@@ -227,7 +228,8 @@ namespace winrt::AccountVault::implementation
             std::uint8_t green,
             std::uint8_t blue);
 
-        [[nodiscard]] std::wstring selectedFilter();
+        [[nodiscard]] std::wstring selectedCategoryFilter();
+        [[nodiscard]] std::optional<Launcher> selectedLauncherFilter();
         [[nodiscard]] RecordId recordIdFrom(
             Microsoft::UI::Xaml::Controls::Button const& button) const;
 

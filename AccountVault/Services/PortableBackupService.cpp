@@ -38,11 +38,8 @@ namespace
     constexpr std::size_t NonceBytes{ 12 };
     constexpr std::size_t TagBytes{ 16 };
     constexpr std::size_t KeyBytes{ 32 };
-    constexpr std::size_t MaximumBackupBytes{ 64U * 1024U * 1024U };
     constexpr std::size_t MaximumPayloadBytes{ 40U * 1024U * 1024U };
-    constexpr std::size_t MaximumAccountCount{ 100000 };
     constexpr std::size_t MaximumFieldCharacters{ 1024U * 1024U };
-    constexpr std::size_t MaximumPasswordCharacters{ 256 };
 
     using ByteVector = std::vector<unsigned char>;
 
@@ -260,7 +257,8 @@ namespace
     [[nodiscard]] ByteVector passwordToUtf8(std::wstring_view password)
     {
         if (password.empty() ||
-            password.size() > MaximumPasswordCharacters ||
+            password.size() >
+                account_vault::services::MaximumPortablePasswordCharacters ||
             password.size() > static_cast<std::size_t>(
                 (std::numeric_limits<int>::max)()))
         {
@@ -522,7 +520,9 @@ namespace
     [[nodiscard]] std::string serializePayload(
         std::vector<account_vault::services::PortableAccount> const& accounts)
     {
-        if (accounts.empty() || accounts.size() > MaximumAccountCount)
+        if (accounts.empty() ||
+            accounts.size() >
+                account_vault::services::MaximumPortableAccountCount)
         {
             throw std::invalid_argument{ "Invalid backup account count." };
         }
@@ -625,7 +625,9 @@ namespace
         }
 
         const JsonArray values{ root.GetNamedArray(L"accounts") };
-        if (values.Size() == 0 || values.Size() > MaximumAccountCount)
+        if (values.Size() == 0 ||
+            values.Size() >
+                account_vault::services::MaximumPortableAccountCount)
         {
             throw std::runtime_error{ "Invalid backup account count." };
         }
@@ -727,7 +729,8 @@ namespace
 
     [[nodiscard]] ParsedEnvelope parseEnvelope(std::string const& text)
     {
-        if (text.empty() || text.size() > MaximumBackupBytes)
+        if (text.empty() ||
+            text.size() > account_vault::services::MaximumPortableBackupBytes)
         {
             throw std::runtime_error{ "Invalid backup size." };
         }

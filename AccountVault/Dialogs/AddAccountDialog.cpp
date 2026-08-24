@@ -2,6 +2,7 @@
 #include "../MainWindow.xaml.h"
 #include "../Security/SensitiveData.h"
 #include "../Services/EmailProviderCatalog.h"
+#include "../Services/LauncherCatalog.h"
 
 #include <winrt/Windows.UI.Text.h>
 
@@ -43,7 +44,7 @@ namespace winrt::AccountVault::implementation
         try
         {
         auto lifetime{ get_strong() };
-        dialog = account_vault::ui::ModelessToolWindow{ L"Add account", 900, 640 };
+        dialog = account_vault::ui::ModelessToolWindow{ L"Add account", 900, 470 };
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Add account"));
         dialog.PrimaryButtonText(L"Add");
@@ -54,10 +55,10 @@ namespace winrt::AccountVault::implementation
         dialog.VerticalAlignment(VerticalAlignment::Center);
 
         StackPanel fields;
-        fields.Spacing(16);
+        fields.Spacing(12);
 
         Grid sections;
-        sections.ColumnSpacing(20);
+        sections.ColumnSpacing(24);
 
         ColumnDefinition launcherColumn;
         launcherColumn.Width(
@@ -92,10 +93,14 @@ namespace winrt::AccountVault::implementation
         ComboBox launcher;
         launcher.Header(box_value(L"Launcher"));
         launcher.PlaceholderText(L"Choose a launcher");
-        for (auto const* name : { L"Steam", L"Riot", L"Epic", L"Other" })
+        launcher.HorizontalAlignment(HorizontalAlignment::Stretch);
+        for (auto const& definition :
+             account_vault::services::LauncherCatalog)
         {
             ComboBoxItem item;
-            item.Content(box_value(name));
+            item.Content(box_value(hstring{ definition.displayName }));
+            item.Tag(box_value(
+                static_cast<std::uint32_t>(definition.value)));
             launcher.Items().Append(item);
         }
 
@@ -138,6 +143,7 @@ namespace winrt::AccountVault::implementation
         ComboBox emailProvider;
         emailProvider.Header(box_value(L"Email provider"));
         emailProvider.PlaceholderText(L"Choose an email provider");
+        emailProvider.HorizontalAlignment(HorizontalAlignment::Stretch);
         for (auto const& provider : account_vault::services::EmailProviders)
         {
             ComboBoxItem item;
@@ -192,7 +198,7 @@ namespace winrt::AccountVault::implementation
         fields.Children().Append(validation);
 
         ScrollViewer addAccountScroller;
-        addAccountScroller.MaxHeight(560);
+        addAccountScroller.MaxHeight(390);
         addAccountScroller.HorizontalScrollBarVisibility(
             ScrollBarVisibility::Disabled);
         addAccountScroller.VerticalScrollBarVisibility(
@@ -237,8 +243,8 @@ namespace winrt::AccountVault::implementation
 
                     const auto launcherItem =
                         launcher.SelectedItem().as<ComboBoxItem>();
-                    const hstring launcherName =
-                        unbox_value<hstring>(launcherItem.Content());
+                    const Launcher launcherValue{ static_cast<Launcher>(
+                        unbox_value<std::uint32_t>(launcherItem.Tag())) };
 
                     const auto providerItem =
                         emailProvider.SelectedItem().as<ComboBoxItem>();
@@ -247,7 +253,6 @@ namespace winrt::AccountVault::implementation
                     const hstring providerWebsite =
                         unbox_value<hstring>(providerItem.Tag());
 
-                    const std::wstring launcherValue{ launcherName.c_str() };
                     const std::wstring launcherUsernameValue{
                         launcherUsername.Text().c_str() };
                     std::wstring launcherPasswordValue{

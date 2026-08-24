@@ -28,10 +28,10 @@ namespace winrt::AccountVault::implementation
         {
         auto lifetime{ get_strong() };
 
-        // Theme editor layout revision v10: compact token cards and one
-        // horizontal HEX/R/G/B input row below the color spectrum.
+        // Theme editor layout revision v11: fit the popup to its 920-DIP editor
+        // grid and remove the unused outer bands around the content.
 
-        dialog = account_vault::ui::ModelessToolWindow{ L"Customize colors", 1260, 760 };
+        dialog = account_vault::ui::ModelessToolWindow{ L"Customize colors", 1040, 700 };
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Create theme"));
         dialog.PrimaryButtonText(L"Save theme");
@@ -190,6 +190,7 @@ namespace winrt::AccountVault::implementation
 
         Grid editor;
         editor.Width(920);
+        editor.HorizontalAlignment(HorizontalAlignment::Center);
         editor.ColumnSpacing(24);
 
         ColumnDefinition tokenColumn;
