@@ -20,6 +20,8 @@ Notable Account Armory changes are recorded here.
 - Added a reusable **Getting started** entry to both compact and wide utility
   layouts, with completion remembered in local app settings.
 - Added concise tooltips to the primary navigation and compact action controls.
+- Updated the remaining MSIX display name and description metadata from the
+  internal `AccountVault` name to the public **Account Armory** brand.
 
 ## 2026-08-24 — Personal alpha
 

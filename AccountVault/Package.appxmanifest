@@ -16,7 +16,7 @@
   <mp:PhoneIdentity PhoneProductId="d5f2d4f2-cd9c-47fc-aa44-06e8c6770338" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>AccountVault</DisplayName>
+    <DisplayName>Account Armory</DisplayName>
     <PublisherDisplayName>imdem</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -35,8 +35,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="AccountVault"
-        Description="AccountVault"
+        DisplayName="Account Armory"
+        Description="Securely organize launcher and credential accounts."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

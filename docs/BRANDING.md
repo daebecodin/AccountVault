@@ -1,6 +1,7 @@
 # Branding
 
 - Product name: **Account Armory**
+- MSIX display name and description: **Account Armory**
 - Internal project, binary, namespace, and solution name: `AccountVault`
 - Primary artwork: knight helmet and key
 
@@ -11,4 +12,3 @@ package entry point, and generated files depend on them.
 Source artwork and Windows icon sizes are stored in `AccountVault/Assets/`.
 `AccountVault/Assets/AccountArmory.ico` is embedded through
 `AccountVault/AccountArmory.rc` for the native window and executable icon.
-
