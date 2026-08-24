@@ -99,7 +99,7 @@ namespace winrt::AccountVault::implementation
             co_return;
         }
 
-        dialog = account_vault::ui::ModelessToolWindow{ L"Account details", 900, 680 };
+        dialog = account_vault::ui::ModelessToolWindow{ L"Account details", 900, 520 };
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Account details"));
         dialog.PrimaryButtonText(L"Edit");
@@ -146,6 +146,7 @@ namespace winrt::AccountVault::implementation
 
         ComboBox launcher;
         launcher.Header(box_value(L"Launcher"));
+        launcher.HorizontalAlignment(HorizontalAlignment::Stretch);
         launcher.IsEnabled(false);
         for (auto const& definition :
              account_vault::services::LauncherCatalog)
@@ -223,6 +224,7 @@ namespace winrt::AccountVault::implementation
 
         ComboBox emailProvider;
         emailProvider.Header(box_value(L"Email provider"));
+        emailProvider.HorizontalAlignment(HorizontalAlignment::Stretch);
         emailProvider.IsEnabled(false);
         emailProvider.Visibility(Visibility::Collapsed);
         for (auto const& provider : account_vault::services::EmailProviders)
@@ -267,10 +269,12 @@ namespace winrt::AccountVault::implementation
         providerLinkPanel.Spacing(4);
 
         TextBlock providerLinkLabel;
-        providerLinkLabel.Text(L"Provider website");
+        providerLinkLabel.Text(L"Email provider");
 
         HyperlinkButton providerLink;
-        providerLink.Content(box_value(hstring{ providerDisplayName }));
+        std::wstring providerLinkText{ providerDisplayName };
+        providerLinkText += L" — Open provider website";
+        providerLink.Content(box_value(hstring{ providerLinkText }));
         providerLink.NavigateUri(
             Uri{ hstring{ account->emailProviderWebsite } });
         providerLink.Padding(Thickness{ 0 });
