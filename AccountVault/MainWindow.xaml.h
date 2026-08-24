@@ -270,7 +270,9 @@ namespace winrt::AccountVault::implementation
             std::wstring& error) const;
 
         Windows::Foundation::IAsyncOperation<winrt::hstring>
-            requestBackupPassword(bool confirmPassword);
+            requestBackupPassword(
+                bool confirmPassword,
+                std::wstring_view initialValidation = {});
 
         winrt::fire_and_forget showExportBackup(
             std::optional<RecordId> onlyRecord);

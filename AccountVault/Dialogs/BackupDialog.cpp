@@ -28,6 +28,7 @@ using namespace Windows::Storage::Streams;
 namespace
 {
     constexpr std::size_t MinimumNewPasswordCharacters{ 12 };
+    constexpr int MaximumBackupPasswordAttempts{ 3 };
 
     struct ScopeExit
     {
@@ -243,7 +244,8 @@ namespace winrt::AccountVault::implementation
     }
 
     IAsyncOperation<hstring> MainWindow::requestBackupPassword(
-        bool confirmPassword)
+        bool confirmPassword,
+        std::wstring_view initialValidation)
     {
         ContentDialog dialog;
         bool appended{};
@@ -294,7 +296,11 @@ namespace winrt::AccountVault::implementation
             }
 
             TextBlock validation;
-            validation.Visibility(Visibility::Collapsed);
+            validation.Text(hstring{ initialValidation });
+            validation.Visibility(
+                initialValidation.empty()
+                    ? Visibility::Collapsed
+                    : Visibility::Visible);
             validation.TextWrapping(TextWrapping::Wrap);
             Microsoft::UI::Xaml::Media::SolidColorBrush validationBrush;
             validationBrush.Color(color(248, 81, 73));
@@ -612,35 +618,82 @@ namespace winrt::AccountVault::implementation
                 co_return;
             }
 
-            hstring passwordValue{
-                co_await requestBackupPassword(false) };
-            if (passwordValue.empty() || m_isLocked ||
-                m_lockGeneration != operationGeneration)
+            const std::string encryptedJson{ to_string(fileText) };
+            apartment_context uiThread;
+            account_vault::services::BackupReadResult readResult;
+            std::wstring retryMessage;
+
+            for (int attempt{ 1 };
+                 attempt <= MaximumBackupPasswordAttempts;
+                 ++attempt)
+            {
+                hstring passwordValue{ co_await requestBackupPassword(
+                    false,
+                    retryMessage) };
+                if (passwordValue.empty() || m_isLocked ||
+                    m_lockGeneration != operationGeneration)
+                {
+                    co_return;
+                }
+
+                std::wstring backupPassword{ passwordValue.c_str() };
+                passwordValue = hstring{};
+                auto wipeBackupPassword{
+                    account_vault::security::wipeOnExit(backupPassword) };
+
+                co_await resume_background();
+                readResult = m_backupService.decrypt(
+                    encryptedJson,
+                    backupPassword);
+                secureWipe(backupPassword);
+                co_await uiThread;
+
+                if (readResult.succeeded)
+                {
+                    break;
+                }
+
+                secureWipe(readResult.accounts);
+                if (attempt == MaximumBackupPasswordAttempts)
+                {
+                    StatusText().Text(
+                        L"Backup unlock failed after 3 attempts; nothing was imported");
+                    co_return;
+                }
+
+                const int attemptsRemaining{
+                    MaximumBackupPasswordAttempts - attempt };
+                retryMessage = readResult.error;
+                retryMessage += L" ";
+                retryMessage += std::to_wstring(attemptsRemaining);
+                retryMessage += attemptsRemaining == 1
+                    ? L" attempt remains."
+                    : L" attempts remain.";
+                noteUserActivity();
+            }
+
+            ScopeExit decryptedCleanup{ [&readResult]()
+            {
+                secureWipe(readResult.accounts);
+            } };
+
+            if (m_isLocked || m_lockGeneration != operationGeneration)
             {
                 co_return;
             }
 
-            std::wstring backupPassword{ passwordValue.c_str() };
-            passwordValue = hstring{};
-            auto wipeBackupPassword{
-                account_vault::security::wipeOnExit(backupPassword) };
+            // Authenticate the backup password and file before showing the
+            // Windows Hello surface. Hello still gates importing decrypted
+            // passwords, but invalid input is rejected immediately.
             const bool verified{ co_await verifyUser(
                 L"Verify your identity to import account passwords") };
             if (!verified || m_isLocked ||
                 m_lockGeneration != operationGeneration)
             {
-                secureWipe(backupPassword);
                 co_return;
             }
 
-            const std::string encryptedJson{ to_string(fileText) };
-            apartment_context uiThread;
             co_await resume_background();
-
-            auto readResult{ m_backupService.decrypt(
-                encryptedJson,
-                backupPassword) };
-            secureWipe(backupPassword);
 
             std::vector<Account> protectedImports;
             std::wstring importError;
@@ -741,11 +794,6 @@ namespace winrt::AccountVault::implementation
             secureWipe(readResult.accounts);
             co_await uiThread;
 
-            if (!readResult.succeeded)
-            {
-                StatusText().Text(hstring{ readResult.error });
-                co_return;
-            }
             if (!importError.empty())
             {
                 StatusText().Text(hstring{ importError });
