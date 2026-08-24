@@ -1547,7 +1547,7 @@ namespace winrt::AccountVault::implementation
             TopAddAccountButton(),
             credential ? L"Add credential" : L"Add account");
         TopImportOneMenuItem().Text(
-            credential ? L"Import one record..." : L"Import one account...");
+            credential ? L"Import one credential..." : L"Import one account...");
         TopImportAllMenuItem().Text(
             credential ? L"Import vault..." : L"Import all accounts...");
         TopImportBrowserCsvMenuItem().Visibility(
