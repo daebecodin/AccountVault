@@ -273,7 +273,9 @@ namespace winrt::AccountVault::implementation
 
         HyperlinkButton providerLink;
         std::wstring providerLinkText{ providerDisplayName };
-        providerLinkText += L" — Open provider website";
+        // Keep this separator ASCII so builds do not depend on the compiler's
+        // source-file encoding and display a mojibake em dash.
+        providerLinkText += L" - Open provider website";
         providerLink.Content(box_value(hstring{ providerLinkText }));
         providerLink.NavigateUri(
             Uri{ hstring{ account->emailProviderWebsite } });

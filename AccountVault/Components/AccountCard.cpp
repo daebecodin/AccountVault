@@ -9,6 +9,8 @@
 #include <chrono>
 #include <limits>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -468,7 +470,7 @@ namespace winrt::AccountVault::implementation
         credentialFlyout.Items().Append(copyEmailPassword);
 
         DropDownButton credentialActions{
-            makeMenuButton(L"COPY") };
+            makeMenuButton(L"Copy") };
         credentialActions.Flyout(credentialFlyout);
 
         MenuFlyoutItem details{ makeMenuItem(L"Details") };
@@ -770,6 +772,179 @@ namespace winrt::AccountVault::implementation
                     StatusText().Text(
                         L"The account could not be removed safely");
                 }
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+    fire_and_forget MainWindow::showRemoveVisibleConfirmation()
+    {
+        ContentDialog dialog;
+        bool dialogAttached{};
+
+        try
+        {
+            auto lifetime{ get_strong() };
+            if (m_removeVisibleInProgress || m_isLocked || !m_storageReady)
+            {
+                co_return;
+            }
+
+            const auto matches{ visibleAccounts() };
+            if (matches.empty())
+            {
+                StatusText().Text(L"There are no shown records to remove");
+                co_return;
+            }
+
+            m_removeVisibleInProgress = true;
+            TopRemoveVisibleButton().IsEnabled(false);
+            noteUserActivity();
+            const std::uint64_t operationGeneration{ m_lockGeneration };
+            const bool credentials{
+                m_workspaceSection == WorkspaceSection::CredentialVault };
+            const bool unfiltered{
+                SearchBox().Text().empty() &&
+                RecordFilter().SelectedIndex() <= 0 };
+
+            std::vector<RecordId> ids;
+            ids.reserve(matches.size());
+            for (Account const* account : matches)
+            {
+                ids.push_back(account->recordId);
+            }
+
+            dialog.XamlRoot(Content().XamlRoot());
+            dialog.Title(box_value(
+                credentials
+                    ? L"Remove shown credentials?"
+                    : L"Remove shown accounts?"));
+
+            std::wstring primaryText{ L"Remove " };
+            primaryText += std::to_wstring(ids.size());
+            primaryText += credentials
+                ? (ids.size() == 1 ? L" credential" : L" credentials")
+                : (ids.size() == 1 ? L" account" : L" accounts");
+            dialog.PrimaryButtonText(hstring{ primaryText });
+            dialog.CloseButtonText(L"Cancel");
+            dialog.DefaultButton(ContentDialogButton::Close);
+
+            StackPanel content;
+            content.Spacing(12);
+
+            TextBlock scope;
+            std::wstring scopeText;
+            if (unfiltered)
+            {
+                scopeText = L"No search or filter is active. This will remove all ";
+                scopeText += std::to_wstring(ids.size());
+                scopeText += credentials
+                    ? L" credentials in the Credential Vault."
+                    : L" accounts in the Launcher Vault.";
+            }
+            else
+            {
+                scopeText = L"This will remove the ";
+                scopeText += std::to_wstring(ids.size());
+                scopeText += credentials
+                    ? L" credentials matched by the current search and filter."
+                    : L" accounts matched by the current search and filter.";
+            }
+            scope.Text(hstring{ scopeText });
+            scope.TextWrapping(TextWrapping::Wrap);
+
+            TextBlock warning;
+            warning.Text(
+                L"This cannot be undone. Export a backup first if you may need these records later.");
+            warning.TextWrapping(TextWrapping::Wrap);
+            warning.Foreground(
+                Application::Current().Resources()
+                    .Lookup(box_value(L"AppAccentBrush"))
+                    .as<Brush>());
+
+            content.Children().Append(scope);
+            content.Children().Append(warning);
+            dialog.Content(content);
+
+            attachDialogToShell(dialog);
+            dialogAttached = true;
+            const ContentDialogResult result{
+                co_await dialog.ShowAsync(ContentDialogPlacement::InPlace) };
+            detachDialogFromShell(dialog);
+            dialogAttached = false;
+
+            if (result != ContentDialogResult::Primary || m_isLocked ||
+                m_lockGeneration != operationGeneration)
+            {
+                m_removeVisibleInProgress = false;
+                refreshAccounts();
+                co_return;
+            }
+
+            const std::unordered_set<RecordId> idsToRemove{
+                ids.begin(),
+                ids.end() };
+            const auto& current{ m_repository.accounts() };
+            std::vector<Account> remaining;
+            remaining.reserve(current.size() - idsToRemove.size());
+            for (auto const& account : current)
+            {
+                if (!idsToRemove.contains(account.recordId))
+                {
+                    remaining.push_back(account);
+                }
+            }
+
+            if (current.size() - remaining.size() != idsToRemove.size())
+            {
+                m_removeVisibleInProgress = false;
+                refreshAccounts();
+                StatusText().Text(
+                    L"The shown records changed; nothing was removed");
+                co_return;
+            }
+
+            std::wstring error;
+            const RecordId nextId{ m_repository.nextId() };
+            if (!m_accountStorage.save(remaining, nextId, error))
+            {
+                m_removeVisibleInProgress = false;
+                refreshAccounts();
+                StatusText().Text(
+                    L"The removal could not be saved; nothing was changed");
+                co_return;
+            }
+
+            const std::size_t removedCount{ idsToRemove.size() };
+            m_repository.replaceAll(std::move(remaining), nextId);
+            m_removeVisibleInProgress = false;
+            refreshAccounts();
+
+            std::wstring status{ std::to_wstring(removedCount) };
+            status += credentials
+                ? (removedCount == 1
+                    ? L" shown credential removed"
+                    : L" shown credentials removed")
+                : (removedCount == 1
+                    ? L" shown account removed"
+                    : L" shown accounts removed");
+            StatusText().Text(hstring{ status });
+            noteUserActivity();
+        }
+        catch (...)
+        {
+            try
+            {
+                if (dialogAttached)
+                {
+                    dialog.Hide();
+                    detachDialogFromShell(dialog);
+                }
+                m_removeVisibleInProgress = false;
+                refreshAccounts();
+                StatusText().Text(
+                    L"The shown records could not be removed safely");
             }
             catch (...)
             {

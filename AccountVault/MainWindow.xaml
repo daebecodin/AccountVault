@@ -238,8 +238,10 @@
                         <Setter Target="ToolbarColumn1.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn2.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn3.Width" Value="Auto" />
+                        <Setter Target="ToolbarColumn4.Width" Value="Auto" />
                         <Setter Target="TopAddAccountButton.Visibility" Value="Visible" />
                         <Setter Target="TopMoreActionsButton.Visibility" Value="Visible" />
+                        <Setter Target="TopRemoveVisibleButton.Visibility" Value="Visible" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
@@ -247,6 +249,9 @@
                         <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="145" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Row)" Value="0" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Column)" Value="4" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="Auto" />
                         <Setter Target="StatusDividerColumn.Width" Value="Auto" />
@@ -293,10 +298,12 @@
                         <Setter Target="ToolbarGrid.Margin" Value="0,28,0,22" />
                         <Setter Target="ToolbarColumn0.Width" Value="*" />
                         <Setter Target="ToolbarColumn1.Width" Value="Auto" />
-                        <Setter Target="ToolbarColumn2.Width" Value="0" />
+                        <Setter Target="ToolbarColumn2.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="ToolbarColumn4.Width" Value="0" />
                         <Setter Target="TopAddAccountButton.Visibility" Value="Collapsed" />
                         <Setter Target="TopMoreActionsButton.Visibility" Value="Collapsed" />
+                        <Setter Target="TopRemoveVisibleButton.Visibility" Value="Visible" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
                         <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
@@ -304,6 +311,9 @@
                         <Setter Target="RecordFilter.(Grid.Column)" Value="1" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="145" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Row)" Value="0" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Column)" Value="2" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="Auto" />
                         <Setter Target="StatusDividerColumn.Width" Value="Auto" />
@@ -349,18 +359,23 @@
 
                         <Setter Target="ToolbarGrid.Margin" Value="0,20,0,18" />
                         <Setter Target="ToolbarColumn0.Width" Value="*" />
-                        <Setter Target="ToolbarColumn1.Width" Value="0" />
+                        <Setter Target="ToolbarColumn1.Width" Value="Auto" />
                         <Setter Target="ToolbarColumn2.Width" Value="0" />
                         <Setter Target="ToolbarColumn3.Width" Value="0" />
+                        <Setter Target="ToolbarColumn4.Width" Value="0" />
                         <Setter Target="TopAddAccountButton.Visibility" Value="Collapsed" />
                         <Setter Target="TopMoreActionsButton.Visibility" Value="Collapsed" />
+                        <Setter Target="TopRemoveVisibleButton.Visibility" Value="Visible" />
                         <Setter Target="SearchBox.(Grid.Row)" Value="0" />
                         <Setter Target="SearchBox.(Grid.Column)" Value="0" />
-                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="2" />
                         <Setter Target="RecordFilter.(Grid.Row)" Value="1" />
                         <Setter Target="RecordFilter.(Grid.Column)" Value="0" />
                         <Setter Target="RecordFilter.(Grid.ColumnSpan)" Value="1" />
                         <Setter Target="RecordFilter.MinWidth" Value="0" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Row)" Value="1" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.Column)" Value="1" />
+                        <Setter Target="TopRemoveVisibleButton.(Grid.ColumnSpan)" Value="1" />
 
                         <Setter Target="StatusSizeColumn.Width" Value="0" />
                         <Setter Target="StatusDividerColumn.Width" Value="0" />
@@ -654,6 +669,7 @@
                             <ColumnDefinition x:Name="ToolbarColumn1" Width="Auto" />
                             <ColumnDefinition x:Name="ToolbarColumn2" Width="Auto" />
                             <ColumnDefinition x:Name="ToolbarColumn3" Width="Auto" />
+                            <ColumnDefinition x:Name="ToolbarColumn4" Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <TextBox
@@ -707,6 +723,22 @@
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
+
+                        <Button
+                            x:Name="TopRemoveVisibleButton"
+                            Grid.Column="4"
+                            Content="Remove shown"
+                            Height="44"
+                            Padding="16,0"
+                            Visibility="Collapsed"
+                            AccessKey="R"
+                            Background="{StaticResource AppSurfaceAltBrush}"
+                            BorderBrush="{StaticResource AppBorderBrush}"
+                            Foreground="{StaticResource AppTextBrush}"
+                            AutomationProperties.Name="Remove shown accounts"
+                            AutomationProperties.HelpText="Remove records matched by the current search and filter"
+                            ToolTipService.ToolTip="Remove records matched by the current search and filter"
+                            Click="RemoveVisibleButton_Click" />
                     </Grid>
 
                     <Grid x:Name="WorkspaceRecordsContainer" Grid.Row="2">
@@ -800,7 +832,7 @@
                                         FontSize="18"
                                         Glyph="&#xE785;" />
                                     <TextBlock
-                                        Text=""
+                                        Text="Unlock"
                                         VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>

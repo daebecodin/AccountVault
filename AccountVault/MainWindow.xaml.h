@@ -46,6 +46,10 @@ namespace winrt::AccountVault::implementation
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::RoutedEventArgs const& args);
 
+        void RemoveVisibleButton_Click(
+            Windows::Foundation::IInspectable const& sender,
+            Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         void SearchBox_TextChanged(
             Windows::Foundation::IInspectable const& sender,
             Microsoft::UI::Xaml::Controls::TextChangedEventArgs const& args);
@@ -133,6 +137,7 @@ namespace winrt::AccountVault::implementation
         bool m_isLocked{ false };
         bool m_unlockInProgress{ false };
         bool m_backupOperationInProgress{ false };
+        bool m_removeVisibleInProgress{ false };
         bool m_updatingWorkspaceNavigation{ false };
         bool m_updatingRecordFilter{ false };
         ShellLayout m_shellLayout{ ShellLayout::Unknown };
@@ -162,6 +167,7 @@ namespace winrt::AccountVault::implementation
         Windows::Foundation::IAsyncOperation<bool> verifyUser(
             winrt::hstring const& message);
         void removeAccount(RecordId id);
+        winrt::fire_and_forget showRemoveVisibleConfirmation();
         void applyDefaultWindowSize() noexcept;
         void installWindowSizeConstraints() noexcept;
         void applyWindowSizeConstraints(MINMAXINFO& limits) const noexcept;

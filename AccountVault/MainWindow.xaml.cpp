@@ -882,6 +882,12 @@ namespace winrt::AccountVault::implementation
             showAddAccountDialog();
         }
     }
+    void MainWindow::RemoveVisibleButton_Click(
+        IInspectable const&,
+        RoutedEventArgs const&)
+    {
+        showRemoveVisibleConfirmation();
+    }
     void MainWindow::SearchBox_TextChanged(
         IInspectable const&,
         TextChangedEventArgs const&)
@@ -1264,6 +1270,9 @@ namespace winrt::AccountVault::implementation
             RecordFilter().IsEnabled(enabled);
             TopAddAccountButton().IsEnabled(enabled);
             TopMoreActionsButton().IsEnabled(enabled);
+            TopRemoveVisibleButton().IsEnabled(
+                enabled && AccountsList().Items().Size() != 0 &&
+                !m_removeVisibleInProgress);
             AccountsList().IsEnabled(enabled);
             ThemePicker().IsEnabled(enabled);
             CustomizeColorsButton().IsEnabled(enabled);
@@ -1520,7 +1529,7 @@ namespace winrt::AccountVault::implementation
         CompactAddMenuItem().Text(
             credential ? L"Add credential" : L"Add account");
         CompactImportOneMenuItem().Text(
-            credential ? L"Import one credential..." : L"Import one account...");
+            credential ? L"Import one record..." : L"Import one account...");
         CompactImportAllMenuItem().Text(
             credential ? L"Import vault..." : L"Import all accounts...");
         CompactImportBrowserCsvMenuItem().Visibility(
@@ -1531,20 +1540,25 @@ namespace winrt::AccountVault::implementation
             credential ? L"VAULT ACTIONS" : L"ACCOUNT ACTIONS"));
         AutomationProperties::SetName(
             AccountActionsButton(),
-            credential ? L"Vault actions" : L"Account actions");
+            credential ? L"Credential Vault actions" : L"Account actions");
         TopAddAccountButton().Content(box_value(
             credential ? L"Add credential" : L"Add account"));
         AutomationProperties::SetName(
             TopAddAccountButton(),
             credential ? L"Add credential" : L"Add account");
         TopImportOneMenuItem().Text(
-            credential ? L"Import one credential..." : L"Import one account...");
+            credential ? L"Import one record..." : L"Import one account...");
         TopImportAllMenuItem().Text(
             credential ? L"Import vault..." : L"Import all accounts...");
         TopImportBrowserCsvMenuItem().Visibility(
             credential ? Visibility::Visible : Visibility::Collapsed);
         TopExportAllMenuItem().Text(
             credential ? L"Export vault..." : L"Export all accounts...");
+        AutomationProperties::SetName(
+            TopRemoveVisibleButton(),
+            credential
+                ? L"Remove shown credentials"
+                : L"Remove shown accounts");
 
         EmptyStateTitle().Text(
             credential ? L"No credentials found" : L"No accounts found");
@@ -1652,6 +1666,9 @@ namespace winrt::AccountVault::implementation
 
         EmptyState().Visibility(
             matches.empty() ? Visibility::Visible : Visibility::Collapsed);
+        TopRemoveVisibleButton().IsEnabled(
+            !matches.empty() && m_storageReady && !m_isLocked &&
+            !m_removeVisibleInProgress);
 
         std::wstring status{ std::to_wstring(matches.size()) };
         if (m_workspaceSection == WorkspaceSection::CredentialVault)

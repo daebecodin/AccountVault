@@ -45,7 +45,7 @@ Edit this file for text that changes while the app is running:
 
 - Launcher Vault versus Credential Vault headings and subtitles
 - Workspace-specific search placeholders
-- Add/import/export menu wording for each vault
+- Add/import/export and `Remove shown` wording for each vault
 - Empty-state text for each vault
 - `All launchers` and `All categories`
 - Account/credential counts in the status bar
@@ -64,7 +64,7 @@ Edit this file for text shown on each record card and its menus:
 - `CREDENTIALS`, `RECORD`, and `ACCOUNT` buttons
 - Copy username/email/password actions
 - Details, export, and remove actions
-- Clipboard, missing-password, removal, and card error messages
+- Clipboard, single/bulk removal, and card error messages
 
 ## Popups and tool windows
 
