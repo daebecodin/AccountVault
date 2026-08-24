@@ -9,15 +9,15 @@
   IgnorableNamespaces="uap rescap systemai">
 
   <Identity
-    Name="d5f2d4f2-cd9c-47fc-aa44-06e8c6770338"
-    Publisher="CN=imdem"
+    Name="daebecodin.AccountArmory"
+    Publisher="CN=C71654FD-F5E3-4F0C-A0B9-F6749F568D23"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="d5f2d4f2-cd9c-47fc-aa44-06e8c6770338" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="cdb5203b-ba46-4511-89d1-a657782f3b65" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>Account Armory</DisplayName>
-    <PublisherDisplayName>imdem</PublisherDisplayName>
+    <PublisherDisplayName>daebecodin</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
