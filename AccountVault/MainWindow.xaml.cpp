@@ -38,8 +38,6 @@ using namespace Windows::Storage;
 
 namespace
 {
-    constexpr int DefaultStartupThemeIndex{ 3 }; // Ayu Mirage
-    constexpr wchar_t StartupThemeSettingKey[]{ L"StartupThemeIndex" };
     constexpr wchar_t AutoLockTimeoutSettingKey[]{ L"AutoLockTimeoutSeconds" };
     constexpr wchar_t GettingStartedVersionSettingKey[]{
         L"GettingStartedTourVersion" };
@@ -128,28 +126,7 @@ namespace winrt::AccountVault::implementation
                 IInspectable const&,
                 RoutedEventArgs const&)
             {
-                const int themeIndex{ ThemePicker().SelectedIndex() };
-                if (themeIndex < 0 || themeIndex >= BuiltInThemeCount)
-                {
-                    return;
-                }
-
-                const auto themeItem{ ThemePicker()
-                    .SelectedItem()
-                    .as<ComboBoxItem>() };
-                const hstring themeName{
-                    unbox_value<hstring>(themeItem.Content()) };
-
-                ApplicationData::Current()
-                    .LocalSettings()
-                    .Values()
-                    .Insert(
-                        StartupThemeSettingKey,
-                        box_value(static_cast<std::int32_t>(themeIndex)));
-
-                std::wstring status{ themeName.c_str() };
-                status += L" set as the startup theme";
-                StatusText().Text(hstring{ status });
+                saveStartupThemeSelection(ThemePicker().SelectedIndex());
             });
 
         MenuFlyoutItem removeDefault;
@@ -159,50 +136,117 @@ namespace winrt::AccountVault::implementation
                 IInspectable const&,
                 RoutedEventArgs const&)
             {
-                const auto themeItem{ ThemePicker()
-                    .SelectedItem()
-                    .as<ComboBoxItem>() };
-                const hstring themeName{
-                    unbox_value<hstring>(themeItem.Content()) };
+                clearStartupThemeSelection();
+            });
 
-                ApplicationData::Current()
-                    .LocalSettings()
-                    .Values()
-                    .Remove(StartupThemeSettingKey);
+        MenuFlyoutItem duplicateTheme;
+        duplicateTheme.Text(L"Duplicate as custom");
+        duplicateTheme.Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                showColorDialog(std::nullopt, true);
+            });
 
-                std::wstring status{ themeName.c_str() };
-                status += L" removed as the startup theme; Ayu Mirage is the fallback";
-                StatusText().Text(hstring{ status });
+        MenuFlyoutItem editTheme;
+        editTheme.Text(L"Edit custom theme...");
+        editTheme.Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                const auto customIndex{ customThemeIndexForPickerIndex(
+                    ThemePicker().SelectedIndex()) };
+                if (!customIndex)
+                {
+                    return;
+                }
+                showColorDialog(
+                    m_customThemeRepository.themes()[*customIndex].id);
+            });
+
+        MenuFlyoutItem deleteTheme;
+        deleteTheme.Text(L"Delete custom theme...");
+        deleteTheme.Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                const auto customIndex{ customThemeIndexForPickerIndex(
+                    ThemePicker().SelectedIndex()) };
+                if (!customIndex)
+                {
+                    return;
+                }
+                showDeleteCustomThemeConfirmation(
+                    m_customThemeRepository.themes()[*customIndex].id);
             });
 
         defaultMenu.Opening(
-            [this, setDefault, removeDefault](
+            [this,
+             setDefault,
+             removeDefault,
+             duplicateTheme,
+             editTheme,
+             deleteTheme](
                 IInspectable const&,
                 IInspectable const&)
             {
                 const int selectedIndex{ ThemePicker().SelectedIndex() };
-                const bool hasBuiltInSelection{
-                    selectedIndex >= 0 && selectedIndex < BuiltInThemeCount };
+                const bool hasSelection{
+                    selectedIndex >= 0 &&
+                    selectedIndex <
+                        static_cast<int>(ThemePicker().Items().Size()) };
+                const bool hasCustomSelection{
+                    customThemeIndexForPickerIndex(selectedIndex).has_value() };
 
-                bool isSavedDefault{ false };
-                const auto settingsValues{ ApplicationData::Current()
-                    .LocalSettings()
-                    .Values() };
-
-                if (hasBuiltInSelection &&
-                    settingsValues.HasKey(StartupThemeSettingKey))
-                {
-                    const int storedIndex{ unbox_value<std::int32_t>(
-                        settingsValues.Lookup(StartupThemeSettingKey)) };
-                    isSavedDefault = storedIndex == selectedIndex;
-                }
-
-                setDefault.IsEnabled(hasBuiltInSelection);
-                removeDefault.IsEnabled(isSavedDefault);
+                setDefault.IsEnabled(hasSelection);
+                removeDefault.IsEnabled(
+                    isStartupThemeSelection(selectedIndex));
+                duplicateTheme.IsEnabled(hasSelection);
+                editTheme.IsEnabled(hasCustomSelection);
+                deleteTheme.IsEnabled(hasCustomSelection);
             });
 
         defaultMenu.Items().Append(setDefault);
         defaultMenu.Items().Append(removeDefault);
+        defaultMenu.Items().Append(MenuFlyoutSeparator{});
+        defaultMenu.Items().Append(duplicateTheme);
+        defaultMenu.Items().Append(editTheme);
+        defaultMenu.Items().Append(deleteTheme);
+
+        CompactSetDefaultThemeMenuItem().Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                saveStartupThemeSelection(ThemePicker().SelectedIndex());
+            });
+        CompactRemoveDefaultThemeMenuItem().Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                clearStartupThemeSelection();
+            });
+        CompactDuplicateThemeMenuItem().Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                showColorDialog(std::nullopt, true);
+            });
+        CompactEditThemeMenuItem().Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                const auto customIndex{ customThemeIndexForPickerIndex(
+                    ThemePicker().SelectedIndex()) };
+                if (customIndex)
+                {
+                    showColorDialog(
+                        m_customThemeRepository.themes()[*customIndex].id);
+                }
+            });
+        CompactDeleteThemeMenuItem().Click(
+            [this](IInspectable const&, RoutedEventArgs const&)
+            {
+                const auto customIndex{ customThemeIndexForPickerIndex(
+                    ThemePicker().SelectedIndex()) };
+                if (customIndex)
+                {
+                    showDeleteCustomThemeConfirmation(
+                        m_customThemeRepository.themes()[*customIndex].id);
+                }
+            });
 
         ThemePicker().AddHandler(
             UIElement::PointerPressedEvent(),
@@ -229,22 +273,18 @@ namespace winrt::AccountVault::implementation
                 } }),
             true);
 
-        int startupThemeIndex{ DefaultStartupThemeIndex };
-        const auto settingsValues{
-            ApplicationData::Current().LocalSettings().Values() };
-
-        if (settingsValues.HasKey(StartupThemeSettingKey))
+        std::wstring customThemeStorageStatus;
+        const auto customThemeLoadResult{ m_customThemeRepository.load() };
+        if (!customThemeLoadResult.succeeded)
         {
-            const int storedIndex{ unbox_value<std::int32_t>(
-                settingsValues.Lookup(StartupThemeSettingKey)) };
-
-            if (storedIndex >= 0 && storedIndex < BuiltInThemeCount)
-            {
-                startupThemeIndex = storedIndex;
-            }
+            customThemeStorageStatus = L"Custom themes could not be loaded: ";
+            customThemeStorageStatus += customThemeLoadResult.error;
         }
+        rebuildThemeOptions();
 
+        const int startupThemeIndex{ startupThemePickerIndex() };
         ThemePicker().SelectedIndex(startupThemeIndex);
+        updateCompactThemeCommands();
 
         const auto loadResult{ m_accountStorage.load() };
         std::wstring storageStatus;
@@ -343,6 +383,10 @@ namespace winrt::AccountVault::implementation
         else if (!storageStatus.empty())
         {
             StatusText().Text(hstring{ storageStatus });
+        }
+        else if (!customThemeStorageStatus.empty())
+        {
+            StatusText().Text(hstring{ customThemeStorageStatus });
         }
 
         initializeAutoLock();
@@ -960,6 +1004,7 @@ namespace winrt::AccountVault::implementation
         if (m_windowReady)
         {
             applyPreset(ThemePicker().SelectedIndex());
+            updateCompactThemeCommands();
         }
     }
     void MainWindow::CompactThemeMenuItem_Click(
@@ -970,12 +1015,16 @@ namespace winrt::AccountVault::implementation
         {
             const auto item{ sender.as<MenuFlyoutItem>() };
             const auto tag{ unbox_value<hstring>(item.Tag()) };
-            if (tag.size() != 1 || tag[0] < L'0' || tag[0] > L'9')
+            std::size_t parsedCharacters{};
+            const int selectedIndex{
+                std::stoi(tag.c_str(), &parsedCharacters) };
+            if (parsedCharacters != tag.size() || selectedIndex < 0 ||
+                selectedIndex >=
+                    static_cast<int>(ThemePicker().Items().Size()))
             {
                 return;
             }
 
-            const int selectedIndex{ static_cast<int>(tag[0] - L'0') };
             if (ThemePicker().SelectedIndex() == selectedIndex)
             {
                 applyPreset(selectedIndex);

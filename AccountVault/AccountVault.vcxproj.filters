@@ -63,6 +63,9 @@
     <ClCompile Include="Themes\ThemeService.cpp">
       <Filter>Themes</Filter>
     </ClCompile>
+    <ClCompile Include="Themes\CustomThemeRepository.cpp">
+      <Filter>Themes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -73,6 +76,9 @@
       <Filter>Components</Filter>
     </ClInclude>
     <ClInclude Include="Models\Account.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Models\CustomTheme.h">
       <Filter>Models</Filter>
     </ClInclude>
     <ClInclude Include="Models\Launcher.h">
@@ -107,6 +113,9 @@
     </ClInclude>
     <ClInclude Include="Services\PortableBackupService.h">
       <Filter>Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Themes\CustomThemeRepository.h">
+      <Filter>Themes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

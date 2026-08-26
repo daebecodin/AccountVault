@@ -53,7 +53,7 @@ different column orders are ignored.
 | Responsive layouts | Complete | Wide, center-only, and compact |
 | Password generator | Complete | Local cryptographic random source |
 | Built-in themes | Complete | Ten palettes |
-| Custom color editor | Partial | Works during the current session only |
+| Custom theme management | Implemented | Persistent create, edit, rename, duplicate, delete, and startup-default support; manual verification pending |
 | Auto-lock utility | Complete | Lock now and configure timeout |
 | Getting-started walkthrough | Complete | First-run TeachingTip tour; reopen from Utilities |
 | Accessibility metadata | Complete | Names, help text, access keys, and live status |
@@ -85,7 +85,7 @@ Passed manually with fake data:
 
 ## Remaining work
 
-- Persist custom themes across restarts.
+- Manually verify custom-theme CRUD, restart persistence, and default fallback.
 - Produce and sign an MSIX installer.
 - Test installation and upgrades on a clean Windows computer.
 - Add broader automated UI/input-validation tests.

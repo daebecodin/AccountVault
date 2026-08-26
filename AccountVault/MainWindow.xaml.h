@@ -7,6 +7,7 @@
 #include "Services/AccountStorageService.h"
 #include "Services/CredentialService.h"
 #include "Services/PortableBackupService.h"
+#include "Themes/CustomThemeRepository.h"
 
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Windowing.h>
@@ -96,6 +97,7 @@ namespace winrt::AccountVault::implementation
         using Launcher = account_vault::models::Launcher;
         using RecordId = account_vault::models::RecordId;
         using PortableAccount = account_vault::services::PortableAccount;
+        using CustomThemeId = account_vault::models::CustomThemeId;
         using ThemeDefinition = account_vault::models::ThemeDefinition;
 
         enum class ShellLayout
@@ -133,7 +135,7 @@ namespace winrt::AccountVault::implementation
         account_vault::services::AccountStorageService m_accountStorage;
         account_vault::services::CredentialService m_credentials;
         account_vault::services::PortableBackupService m_backupService;
-        std::vector<ThemeDefinition> m_customThemes;
+        account_vault::themes::CustomThemeRepository m_customThemeRepository;
         std::vector<account_vault::ui::ModelessToolWindow> m_modelessWindows;
         account_vault::ui::ModelessToolWindow m_passwordGeneratorWindow{ nullptr };
         account_vault::ui::ModelessToolWindow m_autoLockSettingsWindow{ nullptr };
@@ -248,6 +250,16 @@ namespace winrt::AccountVault::implementation
         [[nodiscard]] bool persistAccounts(std::wstring& error) const;
         void applyPreset(int selectedIndex);
         void applyTheme(ThemeDefinition const& theme);
+        void rebuildThemeOptions();
+        void updateCompactThemeCommands();
+        [[nodiscard]] std::optional<std::size_t> customThemeIndexForPickerIndex(
+            int pickerIndex) const noexcept;
+        [[nodiscard]] std::optional<int> pickerIndexForCustomTheme(
+            CustomThemeId id) const noexcept;
+        [[nodiscard]] int startupThemePickerIndex();
+        void saveStartupThemeSelection(int pickerIndex);
+        [[nodiscard]] bool isStartupThemeSelection(int pickerIndex) const;
+        void clearStartupThemeSelection();
 
         void setBrushColor(
             std::wstring_view resourceName,
@@ -294,7 +306,11 @@ namespace winrt::AccountVault::implementation
         winrt::fire_and_forget showAccountDetailsDialog(RecordId id);
         winrt::fire_and_forget showAddCredentialDialog();
         winrt::fire_and_forget showCredentialDetailsDialog(RecordId id);
-        winrt::fire_and_forget showColorDialog();
+        winrt::fire_and_forget showColorDialog(
+            std::optional<CustomThemeId> editingThemeId = std::nullopt,
+            bool duplicateSelectedTheme = false);
+        winrt::fire_and_forget showDeleteCustomThemeConfirmation(
+            CustomThemeId id);
         winrt::fire_and_forget showPasswordGenerator();
         winrt::fire_and_forget showBrowserCsvImport();
 

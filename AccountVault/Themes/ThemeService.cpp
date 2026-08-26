@@ -2,14 +2,29 @@
 #include "../MainWindow.xaml.h"
 
 #include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
+#include <winrt/Microsoft.UI.Xaml.Controls.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Windows.Storage.h>
 
+#include <algorithm>
 #include <string>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
+using namespace Microsoft::UI::Xaml::Automation;
+using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
+using namespace Windows::Storage;
 using namespace Windows::UI;
+
+namespace
+{
+    constexpr int DefaultStartupThemeIndex{ 3 }; // Ayu Mirage
+    constexpr wchar_t StartupThemeSettingKey[]{ L"StartupThemeIndex" };
+    constexpr wchar_t StartupCustomThemeIdSettingKey[]{
+        L"StartupCustomThemeId" };
+}
 
 namespace winrt::AccountVault::implementation
 {
@@ -183,18 +198,278 @@ namespace winrt::AccountVault::implementation
 
             const auto customIndex = static_cast<std::size_t>(
                 selectedIndex - BuiltInThemeCount);
-            if (customIndex >= m_customThemes.size())
+            auto const& customThemes{ m_customThemeRepository.themes() };
+            if (customIndex >= customThemes.size())
             {
                 return;
             }
 
-            theme = m_customThemes[customIndex];
+            theme = customThemes[customIndex].definition;
             break;
         }
         }
 
         applyTheme(theme);
     }
+
+    void MainWindow::rebuildThemeOptions()
+    {
+        const auto pickerItems{ ThemePicker().Items() };
+        while (pickerItems.Size() > BuiltInThemeCount)
+        {
+            pickerItems.RemoveAtEnd();
+        }
+
+        const auto compactItems{ CompactThemeMenu().Items() };
+        while (compactItems.Size() > BuiltInThemeCount)
+        {
+            compactItems.RemoveAtEnd();
+        }
+
+        auto const& customThemes{ m_customThemeRepository.themes() };
+        for (std::size_t index = 0; index < customThemes.size(); ++index)
+        {
+            const int pickerIndex{
+                BuiltInThemeCount + static_cast<int>(index) };
+            auto const& definition{ customThemes[index].definition };
+
+            ComboBoxItem pickerItem;
+            pickerItem.Content(box_value(hstring{ definition.name }));
+            pickerItem.RightTapped(
+                { this, &MainWindow::ThemeOption_RightTapped });
+            AutomationProperties::SetName(
+                pickerItem,
+                hstring{ definition.name + L" custom theme" });
+            pickerItems.Append(pickerItem);
+
+            MenuFlyoutItem compactItem;
+            compactItem.Text(hstring{ definition.name });
+            compactItem.Tag(
+                box_value(hstring{ std::to_wstring(pickerIndex) }));
+            compactItem.Click(
+                { this, &MainWindow::CompactThemeMenuItem_Click });
+            compactItems.Append(compactItem);
+        }
+
+        updateCompactThemeCommands();
+    }
+
+    void MainWindow::updateCompactThemeCommands()
+    {
+        const int pickerIndex{ ThemePicker().SelectedIndex() };
+        const bool hasSelection{
+            pickerIndex >= 0 &&
+            pickerIndex < static_cast<int>(ThemePicker().Items().Size()) };
+        const bool hasCustomSelection{
+            customThemeIndexForPickerIndex(pickerIndex).has_value() };
+
+        CompactSetDefaultThemeMenuItem().IsEnabled(hasSelection);
+        CompactRemoveDefaultThemeMenuItem().IsEnabled(
+            isStartupThemeSelection(pickerIndex));
+        CompactDuplicateThemeMenuItem().IsEnabled(hasSelection);
+        CompactEditThemeMenuItem().IsEnabled(hasCustomSelection);
+        CompactDeleteThemeMenuItem().IsEnabled(hasCustomSelection);
+    }
+
+    std::optional<std::size_t>
+        MainWindow::customThemeIndexForPickerIndex(
+            int pickerIndex) const noexcept
+    {
+        if (pickerIndex < BuiltInThemeCount)
+        {
+            return std::nullopt;
+        }
+
+        const auto customIndex{ static_cast<std::size_t>(
+            pickerIndex - BuiltInThemeCount) };
+        return customIndex < m_customThemeRepository.themes().size()
+            ? std::optional<std::size_t>{ customIndex }
+            : std::nullopt;
+    }
+
+    std::optional<int> MainWindow::pickerIndexForCustomTheme(
+        CustomThemeId id) const noexcept
+    {
+        auto const& customThemes{ m_customThemeRepository.themes() };
+        const auto found{ std::find_if(
+            customThemes.begin(),
+            customThemes.end(),
+            [id](account_vault::models::CustomTheme const& theme)
+            {
+                return theme.id == id;
+            }) };
+        if (found == customThemes.end())
+        {
+            return std::nullopt;
+        }
+
+        return BuiltInThemeCount + static_cast<int>(
+            std::distance(customThemes.begin(), found));
+    }
+
+    int MainWindow::startupThemePickerIndex()
+    {
+        const auto values{
+            ApplicationData::Current().LocalSettings().Values() };
+
+        if (values.HasKey(StartupCustomThemeIdSettingKey))
+        {
+            try
+            {
+                const hstring storedText{ unbox_value<hstring>(
+                    values.Lookup(StartupCustomThemeIdSettingKey)) };
+                std::size_t parsedCharacters{};
+                const CustomThemeId storedId{
+                    std::stoull(storedText.c_str(), &parsedCharacters) };
+                if (parsedCharacters == storedText.size())
+                {
+                    if (const auto pickerIndex{
+                            pickerIndexForCustomTheme(storedId) })
+                    {
+                        return *pickerIndex;
+                    }
+                }
+            }
+            catch (...)
+            {
+            }
+
+            // A deleted or malformed custom default must never prevent the app
+            // from starting with its known built-in fallback.
+            values.Remove(StartupCustomThemeIdSettingKey);
+        }
+
+        if (values.HasKey(StartupThemeSettingKey))
+        {
+            try
+            {
+                const int storedIndex{ unbox_value<std::int32_t>(
+                    values.Lookup(StartupThemeSettingKey)) };
+                if (storedIndex >= 0 && storedIndex < BuiltInThemeCount)
+                {
+                    return storedIndex;
+                }
+            }
+            catch (...)
+            {
+            }
+
+            values.Remove(StartupThemeSettingKey);
+        }
+
+        return DefaultStartupThemeIndex;
+    }
+
+    void MainWindow::saveStartupThemeSelection(int pickerIndex)
+    {
+        if (pickerIndex < 0 ||
+            pickerIndex >= static_cast<int>(ThemePicker().Items().Size()))
+        {
+            return;
+        }
+
+        const auto values{
+            ApplicationData::Current().LocalSettings().Values() };
+        if (const auto customIndex{
+                customThemeIndexForPickerIndex(pickerIndex) })
+        {
+            const CustomThemeId id{
+                m_customThemeRepository.themes()[*customIndex].id };
+            values.Insert(
+                StartupCustomThemeIdSettingKey,
+                box_value(hstring{ std::to_wstring(id) }));
+            values.Remove(StartupThemeSettingKey);
+        }
+        else if (pickerIndex < BuiltInThemeCount)
+        {
+            values.Insert(
+                StartupThemeSettingKey,
+                box_value(static_cast<std::int32_t>(pickerIndex)));
+            values.Remove(StartupCustomThemeIdSettingKey);
+        }
+        else
+        {
+            return;
+        }
+
+        const auto themeItem{
+            ThemePicker().SelectedItem().as<ComboBoxItem>() };
+        std::wstring status{
+            unbox_value<hstring>(themeItem.Content()).c_str() };
+        status += L" set as the startup theme";
+        StatusText().Text(hstring{ status });
+        updateCompactThemeCommands();
+    }
+
+    bool MainWindow::isStartupThemeSelection(int pickerIndex) const
+    {
+        if (pickerIndex < 0)
+        {
+            return false;
+        }
+
+        const auto values{
+            ApplicationData::Current().LocalSettings().Values() };
+        if (const auto customIndex{
+                customThemeIndexForPickerIndex(pickerIndex) })
+        {
+            if (!values.HasKey(StartupCustomThemeIdSettingKey))
+            {
+                return false;
+            }
+            try
+            {
+                const hstring storedText{ unbox_value<hstring>(
+                    values.Lookup(StartupCustomThemeIdSettingKey)) };
+                return storedText == hstring{ std::to_wstring(
+                    m_customThemeRepository.themes()[*customIndex].id) };
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
+
+        if (pickerIndex >= BuiltInThemeCount ||
+            values.HasKey(StartupCustomThemeIdSettingKey) ||
+            !values.HasKey(StartupThemeSettingKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            return unbox_value<std::int32_t>(
+                values.Lookup(StartupThemeSettingKey)) == pickerIndex;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    void MainWindow::clearStartupThemeSelection()
+    {
+        const int pickerIndex{ ThemePicker().SelectedIndex() };
+        if (!isStartupThemeSelection(pickerIndex))
+        {
+            return;
+        }
+
+        const auto values{
+            ApplicationData::Current().LocalSettings().Values() };
+        values.Remove(StartupThemeSettingKey);
+        values.Remove(StartupCustomThemeIdSettingKey);
+
+        const auto themeItem{
+            ThemePicker().SelectedItem().as<ComboBoxItem>() };
+        std::wstring status{
+            unbox_value<hstring>(themeItem.Content()).c_str() };
+        status += L" removed as the startup theme; Ayu Mirage is the fallback";
+        StatusText().Text(hstring{ status });
+        updateCompactThemeCommands();
+    }
+
     void MainWindow::applyTheme(ThemeDefinition const& theme)
     {
         const auto blend = [](

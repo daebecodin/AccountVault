@@ -14,6 +14,14 @@ Notable Account Armory changes are recorded here.
 
 ### Added
 
+- Added persistent custom themes with create, edit, rename, duplicate, and
+  confirmed delete actions.
+- Added stable custom-theme IDs so a custom theme can be selected as the
+  startup default without depending on its position in the theme list.
+- Added custom themes and their management commands to both wide and compact
+  utility layouts.
+- Added atomic `custom-themes.json` storage so a failed save does not replace
+  the last valid custom-theme collection.
 - Added a first-run TeachingTip walkthrough covering vault navigation, adding
   and importing records, encrypted backups, recovery-password safety, DPAPI,
   and security utilities.

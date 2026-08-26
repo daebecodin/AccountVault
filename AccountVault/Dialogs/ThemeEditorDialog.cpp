@@ -2,8 +2,10 @@
 #include "../MainWindow.xaml.h"
 
 #include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Windows.Storage.h>
 #include <winrt/Windows.UI.Text.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <string>
@@ -19,7 +21,9 @@ using namespace Windows::UI;
 
 namespace winrt::AccountVault::implementation
 {
-    fire_and_forget MainWindow::showColorDialog()
+    fire_and_forget MainWindow::showColorDialog(
+        std::optional<CustomThemeId> editingThemeId,
+        bool duplicateSelectedTheme)
     {
         account_vault::ui::ModelessToolWindow dialog{ nullptr };
         bool dialogAttached{ false };
@@ -31,10 +35,25 @@ namespace winrt::AccountVault::implementation
         // Theme editor layout revision v11: fit the popup to its 920-DIP editor
         // grid and remove the unused outer bands around the content.
 
-        dialog = account_vault::ui::ModelessToolWindow{ L"Customize colors", 1040, 700 };
+        const auto editingTheme{ editingThemeId
+            ? m_customThemeRepository.find(*editingThemeId)
+            : nullptr };
+        if (editingThemeId && !editingTheme)
+        {
+            StatusText().Text(L"The custom theme no longer exists");
+            co_return;
+        }
+
+        const bool editing{ editingTheme != nullptr };
+        dialog = account_vault::ui::ModelessToolWindow{
+            hstring{ editing ? L"Edit theme" : L"Customize colors" },
+            1040,
+            700 };
         dialog.XamlRoot(Content().XamlRoot());
-        dialog.Title(box_value(L"Create theme"));
-        dialog.PrimaryButtonText(L"Save theme");
+        dialog.Title(box_value(
+            hstring{ editing ? L"Edit theme" : L"Create theme" }));
+        dialog.PrimaryButtonText(
+            hstring{ editing ? L"Save changes" : L"Save theme" });
         dialog.CloseButtonText(L"Cancel");
         dialog.DefaultButton(ContentDialogButton::Primary);
         dialog.HorizontalAlignment(HorizontalAlignment::Center);
@@ -49,14 +68,16 @@ namespace winrt::AccountVault::implementation
             box_value(L"ContentDialogMinWidth"),
             box_value(980.0));
 
-        ThemeDefinition draft{
-            L"",
-            brushColor(L"AppBackgroundBrush"),
-            brushColor(L"AppSurfaceBrush"),
-            brushColor(L"AppSurfaceAltBrush"),
-            brushColor(L"AppAccentBrush"),
-            brushColor(L"AppTextBrush"),
-            brushColor(L"AppMutedTextBrush") };
+        ThemeDefinition draft{ editing
+            ? editingTheme->definition
+            : ThemeDefinition{
+                L"",
+                brushColor(L"AppBackgroundBrush"),
+                brushColor(L"AppSurfaceBrush"),
+                brushColor(L"AppSurfaceAltBrush"),
+                brushColor(L"AppAccentBrush"),
+                brushColor(L"AppTextBrush"),
+                brushColor(L"AppMutedTextBrush") } };
 
         StackPanel dialogContent;
         dialogContent.Spacing(16);
@@ -64,6 +85,23 @@ namespace winrt::AccountVault::implementation
         TextBox themeName;
         themeName.Header(box_value(L"Theme name"));
         themeName.PlaceholderText(L"My custom theme");
+        if (editing)
+        {
+            themeName.Text(hstring{ draft.name });
+        }
+        else if (duplicateSelectedTheme &&
+                 ThemePicker().SelectedIndex() >= 0)
+        {
+            const auto selectedItem{
+                ThemePicker().SelectedItem().try_as<ComboBoxItem>() };
+            if (selectedItem)
+            {
+                std::wstring duplicateName{
+                    unbox_value<hstring>(selectedItem.Content()).c_str() };
+                duplicateName += L" copy";
+                themeName.Text(hstring{ duplicateName });
+            }
+        }
 
         TextBlock validation;
         validation.Text(L"Enter a name for the theme.");
@@ -71,6 +109,18 @@ namespace winrt::AccountVault::implementation
         SolidColorBrush validationBrush;
         validationBrush.Color(color(248, 81, 73));
         validation.Foreground(validationBrush);
+
+        const auto normalizedThemeName = [&themeName]()
+        {
+            const std::wstring enteredName{ themeName.Text().c_str() };
+            const auto first{ enteredName.find_first_not_of(L" \t\r\n") };
+            if (first == std::wstring::npos)
+            {
+                return std::wstring{};
+            }
+            const auto last{ enteredName.find_last_not_of(L" \t\r\n") };
+            return enteredName.substr(first, last - first + 1);
+        };
 
         const std::array<std::wstring_view, 6> tokenNames{
             L"Background",
@@ -618,9 +668,30 @@ namespace winrt::AccountVault::implementation
         dialog.PrimaryButtonClick(
             [&](account_vault::ui::ModelessToolWindow const&, account_vault::ui::ModelessButtonClickEventArgs const& args)
             {
-                if (themeName.Text().empty())
+                const std::wstring enteredName{ normalizedThemeName() };
+                if (enteredName.empty())
                 {
                     args.Cancel(true);
+                    validation.Text(L"Enter a name for the theme.");
+                    validation.Visibility(Visibility::Visible);
+                    themeName.Focus(FocusState::Programmatic);
+                    return;
+                }
+
+                const bool duplicateName{ std::any_of(
+                    m_customThemeRepository.themes().begin(),
+                    m_customThemeRepository.themes().end(),
+                    [&](account_vault::models::CustomTheme const& theme)
+                    {
+                        return (!editingThemeId ||
+                                theme.id != *editingThemeId) &&
+                            theme.definition.name == enteredName;
+                    }) };
+                if (duplicateName)
+                {
+                    args.Cancel(true);
+                    validation.Text(
+                        L"A custom theme with this name already exists.");
                     validation.Visibility(Visibility::Visible);
                     themeName.Focus(FocusState::Programmatic);
                 }
@@ -640,19 +711,48 @@ namespace winrt::AccountVault::implementation
             co_return;
         }
 
-        draft.name = themeName.Text().c_str();
-        m_customThemes.push_back(draft);
+        draft.name = normalizedThemeName();
+        std::wstring storageError;
+        CustomThemeId savedThemeId{};
+        if (editing)
+        {
+            if (!m_customThemeRepository.update(
+                    *editingThemeId,
+                    draft,
+                    storageError))
+            {
+                std::wstring status{ L"The custom theme could not be saved: " };
+                status += storageError;
+                StatusText().Text(hstring{ status });
+                co_return;
+            }
+            savedThemeId = *editingThemeId;
+        }
+        else
+        {
+            const auto createdThemeId{
+                m_customThemeRepository.create(draft, storageError) };
+            if (!createdThemeId)
+            {
+                std::wstring status{ L"The custom theme could not be created: " };
+                status += storageError;
+                StatusText().Text(hstring{ status });
+                co_return;
+            }
+            savedThemeId = *createdThemeId;
+        }
 
-        ComboBoxItem item;
-        item.Content(box_value(hstring{ draft.name }));
-        ThemePicker().Items().Append(item);
-        ThemePicker().SelectedIndex(
-            BuiltInThemeCount +
-            static_cast<int>(m_customThemes.size()) - 1);
+        rebuildThemeOptions();
+        if (const auto pickerIndex{
+                pickerIndexForCustomTheme(savedThemeId) })
+        {
+            ThemePicker().SelectedIndex(*pickerIndex);
+            applyPreset(*pickerIndex);
+        }
 
-        std::wstring status{ L"Theme created: " };
+        std::wstring status{
+            editing ? L"Theme updated: " : L"Theme created: " };
         status += draft.name;
-        status += L" (session only)";
         StatusText().Text(hstring{ status });
         }
         catch (...)
@@ -673,6 +773,107 @@ namespace winrt::AccountVault::implementation
             {
                 StatusText().Text(
                     L"The theme editor encountered an unexpected error");
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+
+    fire_and_forget MainWindow::showDeleteCustomThemeConfirmation(
+        CustomThemeId id)
+    {
+        ContentDialog dialog;
+        bool dialogAttached{};
+
+        try
+        {
+            auto lifetime{ get_strong() };
+            if (m_isLocked)
+            {
+                co_return;
+            }
+
+            const auto theme{ m_customThemeRepository.find(id) };
+            if (!theme)
+            {
+                StatusText().Text(L"The custom theme no longer exists");
+                co_return;
+            }
+
+            const std::wstring themeName{ theme->definition.name };
+            const auto pickerIndex{ pickerIndexForCustomTheme(id) };
+            const bool wasStartupTheme{
+                pickerIndex && isStartupThemeSelection(*pickerIndex) };
+
+            dialog.XamlRoot(Content().XamlRoot());
+            dialog.Title(box_value(L"Delete custom theme?"));
+            dialog.PrimaryButtonText(L"Delete theme");
+            dialog.CloseButtonText(L"Cancel");
+            dialog.DefaultButton(ContentDialogButton::Close);
+
+            TextBlock message;
+            std::wstring messageText{ L"Delete \"" };
+            messageText += themeName;
+            messageText += L"\"? This cannot be undone.";
+            if (wasStartupTheme)
+            {
+                messageText +=
+                    L" Ayu Mirage will become the startup fallback.";
+            }
+            message.Text(hstring{ messageText });
+            message.TextWrapping(TextWrapping::Wrap);
+            dialog.Content(message);
+
+            attachDialogToShell(dialog);
+            dialogAttached = true;
+            const ContentDialogResult result{
+                co_await dialog.ShowAsync(ContentDialogPlacement::InPlace) };
+            detachDialogFromShell(dialog);
+            dialogAttached = false;
+
+            if (result != ContentDialogResult::Primary || m_isLocked)
+            {
+                co_return;
+            }
+
+            std::wstring storageError;
+            if (!m_customThemeRepository.remove(id, storageError))
+            {
+                std::wstring status{ L"The custom theme could not be deleted: " };
+                status += storageError;
+                StatusText().Text(hstring{ status });
+                co_return;
+            }
+
+            if (wasStartupTheme)
+            {
+                const auto values{ Windows::Storage::ApplicationData::Current()
+                    .LocalSettings()
+                    .Values() };
+                values.Remove(L"StartupCustomThemeId");
+                values.Remove(L"StartupThemeIndex");
+            }
+
+            rebuildThemeOptions();
+            ThemePicker().SelectedIndex(3); // Ayu Mirage
+            applyPreset(3);
+
+            std::wstring status{ L"Theme deleted: " };
+            status += themeName;
+            StatusText().Text(hstring{ status });
+        }
+        catch (...)
+        {
+            try
+            {
+                if (dialogAttached)
+                {
+                    dialog.Hide();
+                    detachDialogFromShell(dialog);
+                }
+                StatusText().Text(
+                    L"The custom theme could not be deleted safely");
             }
             catch (...)
             {

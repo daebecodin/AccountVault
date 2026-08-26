@@ -635,7 +635,7 @@
                             ToolTipService.ToolTip="Utilities and getting started">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutSubItem Text="Theme">
+                                    <MenuFlyoutSubItem x:Name="CompactThemeMenu" Text="Theme">
                                         <MenuFlyoutItem Text="Catppuccin Mocha" Tag="0" Click="CompactThemeMenuItem_Click" />
                                         <MenuFlyoutItem Text="Tokyo Night" Tag="1" Click="CompactThemeMenuItem_Click" />
                                         <MenuFlyoutItem Text="Dracula" Tag="2" Click="CompactThemeMenuItem_Click" />
@@ -646,6 +646,14 @@
                                         <MenuFlyoutItem Text="Houston" Tag="7" Click="CompactThemeMenuItem_Click" />
                                         <MenuFlyoutItem Text="Night Owl" Tag="8" Click="CompactThemeMenuItem_Click" />
                                         <MenuFlyoutItem Text="Matcha" Tag="9" Click="CompactThemeMenuItem_Click" />
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem Text="Current theme">
+                                        <MenuFlyoutItem x:Name="CompactSetDefaultThemeMenuItem" Text="Set default" />
+                                        <MenuFlyoutItem x:Name="CompactRemoveDefaultThemeMenuItem" Text="Remove default" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Name="CompactDuplicateThemeMenuItem" Text="Duplicate as custom..." />
+                                        <MenuFlyoutItem x:Name="CompactEditThemeMenuItem" Text="Edit custom theme..." />
+                                        <MenuFlyoutItem x:Name="CompactDeleteThemeMenuItem" Text="Delete custom theme..." />
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutItem Text="Customize colors..." Click="CustomizeColorsButton_Click" />
                                     <MenuFlyoutSeparator />
@@ -954,10 +962,10 @@
                         HorizontalAlignment="Stretch"
                         AccessKey="T"
                         AutomationProperties.Name="Theme"
-                        AutomationProperties.HelpText="Choose a theme; right-click the selected theme to change the startup theme"
+                        AutomationProperties.HelpText="Choose a theme; right-click the selected theme to manage it or change the startup theme"
                         Style="{StaticResource ActionRailComboBoxStyle}"
                         SelectedIndex="3"
-                        ToolTipService.ToolTip="Right-click a theme to make it the startup theme"
+                        ToolTipService.ToolTip="Right-click the selected theme to manage it"
                         SelectionChanged="ThemePicker_SelectionChanged">
                         <ComboBox.Resources>
                             <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="AppAccentLowBrush" />
