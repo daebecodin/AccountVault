@@ -794,55 +794,70 @@
                         x:Name="LockOverlay"
                         Grid.Row="2"
                         Canvas.ZIndex="1000"
-                        Padding="36"
+                        Padding="12"
                         Background="{StaticResource AppBackgroundBrush}"
                         AutomationProperties.Name="Account Armory locked"
                         AutomationProperties.LiveSetting="Assertive"
                         Visibility="Collapsed">
-                        <StackPanel
-                            MaxWidth="620"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="24">
-                            <Image
-                                Width="280"
-                                Height="280"
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Disabled"
+                            VerticalContentAlignment="Center"
+                            VerticalScrollBarVisibility="Auto"
+                            VerticalScrollMode="Auto"
+                            ZoomMode="Disabled">
+                            <StackPanel
+                                MaxWidth="620"
+                                Margin="0"
                                 HorizontalAlignment="Center"
-                                Source="Assets/Square150x150Logo.scale-200.png"
-                                Stretch="Uniform"
-                                AutomationProperties.Name="Account Armory vault icon" />
-                            <TextBlock
-                                Text="Unlock To Enter The Vault"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap"
-                                FontSize="28"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource AppTextBrush}" />
-                            <Button
-                                x:Name="UnlockButton"
-                                MinWidth="240"
-                                Height="48"
-                                Padding="18,0"
-                                Style="{StaticResource PrimaryActionButtonStyle}"
-                                HorizontalAlignment="Center"
-                                AccessKey="U"
-                                AutomationProperties.Name="Unlock Account Armory"
-                                ToolTipService.ToolTip="Unlock Account Armory"
-                                Click="UnlockButton_Click">
-                                <StackPanel
+                                Spacing="10">
+                                <!--
+                                    Use a tightly cropped icon and compact vertical
+                                    metrics so the complete unlock action remains
+                                    visible at 1920x1080 with 150% display scaling.
+                                    The ScrollViewer is a fallback for still shorter
+                                    effective heights and larger text settings.
+                                -->
+                                <Image
+                                    Width="120"
+                                    Height="120"
                                     HorizontalAlignment="Center"
-                                    Orientation="Horizontal"
-                                    Spacing="10">
-                                    <FontIcon
-                                        FontFamily="Segoe Fluent Icons"
-                                        FontSize="18"
-                                        Glyph="&#xE785;" />
-                                    <TextBlock
-                                        Text=""
-                                        VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
+                                    Source="Assets/StoreLogo.scale-400.png"
+                                    Stretch="Uniform"
+                                    AutomationProperties.Name="Account Armory vault icon" />
+                                <TextBlock
+                                    Text="Unlock To Enter The Vault"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap"
+                                    FontSize="24"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource AppTextBrush}" />
+                                <Button
+                                    x:Name="UnlockButton"
+                                    MinWidth="240"
+                                    Height="48"
+                                    Padding="18,0"
+                                    Style="{StaticResource PrimaryActionButtonStyle}"
+                                    HorizontalAlignment="Center"
+                                    AccessKey="U"
+                                    AutomationProperties.Name="Unlock Account Armory"
+                                    ToolTipService.ToolTip="Unlock Account Armory"
+                                    Click="UnlockButton_Click">
+                                    <StackPanel
+                                        HorizontalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="10">
+                                        <FontIcon
+                                            FontFamily="Segoe Fluent Icons"
+                                            FontSize="18"
+                                            Glyph="&#xE785;" />
+                                        <TextBlock
+                                            Text=""
+                                            VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
                     </Border>
                     </Grid>
                 </Border>
