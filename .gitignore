@@ -67,3 +67,4 @@ browser-passwords*.csv
 Thumbs.db
 Desktop.ini
 /AccountVault/AccountVault.vcxproj
+/AccountVault/Package.appxmanifest
