@@ -524,12 +524,53 @@ namespace winrt::AccountVault::implementation
         const SIZE maximum{
             outerSizeForClient(MaximumClientWidth, MaximumClientHeight) };
 
-        limits.ptMinTrackSize.x = minimum.cx;
-        limits.ptMinTrackSize.y = minimum.cy;
-        limits.ptMaxTrackSize.x = maximum.cx;
-        limits.ptMaxTrackSize.y = maximum.cy;
-        limits.ptMaxSize.x = (std::min)(limits.ptMaxSize.x, maximum.cx);
-        limits.ptMaxSize.y = (std::min)(limits.ptMaxSize.y, maximum.cy);
+        // A logical 945-DIP minimum is taller than the available work area on
+        // a 1920x1080 display at 150% scaling. Never advertise a track size
+        // larger than the current monitor's work area or Windows can create a
+        // clipped window whose lower controls cannot be reached.
+        RECT workArea{};
+        bool hasWorkArea{ false };
+        const HMONITOR monitor{
+            ::MonitorFromWindow(m_windowHandle, MONITOR_DEFAULTTONEAREST) };
+        if (monitor)
+        {
+            MONITORINFO monitorInfo{ sizeof(MONITORINFO) };
+            if (::GetMonitorInfoW(monitor, &monitorInfo))
+            {
+                workArea = monitorInfo.rcWork;
+                hasWorkArea = true;
+            }
+        }
+
+        const LONG availableWidth{ hasWorkArea
+            ? (std::max)(1L, workArea.right - workArea.left)
+            : maximum.cx };
+        const LONG availableHeight{ hasWorkArea
+            ? (std::max)(1L, workArea.bottom - workArea.top)
+            : maximum.cy };
+        const LONG minimumWidth{
+            (std::min)(static_cast<LONG>(minimum.cx), availableWidth) };
+        const LONG minimumHeight{
+            (std::min)(static_cast<LONG>(minimum.cy), availableHeight) };
+        const LONG maximumWidth{
+            (std::max)(
+                minimumWidth,
+                (std::min)(
+                    static_cast<LONG>(maximum.cx),
+                    availableWidth)) };
+        const LONG maximumHeight{
+            (std::max)(
+                minimumHeight,
+                (std::min)(
+                    static_cast<LONG>(maximum.cy),
+                    availableHeight)) };
+
+        limits.ptMinTrackSize.x = minimumWidth;
+        limits.ptMinTrackSize.y = minimumHeight;
+        limits.ptMaxTrackSize.x = maximumWidth;
+        limits.ptMaxTrackSize.y = maximumHeight;
+        limits.ptMaxSize.x = (std::min)(limits.ptMaxSize.x, maximumWidth);
+        limits.ptMaxSize.y = (std::min)(limits.ptMaxSize.y, maximumHeight);
     }
 
     LRESULT CALLBACK MainWindow::windowSubclassProc(
@@ -894,7 +935,8 @@ namespace winrt::AccountVault::implementation
     }
 
     void MainWindow::attachDialogToShell(
-        account_vault::ui::ModelessToolWindow const& window)
+        account_vault::ui::ModelessToolWindow const& window,
+        ModelessWindowKind kind)
     {
         if (window)
         {
@@ -906,29 +948,46 @@ namespace winrt::AccountVault::implementation
                 window.OwnerWindowHandle(
                     reinterpret_cast<std::intptr_t>(ownerWindow));
             }
-            m_modelessWindows.push_back(window);
+            m_modelessWindows[static_cast<std::size_t>(kind)] = window;
         }
     }
 
     void MainWindow::detachModelessWindow(
-        account_vault::ui::ModelessToolWindow const& window) noexcept
+        account_vault::ui::ModelessToolWindow const& window,
+        ModelessWindowKind kind) noexcept
     {
         try
         {
-            const auto id{ window.Id() };
-            m_modelessWindows.erase(
-                std::remove_if(
-                    m_modelessWindows.begin(),
-                    m_modelessWindows.end(),
-                    [id](account_vault::ui::ModelessToolWindow const& candidate)
-                    {
-                        return candidate.Id() == id;
-                    }),
-                m_modelessWindows.end());
+            auto& registered{
+                m_modelessWindows[static_cast<std::size_t>(kind)] };
+            if (registered && window && registered.Id() == window.Id())
+            {
+                registered = nullptr;
+            }
         }
         catch (...)
         {
         }
+    }
+
+    bool MainWindow::activateModelessWindow(
+        ModelessWindowKind kind) noexcept
+    {
+        try
+        {
+            const auto& window{
+                m_modelessWindows[static_cast<std::size_t>(kind)] };
+            if (window)
+            {
+                window.Activate();
+                return true;
+            }
+        }
+        catch (...)
+        {
+        }
+
+        return false;
     }
 
     void MainWindow::closeModelessWindows() noexcept
@@ -938,7 +997,10 @@ namespace winrt::AccountVault::implementation
             const auto windows{ m_modelessWindows };
             for (auto const& window : windows)
             {
-                window.Close();
+                if (window)
+                {
+                    window.Close();
+                }
             }
         }
         catch (...)
@@ -952,7 +1014,10 @@ namespace winrt::AccountVault::implementation
         {
             for (auto const& window : m_modelessWindows)
             {
-                window.IsInteractionEnabled(enabled);
+                if (window)
+                {
+                    window.IsInteractionEnabled(enabled);
+                }
             }
         }
         catch (...)

@@ -65,7 +65,10 @@ namespace winrt::AccountVault::implementation
 
             for (auto const& window : m_modelessWindows)
             {
-                window.RefreshTheme();
+                if (window)
+                {
+                    window.RefreshTheme();
+                }
             }
         }
         catch (...)

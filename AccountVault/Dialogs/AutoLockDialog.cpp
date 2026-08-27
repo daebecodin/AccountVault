@@ -42,9 +42,8 @@ namespace winrt::AccountVault::implementation
         {
             auto lifetime{ get_strong() };
 
-            if (m_autoLockSettingsWindow)
+            if (activateModelessWindow(ModelessWindowKind::AutoLockSettings))
             {
-                m_autoLockSettingsWindow.Activate();
                 co_return;
             }
 
@@ -117,16 +116,14 @@ namespace winrt::AccountVault::implementation
             content.Children().Append(lockNow);
             dialog.Content(content);
 
-            attachDialogToShell(dialog);
+            attachDialogToShell(dialog, ModelessWindowKind::AutoLockSettings);
             dialogAttached = true;
-            m_autoLockSettingsWindow = dialog;
 
             const ContentDialogResult result{
                 co_await dialog.ShowAsync(ContentDialogPlacement::InPlace) };
 
-            detachModelessWindow(dialog);
+            detachModelessWindow(dialog, ModelessWindowKind::AutoLockSettings);
             dialogAttached = false;
-            m_autoLockSettingsWindow = nullptr;
 
             if (lockNowRequested)
             {
@@ -155,9 +152,8 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::AutoLockSettings);
                 }
-                m_autoLockSettingsWindow = nullptr;
             }
             catch (...)
             {

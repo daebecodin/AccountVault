@@ -31,6 +31,10 @@ namespace winrt::AccountVault::implementation
         try
         {
         auto lifetime{ get_strong() };
+        if (activateModelessWindow(ModelessWindowKind::ThemeEditor))
+        {
+            co_return;
+        }
 
         // Theme editor layout revision v11: fit the popup to its 920-DIP editor
         // grid and remove the unused outer bands around the content.
@@ -697,13 +701,13 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        attachDialogToShell(dialog);
+        attachDialogToShell(dialog, ModelessWindowKind::ThemeEditor);
         dialogAttached = true;
 
         const ContentDialogResult result =
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
 
-        detachModelessWindow(dialog);
+        detachModelessWindow(dialog, ModelessWindowKind::ThemeEditor);
         dialogAttached = false;
 
         if (result != ContentDialogResult::Primary)
@@ -762,7 +766,7 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::ThemeEditor);
                 }
             }
             catch (...)

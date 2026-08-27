@@ -13,7 +13,9 @@
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -114,6 +116,19 @@ namespace winrt::AccountVault::implementation
             CredentialVault
         };
 
+        enum class ModelessWindowKind : std::size_t
+        {
+            AddAccount,
+            AccountDetails,
+            AddCredential,
+            CredentialDetails,
+            ThemeEditor,
+            PasswordGenerator,
+            AutoLockSettings,
+            BrowserCsvImport,
+            Count
+        };
+
         static constexpr int BuiltInThemeCount{ 10 };
         static constexpr int DefaultAutoLockTimeoutSeconds{ 90 };
         static constexpr int GettingStartedTourVersion{ 1 };
@@ -136,10 +151,10 @@ namespace winrt::AccountVault::implementation
         account_vault::services::CredentialService m_credentials;
         account_vault::services::PortableBackupService m_backupService;
         account_vault::themes::CustomThemeRepository m_customThemeRepository;
-        std::vector<account_vault::ui::ModelessToolWindow> m_modelessWindows;
-        account_vault::ui::ModelessToolWindow m_passwordGeneratorWindow{ nullptr };
-        account_vault::ui::ModelessToolWindow m_autoLockSettingsWindow{ nullptr };
-        account_vault::ui::ModelessToolWindow m_browserCsvImportWindow{ nullptr };
+        std::array<
+            account_vault::ui::ModelessToolWindow,
+            static_cast<std::size_t>(ModelessWindowKind::Count)>
+            m_modelessWindows{};
         bool m_windowReady{ false };
         bool m_storageReady{ true };
         bool m_isLocked{ false };
@@ -283,9 +298,13 @@ namespace winrt::AccountVault::implementation
         void detachDialogFromShell(
             Microsoft::UI::Xaml::Controls::ContentDialog const& dialog) noexcept;
         void attachDialogToShell(
-            account_vault::ui::ModelessToolWindow const& window);
+            account_vault::ui::ModelessToolWindow const& window,
+            ModelessWindowKind kind);
         void detachModelessWindow(
-            account_vault::ui::ModelessToolWindow const& window) noexcept;
+            account_vault::ui::ModelessToolWindow const& window,
+            ModelessWindowKind kind) noexcept;
+        [[nodiscard]] bool activateModelessWindow(
+            ModelessWindowKind kind) noexcept;
         void setModelessWindowsInteraction(bool enabled) noexcept;
         void closeModelessWindows() noexcept;
 

@@ -67,6 +67,10 @@ namespace winrt::AccountVault::implementation
         try
         {
             auto lifetime{ get_strong() };
+            if (activateModelessWindow(ModelessWindowKind::AddCredential))
+            {
+                co_return;
+            }
             dialog = account_vault::ui::ModelessToolWindow{ L"Credential", 680, 760 };
             dialog.XamlRoot(Content().XamlRoot());
             dialog.Title(box_value(L"Add credential"));
@@ -357,13 +361,13 @@ namespace winrt::AccountVault::implementation
                     }
                 });
 
-            attachDialogToShell(dialog);
+            attachDialogToShell(dialog, ModelessWindowKind::AddCredential);
             dialogAttached = true;
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
             password.Password(L"");
             recoveryPassword.Password(L"");
             dialog.Hide();
-            detachModelessWindow(dialog);
+            detachModelessWindow(dialog, ModelessWindowKind::AddCredential);
             dialogAttached = false;
 
             if (addedId)
@@ -378,7 +382,7 @@ namespace winrt::AccountVault::implementation
             if (dialogAttached && dialog)
             {
                 dialog.Hide();
-                detachModelessWindow(dialog);
+                detachModelessWindow(dialog, ModelessWindowKind::AddCredential);
             }
             try
             {
@@ -411,6 +415,10 @@ namespace winrt::AccountVault::implementation
         try
         {
             auto lifetime{ get_strong() };
+            if (activateModelessWindow(ModelessWindowKind::CredentialDetails))
+            {
+                co_return;
+            }
             const Account* account{ m_repository.find(id) };
             if (!account || account->kind != AccountKind::Credential)
             {
@@ -695,13 +703,13 @@ namespace winrt::AccountVault::implementation
                     }
                 });
 
-            attachDialogToShell(dialog);
+            attachDialogToShell(dialog, ModelessWindowKind::CredentialDetails);
             dialogAttached = true;
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
             password.Password(L"");
             recoveryPassword.Password(L"");
             dialog.Hide();
-            detachModelessWindow(dialog);
+            detachModelessWindow(dialog, ModelessWindowKind::CredentialDetails);
             dialogAttached = false;
 
             if (saved)
@@ -716,7 +724,7 @@ namespace winrt::AccountVault::implementation
             if (dialogAttached && dialog)
             {
                 dialog.Hide();
-                detachModelessWindow(dialog);
+                detachModelessWindow(dialog, ModelessWindowKind::CredentialDetails);
             }
             try
             {

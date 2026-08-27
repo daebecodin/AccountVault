@@ -44,6 +44,10 @@ namespace winrt::AccountVault::implementation
         try
         {
         auto lifetime{ get_strong() };
+        if (activateModelessWindow(ModelessWindowKind::AddAccount))
+        {
+            co_return;
+        }
         dialog = account_vault::ui::ModelessToolWindow{ L"Add account", 900, 470 };
         dialog.XamlRoot(Content().XamlRoot());
         dialog.Title(box_value(L"Add account"));
@@ -362,7 +366,7 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        attachDialogToShell(dialog);
+        attachDialogToShell(dialog, ModelessWindowKind::AddAccount);
         dialogAttached = true;
 
         co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
@@ -370,7 +374,7 @@ namespace winrt::AccountVault::implementation
         launcherPassword.Password(L"");
         emailPassword.Password(L"");
 
-        detachModelessWindow(dialog);
+        detachModelessWindow(dialog, ModelessWindowKind::AddAccount);
         dialogAttached = false;
 
         if (addedId)
@@ -386,7 +390,7 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::AddAccount);
                 }
             }
             catch (...)

@@ -96,9 +96,8 @@ namespace winrt::AccountVault::implementation
         {
             auto lifetime{ get_strong() };
 
-            if (m_passwordGeneratorWindow)
+            if (activateModelessWindow(ModelessWindowKind::PasswordGenerator))
             {
-                m_passwordGeneratorWindow.Activate();
                 co_return;
             }
 
@@ -437,18 +436,16 @@ namespace winrt::AccountVault::implementation
             dialog.Content(content);
             static_cast<void>(generate());
 
-            attachDialogToShell(dialog);
+            attachDialogToShell(dialog, ModelessWindowKind::PasswordGenerator);
             dialogAttached = true;
-            m_passwordGeneratorWindow = dialog;
 
             co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
 
             // XAML owns an immutable text buffer while the password is shown;
             // release it as soon as the utility window closes.
             generatedPassword.Text(L"");
-            detachModelessWindow(dialog);
+            detachModelessWindow(dialog, ModelessWindowKind::PasswordGenerator);
             dialogAttached = false;
-            m_passwordGeneratorWindow = nullptr;
         }
         catch (...)
         {
@@ -457,9 +454,8 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::PasswordGenerator);
                 }
-                m_passwordGeneratorWindow = nullptr;
             }
             catch (...)
             {

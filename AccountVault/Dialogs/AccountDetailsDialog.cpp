@@ -92,6 +92,10 @@ namespace winrt::AccountVault::implementation
         try
         {
         auto lifetime{ get_strong() };
+        if (activateModelessWindow(ModelessWindowKind::AccountDetails))
+        {
+            co_return;
+        }
         const Account* account{ m_repository.find(id) };
         if (!account)
         {
@@ -908,7 +912,7 @@ namespace winrt::AccountVault::implementation
                 }
             });
 
-        attachDialogToShell(dialog);
+        attachDialogToShell(dialog, ModelessWindowKind::AccountDetails);
         dialogAttached = true;
 
         co_await dialog.ShowAsync(ContentDialogPlacement::InPlace);
@@ -929,7 +933,7 @@ namespace winrt::AccountVault::implementation
         launcherPassword.Password(L"");
         emailPassword.Password(L"");
 
-        detachModelessWindow(dialog);
+        detachModelessWindow(dialog, ModelessWindowKind::AccountDetails);
         dialogAttached = false;
 
         if (saved)
@@ -978,7 +982,7 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::AccountDetails);
                 }
             }
             catch (...)

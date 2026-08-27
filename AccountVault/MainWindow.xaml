@@ -802,30 +802,29 @@
                         x:Name="LockOverlay"
                         Grid.Row="2"
                         Canvas.ZIndex="1000"
-                        Padding="12"
+                        Padding="8"
                         Background="{StaticResource AppBackgroundBrush}"
                         AutomationProperties.Name="Account Armory locked"
                         AutomationProperties.LiveSetting="Assertive"
                         Visibility="Collapsed">
-                        <ScrollViewer
-                            HorizontalScrollBarVisibility="Disabled"
-                            HorizontalScrollMode="Disabled"
-                            VerticalContentAlignment="Center"
-                            VerticalScrollBarVisibility="Auto"
-                            VerticalScrollMode="Auto"
-                            ZoomMode="Disabled">
+                        <!--
+                            Scale the complete unlock action as one unit only
+                            when the records area is shorter than its natural
+                            size. This keeps the text and button reachable on a
+                            1920x1080 display at 150% scaling without changing
+                            the surrounding navigation or status bar.
+                        -->
+                        <Viewbox
+                            MaxWidth="620"
+                            MaxHeight="260"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Stretch="Uniform"
+                            StretchDirection="DownOnly">
                             <StackPanel
-                                MaxWidth="620"
-                                Margin="0"
+                                Width="420"
                                 HorizontalAlignment="Center"
                                 Spacing="10">
-                                <!--
-                                    Use a tightly cropped icon and compact vertical
-                                    metrics so the complete unlock action remains
-                                    visible at 1920x1080 with 150% display scaling.
-                                    The ScrollViewer is a fallback for still shorter
-                                    effective heights and larger text settings.
-                                -->
                                 <Image
                                     Width="120"
                                     Height="120"
@@ -865,7 +864,7 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                        </ScrollViewer>
+                        </Viewbox>
                     </Border>
                     </Grid>
                 </Border>

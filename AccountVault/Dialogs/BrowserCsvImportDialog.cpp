@@ -179,9 +179,8 @@ namespace winrt::AccountVault::implementation
         {
             auto lifetime{ get_strong() };
 
-            if (m_browserCsvImportWindow)
+            if (activateModelessWindow(ModelessWindowKind::BrowserCsvImport))
             {
-                m_browserCsvImportWindow.Activate();
                 co_return;
             }
             if (!m_storageReady || m_isLocked)
@@ -349,16 +348,14 @@ namespace winrt::AccountVault::implementation
                     args.Cancel(!valid);
                 });
 
-            attachDialogToShell(dialog);
+            attachDialogToShell(dialog, ModelessWindowKind::BrowserCsvImport);
             dialogAttached = true;
-            m_browserCsvImportWindow = dialog;
 
             const ContentDialogResult result{
                 co_await dialog.ShowAsync(ContentDialogPlacement::InPlace) };
 
-            detachModelessWindow(dialog);
+            detachModelessWindow(dialog, ModelessWindowKind::BrowserCsvImport);
             dialogAttached = false;
-            m_browserCsvImportWindow = nullptr;
 
             if (result != ContentDialogResult::Primary || m_isLocked ||
                 m_lockGeneration != operationGeneration)
@@ -540,9 +537,8 @@ namespace winrt::AccountVault::implementation
                 if (dialogAttached && dialog)
                 {
                     dialog.Hide();
-                    detachModelessWindow(dialog);
+                    detachModelessWindow(dialog, ModelessWindowKind::BrowserCsvImport);
                 }
-                m_browserCsvImportWindow = nullptr;
             }
             catch (...)
             {
