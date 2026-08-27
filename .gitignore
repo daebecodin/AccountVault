@@ -66,5 +66,4 @@ browser-passwords*.csv
 # Windows metadata
 Thumbs.db
 Desktop.ini
-/AccountVault/AccountVault.vcxproj
 /AccountVault/Package.appxmanifest

@@ -480,12 +480,53 @@ namespace winrt::AccountVault::implementation
         const SIZE maximum{
             outerSizeForClient(MaximumClientWidth, MaximumClientHeight) };
 
-        limits.ptMinTrackSize.x = minimum.cx;
-        limits.ptMinTrackSize.y = minimum.cy;
-        limits.ptMaxTrackSize.x = maximum.cx;
-        limits.ptMaxTrackSize.y = maximum.cy;
-        limits.ptMaxSize.x = (std::min)(limits.ptMaxSize.x, maximum.cx);
-        limits.ptMaxSize.y = (std::min)(limits.ptMaxSize.y, maximum.cy);
+        // A logical 945-DIP minimum is taller than the available work area on
+        // a 1920x1080 display at 150% scaling. Never advertise a track size
+        // larger than the current monitor's work area or Windows can create a
+        // clipped window whose lower controls cannot be reached.
+        RECT workArea{};
+        bool hasWorkArea{ false };
+        const HMONITOR monitor{
+            ::MonitorFromWindow(m_windowHandle, MONITOR_DEFAULTTONEAREST) };
+        if (monitor)
+        {
+            MONITORINFO monitorInfo{ sizeof(MONITORINFO) };
+            if (::GetMonitorInfoW(monitor, &monitorInfo))
+            {
+                workArea = monitorInfo.rcWork;
+                hasWorkArea = true;
+            }
+        }
+
+        const LONG availableWidth{ hasWorkArea
+            ? (std::max)(1L, workArea.right - workArea.left)
+            : maximum.cx };
+        const LONG availableHeight{ hasWorkArea
+            ? (std::max)(1L, workArea.bottom - workArea.top)
+            : maximum.cy };
+        const LONG minimumWidth{
+            (std::min)(static_cast<LONG>(minimum.cx), availableWidth) };
+        const LONG minimumHeight{
+            (std::min)(static_cast<LONG>(minimum.cy), availableHeight) };
+        const LONG maximumWidth{
+            (std::max)(
+                minimumWidth,
+                (std::min)(
+                    static_cast<LONG>(maximum.cx),
+                    availableWidth)) };
+        const LONG maximumHeight{
+            (std::max)(
+                minimumHeight,
+                (std::min)(
+                    static_cast<LONG>(maximum.cy),
+                    availableHeight)) };
+
+        limits.ptMinTrackSize.x = minimumWidth;
+        limits.ptMinTrackSize.y = minimumHeight;
+        limits.ptMaxTrackSize.x = maximumWidth;
+        limits.ptMaxTrackSize.y = maximumHeight;
+        limits.ptMaxSize.x = (std::min)(limits.ptMaxSize.x, maximumWidth);
+        limits.ptMaxSize.y = (std::min)(limits.ptMaxSize.y, maximumHeight);
     }
 
     LRESULT CALLBACK MainWindow::windowSubclassProc(
